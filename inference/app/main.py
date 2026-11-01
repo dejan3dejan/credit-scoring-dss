@@ -11,7 +11,7 @@ from app.errors import ModelUnavailable, install_handlers
 from app.schemas import CATEGORY_CODES, FEATURES, Health, ModelInfo, PredictRequest, PredictResponse
 from src.models.artifact import load_artifact
 
-logger = logging.getLogger("inference")
+logger = logging.getLogger("uvicorn.error.inference")
 
 DEFAULT_MODEL_PATH = (
     Path(__file__).resolve().parents[2] / "ml" / "models" / "credit_rf_isotonic_v1.joblib"
