@@ -119,6 +119,10 @@
             }
             <p class="muted">Recorded by @od.DecidedBy on @od.DecidedAt.ToLocalTime().ToString("d MMM yyyy 'at' HH:mm"). A recorded decision cannot be changed.</p>
         }
+        else if (!Model.CanDecide)
+        {
+            <p class="muted">Awaiting the loan officer's decision. Your role can view applications but not decide them.</p>
+        }
         else
         {
             var recommended = d?.Recommendation;
@@ -146,13 +150,8 @@
                     </span>
                     <span asp-validation-for="Review.Reason" class="error"></span>
                 </div>
-                <div class="field">
-                    <label asp-for="Review.DecidedBy"></label>
-                    <input asp-for="Review.DecidedBy" autocomplete="name" maxlength="@BusinessLimits.SubmittedByMaxLength">
-                    <span asp-validation-for="Review.DecidedBy" class="error"></span>
-                </div>
                 <div class="decision-actions">
-                    <span class="muted">A recorded decision cannot be changed.</span>
+                    <span class="muted">Recorded as @User.Identity!.Name. A recorded decision cannot be changed.</span>
                     <button type="submit" class="button button-primary">Record decision</button>
                 </div>
             </form>

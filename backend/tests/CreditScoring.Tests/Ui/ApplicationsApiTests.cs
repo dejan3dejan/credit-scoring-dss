@@ -141,7 +141,7 @@ public class ApplicationsApiTests
     }
 
     private static RecordDecisionRequest DecisionRequest() =>
-        new() { Outcome = FinalDecision.Reject, Reason = "income not verified", DecidedBy = "Ana" };
+        new() { Outcome = FinalDecision.Reject, Reason = "income not verified" };
 
     [Fact]
     public async Task Decide_posts_to_the_application_decision_endpoint()

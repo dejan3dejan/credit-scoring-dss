@@ -10,7 +10,7 @@ public interface ICreditDecisionService
         CreditApplication application,
         FinalDecision outcome,
         string? reason,
-        string decidedBy);
+        Actor decidedBy);
 }
 
 public static class DecisionErrorCodes

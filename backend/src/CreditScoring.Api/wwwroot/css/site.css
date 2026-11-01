@@ -433,6 +433,24 @@ h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 600; colo
 .limit-list { margin: 0; padding: 16px 24px 16px 42px; display: grid; gap: 10px; color: var(--fg-2); }
 .limit-list strong { color: var(--fg); }
 
+.user-menu { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.user-name { font-weight: 500; }
+.role-chip { padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.user-menu form { margin: 0; }
+.link-button { padding: 0; border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.link-button:hover { color: var(--fg); text-decoration: underline; }
+
+body.bare { min-height: 100vh; display: flex; flex-direction: column; }
+body.bare .main { flex: 1; display: grid; place-items: center; padding-top: 48px; }
+body.bare .footer { border-top: 0; text-align: center; }
+.signin { width: 100%; max-width: 380px; }
+.signin-brand { text-align: center; margin-bottom: 24px; }
+.signin-brand h1 { margin-top: 14px; font-size: 24px; letter-spacing: -0.02em; }
+.signin-brand p { margin: 4px 0 0; color: var(--muted); }
+.brand-mark-lg { width: 44px; height: 44px; border-radius: 12px; margin: 0 auto; }
+.signin-form { display: grid; gap: 16px; padding: 24px; }
+.signin-button { width: 100%; }
+
 .empty { padding: 56px 24px; text-align: center; }
 .empty h2 { font-size: 16px; }
 .empty p { margin: 6px 0 0; color: var(--muted); }

@@ -5,6 +5,7 @@ public class CreditApplication
     public Guid Id { get; private set; }
     public required string ApplicantName { get; init; }
     public required string SubmittedBy { get; init; }
+    public Guid? SubmittedByUserId { get; init; }
     public required DateTimeOffset SubmittedAt { get; init; }
 
     public required int DurationMonths { get; init; }

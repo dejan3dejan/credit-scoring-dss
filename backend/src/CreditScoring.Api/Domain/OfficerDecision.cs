@@ -15,6 +15,7 @@ public class OfficerDecision
     public FinalDecision Outcome { get; private set; }
     public string? Reason { get; private set; }
     public string DecidedBy { get; private set; } = "";
+    public Guid? DecidedByUserId { get; private set; }
     public DateTimeOffset DecidedAt { get; private set; }
     public bool IsOverride { get; private set; }
 
@@ -26,12 +27,14 @@ public class OfficerDecision
         Recommendation? recommendation,
         FinalDecision outcome,
         string? reason,
-        string decidedBy,
+        Actor decidedBy,
         DateTimeOffset decidedAt)
     {
         if (!Enum.IsDefined(outcome))
             throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "unknown outcome");
-        ArgumentException.ThrowIfNullOrWhiteSpace(decidedBy);
+        ArgumentException.ThrowIfNullOrWhiteSpace(decidedBy.Name);
+        if (decidedBy.UserId == Guid.Empty)
+            throw new ArgumentException("a decision needs a signed-in user", nameof(decidedBy));
 
         var isOverride = recommendation is { } r && !Agrees(r, outcome);
         var trimmedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
@@ -42,7 +45,8 @@ public class OfficerDecision
         {
             Outcome = outcome,
             Reason = trimmedReason,
-            DecidedBy = decidedBy.Trim(),
+            DecidedBy = decidedBy.Name.Trim(),
+            DecidedByUserId = decidedBy.UserId,
             DecidedAt = decidedAt,
             IsOverride = isOverride,
         };

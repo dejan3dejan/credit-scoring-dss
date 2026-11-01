@@ -183,21 +183,8 @@
         </div>
     </section>
 
-    <section class="panel">
-        <div class="panel-body">
-            <div class="grid">
-                <div class="field">
-                    <label asp-for="Input.SubmittedBy"></label>
-                    <input asp-for="Input.SubmittedBy" placeholder="Your name" autocomplete="name" maxlength="@BusinessLimits.SubmittedByMaxLength">
-                    <span asp-validation-for="Input.SubmittedBy" class="error"></span>
-                </div>
-            </div>
-        </div>
-        <div class="panel-foot">Saved with the application for the audit trail.</div>
-    </section>
-
     <div class="action-bar">
-        <span>You will get a recommendation, not a decision.</span>
+        <span>Submitted as @User.Identity!.Name. You will get a recommendation, not a decision.</span>
         <button type="submit" class="button button-primary">Get recommendation</button>
     </div>
 </form>

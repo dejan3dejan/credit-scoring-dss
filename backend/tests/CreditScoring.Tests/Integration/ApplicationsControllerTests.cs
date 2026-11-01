@@ -1,7 +1,9 @@
+using CreditScoring.Api.Auth;
 using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Controllers;
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +23,13 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     private async Task<T> WithController<T>(Func<ApplicationsController, Task<T>> action)
     {
         await using var db = database.CreateContext();
-        var controller = new ApplicationsController(db, TestServices.DecisionService(ml, clock), clock);
+        var controller = new ApplicationsController(db, TestServices.DecisionService(ml, clock), clock)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = Credentials.PrincipalFor(database.Officer) },
+            },
+        };
         return await action(controller);
     }
 
@@ -56,6 +64,8 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         var saved = await db.Applications.Include(a => a.Decision).SingleAsync(a => a.Id == created.Id);
         Assert.Equal("Ana Petrovic", saved.ApplicantName);
         Assert.Equal(TestData.Now, saved.SubmittedAt);
+        Assert.Equal("Olga Officer", saved.SubmittedBy);
+        Assert.Equal(database.Officer.Id, saved.SubmittedByUserId);
         Assert.Equal(DecisionStatus.Scored, saved.Decision!.Status);
         Assert.Equal(0.3, saved.Decision.PBad);
         Assert.Equal(TestData.ModelId, saved.Decision.ModelId);
@@ -163,7 +173,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     private Task<ActionResult<ApplicationResponse>> Decide(Guid id, FinalDecision outcome, string? reason = null) =>
         WithController(c => c.Decide(
             id,
-            new RecordDecisionRequest { Outcome = outcome, Reason = reason, DecidedBy = " Ana " },
+            new RecordDecisionRequest { Outcome = outcome, Reason = reason },
             CancellationToken.None));
 
     [Fact]
@@ -180,7 +190,8 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         Assert.True(body.OfficerDecision.IsOverride);
         await using var db = database.CreateContext();
         var saved = await db.OfficerDecisions.SingleAsync(d => d.CreditApplicationId == created.Id);
-        Assert.Equal("Ana", saved.DecidedBy);
+        Assert.Equal("Olga Officer", saved.DecidedBy);
+        Assert.Equal(database.Officer.Id, saved.DecidedByUserId);
         Assert.Equal("income not verified", saved.Reason);
         Assert.Equal(TestData.Now.AddMinutes(5), saved.DecidedAt);
     }

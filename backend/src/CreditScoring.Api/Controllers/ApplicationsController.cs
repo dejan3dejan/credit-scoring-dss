@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using CreditScoring.Api.Auth;
 using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Data;
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -17,13 +19,14 @@ public class ApplicationsController(
     TimeProvider time) : ControllerBase
 {
     [HttpPost]
+    [Authorize(Policy = Policies.CanDecide)]
     [ProducesResponseType<ApplicationResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApplicationResponse>> Create(
         CreateApplicationRequest request,
         CancellationToken cancellationToken)
     {
-        var application = request.ToDomain(time.GetUtcNow());
+        var application = request.ToDomain(time.GetUtcNow(), Credentials.ActorOf(User));
         application.Decision = await decisions.EvaluateAsync(application, cancellationToken);
 
         db.Applications.Add(application);
@@ -47,6 +50,7 @@ public class ApplicationsController(
     }
 
     [HttpPost("{id:guid}/decision")]
+    [Authorize(Policy = Policies.CanDecide)]
     [ProducesResponseType<ApplicationResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -63,7 +67,7 @@ public class ApplicationsController(
         if (application is null)
             return NotFound();
 
-        switch (decisions.RecordOfficerDecision(application, request.Outcome!.Value, request.Reason, request.DecidedBy!))
+        switch (decisions.RecordOfficerDecision(application, request.Outcome!.Value, request.Reason, Credentials.ActorOf(User)))
         {
             case DecisionRecorded recorded:
                 application.OfficerDecision = recorded.Decision;

@@ -10,6 +10,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
     public DbSet<CreditApplication> Applications => Set<CreditApplication>();
     public DbSet<CreditDecision> Decisions => Set<CreditDecision>();
     public DbSet<OfficerDecision> OfficerDecisions => Set<OfficerDecision>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -26,6 +27,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             application.Property(a => a.InstallmentSharePercent).HasPrecision(5, 2);
             application.HasIndex(a => a.SubmittedAt);
             application.HasIndex(a => a.ApplicantName);
+            application.HasOne<User>().WithMany().HasForeignKey(a => a.SubmittedByUserId).OnDelete(DeleteBehavior.Restrict);
             application.HasOne(a => a.Decision)
                 .WithOne()
                 .HasForeignKey<CreditDecision>(d => d.CreditApplicationId)
@@ -43,6 +45,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             decision.Property(d => d.Reason).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
             decision.Property(d => d.DecidedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
             decision.HasIndex(d => new { d.IsOverride, d.Outcome });
+            decision.HasOne<User>().WithMany().HasForeignKey(d => d.DecidedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CreditDecision>(decision =>
@@ -58,6 +61,14 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             decision.Property(d => d.ModelId).HasMaxLength(100);
             decision.Property(d => d.ErrorCode).HasMaxLength(64);
             decision.HasIndex(d => new { d.Status, d.Recommendation });
+        });
+
+        modelBuilder.Entity<User>(user =>
+        {
+            user.ToTable("users");
+            user.Property(u => u.UserName).HasMaxLength(BusinessLimits.UserNameMaxLength);
+            user.Property(u => u.DisplayName).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            user.HasIndex(u => u.UserName).IsUnique();
         });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())

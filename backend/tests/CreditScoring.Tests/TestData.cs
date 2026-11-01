@@ -11,10 +11,11 @@ internal static class TestData
 
     public static readonly DateTimeOffset Now = new(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
 
+    public static readonly Actor Officer = new(Guid.Parse("0192f000-0000-7000-8000-000000000001"), "Tester");
+
     public static CreateApplicationRequest ValidRequest() => new()
     {
         ApplicantName = "  Test Applicant ",
-        SubmittedBy = " tester ",
         DurationMonths = 24,
         CreditAmount = 3500,
         Age = 35,

@@ -41,7 +41,7 @@ public class CreditDecisionService(
         CreditApplication application,
         FinalDecision outcome,
         string? reason,
-        string decidedBy)
+        Actor decidedBy)
     {
         if (application.OfficerDecision is not null)
             return new AlreadyDecided();

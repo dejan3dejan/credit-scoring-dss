@@ -41,6 +41,7 @@ public class ApiJsonTests
     [InlineData("""{"durationMonths":"24"}""")]
     [InlineData("""{"durationMonths":24.5}""")]
     [InlineData("""{"unknownField":1}""")]
+    [InlineData("""{"submittedBy":"someone else"}""")]
     public void Loose_input_is_rejected(string json)
     {
         Assert.Throws<JsonException>(() => Read(json));

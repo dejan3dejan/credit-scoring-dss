@@ -1,12 +1,14 @@
 using System.Diagnostics;
+using CreditScoring.Api.Auth;
 using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Ui;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace CreditScoring.Api.Pages.Applications;
 
-public class DetailsModel(ApplicationsApi api) : PageModel
+public class DetailsModel(ApplicationsApi api, IAuthorizationService authorization) : PageModel
 {
     public ApplicationResponse Application { get; private set; } = null!;
 
@@ -15,17 +17,21 @@ public class DetailsModel(ApplicationsApi api) : PageModel
 
     public bool AlreadyDecidedElsewhere { get; private set; }
 
+    public bool CanDecide { get; private set; }
+
     public async Task<IActionResult> OnGetAsync(Guid id, CancellationToken cancellationToken)
     {
         if (!await LoadAsync(id, cancellationToken))
             return NotFound();
 
-        Review = new RecordDecisionRequest { DecidedBy = Application.SubmittedBy };
         return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(Guid id, CancellationToken cancellationToken)
     {
+        if (!(await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded)
+            return Forbid();
+
         ModelState.Clear();
         switch (await api.DecideAsync(id, Review, cancellationToken))
         {
@@ -50,6 +56,7 @@ public class DetailsModel(ApplicationsApi api) : PageModel
             return false;
 
         Application = application;
+        CanDecide = (await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
         return true;
     }
 }

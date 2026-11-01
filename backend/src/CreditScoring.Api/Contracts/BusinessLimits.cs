@@ -22,4 +22,5 @@ public static class BusinessLimits
     public const int ApplicantNameMaxLength = 200;
     public const int SubmittedByMaxLength = 100;
     public const int DecisionReasonMaxLength = 500;
+    public const int UserNameMaxLength = 64;
 }

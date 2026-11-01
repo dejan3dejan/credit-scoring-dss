@@ -8,9 +8,6 @@ public sealed record CreateApplicationRequest
     [Required, StringLength(BusinessLimits.ApplicantNameMaxLength), Display(Name = "Applicant name")]
     public string? ApplicantName { get; init; }
 
-    [Required, StringLength(BusinessLimits.SubmittedByMaxLength), Display(Name = "Submitted by")]
-    public string? SubmittedBy { get; init; }
-
     [Required, Range(BusinessLimits.MinDurationMonths, BusinessLimits.MaxDurationMonths), Display(Name = "Loan term (months)")]
     public int? DurationMonths { get; init; }
 
@@ -71,10 +68,11 @@ public sealed record CreateApplicationRequest
     [Required, Display(Name = "Foreign worker")]
     public bool? IsForeignWorker { get; init; }
 
-    public CreditApplication ToDomain(DateTimeOffset submittedAt) => new()
+    public CreditApplication ToDomain(DateTimeOffset submittedAt, Actor submittedBy) => new()
     {
         ApplicantName = ApplicantName!.Trim(),
-        SubmittedBy = SubmittedBy!.Trim(),
+        SubmittedBy = submittedBy.Name,
+        SubmittedByUserId = submittedBy.UserId,
         SubmittedAt = submittedAt,
         DurationMonths = DurationMonths!.Value,
         CreditAmount = CreditAmount!.Value,

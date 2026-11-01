@@ -11,7 +11,6 @@ public class RecordDecisionRequestTests
     {
         Outcome = FinalDecision.Approve,
         Reason = null,
-        DecidedBy = "Ana",
     };
 
     private static List<string> Errors(RecordDecisionRequest request)
@@ -31,11 +30,9 @@ public class RecordDecisionRequestTests
     }
 
     [Fact]
-    public void Outcome_and_decider_are_required()
+    public void Outcome_is_required()
     {
-        Assert.Equal(
-            [nameof(RecordDecisionRequest.Outcome), nameof(RecordDecisionRequest.DecidedBy)],
-            Errors(Valid() with { Outcome = null, DecidedBy = "  " }));
+        Assert.Equal([nameof(RecordDecisionRequest.Outcome)], Errors(Valid() with { Outcome = null }));
     }
 
     [Fact]
@@ -50,10 +47,9 @@ public class RecordDecisionRequestTests
         var request = Valid() with
         {
             Reason = new string('r', BusinessLimits.DecisionReasonMaxLength + 1),
-            DecidedBy = new string('d', BusinessLimits.SubmittedByMaxLength + 1),
         };
 
-        Assert.Equal([nameof(RecordDecisionRequest.Reason), nameof(RecordDecisionRequest.DecidedBy)], Errors(request));
+        Assert.Equal([nameof(RecordDecisionRequest.Reason)], Errors(request));
     }
 
     [Theory]

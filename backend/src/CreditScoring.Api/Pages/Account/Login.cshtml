@@ -1,0 +1,32 @@
+@page "/account/login"
+@model CreditScoring.Api.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Sign in";
+    ViewData["Bare"] = true;
+}
+
+<div class="signin">
+    <div class="signin-brand">
+        <span class="brand-mark brand-mark-lg" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="currentColor"/></svg>
+        </span>
+        <h1>Credit Scoring</h1>
+        <p>Decision support for loan officers</p>
+    </div>
+
+    <form method="post" class="panel signin-form" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert"></div>
+        <input type="hidden" asp-for="ReturnUrl">
+        <div class="field">
+            <label asp-for="UserName"></label>
+            <input asp-for="UserName" autocomplete="username" autofocus>
+            <span asp-validation-for="UserName" class="error"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Password"></label>
+            <input asp-for="Password" autocomplete="current-password">
+            <span asp-validation-for="Password" class="error"></span>
+        </div>
+        <button type="submit" class="button button-primary signin-button">Sign in</button>
+    </form>
+</div>

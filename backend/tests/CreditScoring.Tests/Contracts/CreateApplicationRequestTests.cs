@@ -29,10 +29,11 @@ public class CreateApplicationRequestTests
     [Fact]
     public void ToDomain_maps_every_field_and_trims_names()
     {
-        var application = Valid().ToDomain(TestData.Now);
+        var application = Valid().ToDomain(TestData.Now, TestData.Officer);
 
         Assert.Equal("Test Applicant", application.ApplicantName);
-        Assert.Equal("tester", application.SubmittedBy);
+        Assert.Equal("Tester", application.SubmittedBy);
+        Assert.Equal(TestData.Officer.UserId, application.SubmittedByUserId);
         Assert.Equal(TestData.Now, application.SubmittedAt);
         Assert.Equal(TestData.ContractRequest, StatlogMapper.ToMlRequest(application));
         Assert.Equal(22m, application.InstallmentSharePercent);
@@ -142,8 +143,8 @@ public class CreateApplicationRequestTests
     public void Blank_names_are_invalid(string name)
     {
         Assert.Equal(
-            [nameof(CreateApplicationRequest.ApplicantName), nameof(CreateApplicationRequest.SubmittedBy)],
-            Errors(Valid() with { ApplicantName = name, SubmittedBy = name }));
+            [nameof(CreateApplicationRequest.ApplicantName)],
+            Errors(Valid() with { ApplicantName = name }));
     }
 
     [Fact]
@@ -152,12 +153,9 @@ public class CreateApplicationRequestTests
         var request = Valid() with
         {
             ApplicantName = new string('a', BusinessLimits.ApplicantNameMaxLength + 1),
-            SubmittedBy = new string('b', BusinessLimits.SubmittedByMaxLength + 1),
         };
 
-        Assert.Equal(
-            [nameof(CreateApplicationRequest.ApplicantName), nameof(CreateApplicationRequest.SubmittedBy)],
-            Errors(request));
+        Assert.Equal([nameof(CreateApplicationRequest.ApplicantName)], Errors(request));
     }
 
     [Fact]

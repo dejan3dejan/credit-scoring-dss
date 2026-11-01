@@ -1,5 +1,12 @@
+@using CreditScoring.Api.Auth
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService Authorization
 @{
     var current = ViewContext.RouteData.Values["page"] as string;
+    var bare = ViewData["Bare"] is true;
+    var signedIn = User.Identity?.IsAuthenticated == true;
+    var canDecide = signedIn && (await Authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -10,35 +17,53 @@
     <title>@ViewData["Title"] · Credit Scoring</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
 </head>
-<body>
-    <header class="header">
-        <div class="container">
-            <div class="header-top">
-                <a class="brand" asp-page="/Applications/New">
-                    <span class="brand-mark" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="currentColor"/></svg>
-                    </span>
-                    Credit Scoring
-                    <span class="brand-slash" aria-hidden="true">/</span>
-                    <span class="brand-env">Decision Support</span>
-                </a>
-                <span class="header-meta">Amounts in 1970s DM</span>
-            </div>
-            <nav class="tabs">
-                <a asp-page="/Applications/New" class="@(current == "/Applications/New" ? "active" : null)">New application</a>
-                <a asp-page="/Applications/Index" class="@(current is "/Applications/Index" or "/Applications/Details" ? "active" : null)">History</a>
-                <a asp-page="/Model" class="@(current == "/Model" ? "active" : null)">Model</a>
-            </nav>
-        </div>
-    </header>
-
-    @if (IsSectionDefined("Band"))
+<body class="@(bare ? "bare" : null)">
+    @if (!bare)
     {
-        <section class="band">
-            <div class="container band-inner">
-                @await RenderSectionAsync("Band")
+        <header class="header">
+            <div class="container">
+                <div class="header-top">
+                    <a class="brand" href="/">
+                        <span class="brand-mark" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="currentColor"/></svg>
+                        </span>
+                        Credit Scoring
+                        <span class="brand-slash" aria-hidden="true">/</span>
+                        <span class="brand-env">Decision Support</span>
+                    </a>
+                    @if (signedIn)
+                    {
+                        <div class="user-menu">
+                            <span class="user-name">@User.Identity!.Name</span>
+                            <span class="role-chip">@role</span>
+                            <form method="post" asp-page="/Account/Login" asp-page-handler="Logout">
+                                <button type="submit" class="link-button">Sign out</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+                @if (signedIn)
+                {
+                    <nav class="tabs">
+                        @if (canDecide)
+                        {
+                            <a asp-page="/Applications/New" class="@(current == "/Applications/New" ? "active" : null)">New application</a>
+                        }
+                        <a asp-page="/Applications/Index" class="@(current is "/Applications/Index" or "/Applications/Details" ? "active" : null)">History</a>
+                        <a asp-page="/Model" class="@(current == "/Model" ? "active" : null)">Model</a>
+                    </nav>
+                }
             </div>
-        </section>
+        </header>
+
+        @if (IsSectionDefined("Band"))
+        {
+            <section class="band">
+                <div class="container band-inner">
+                    @await RenderSectionAsync("Band")
+                </div>
+            </section>
+        }
     }
 
     <main class="container main">

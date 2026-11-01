@@ -1,0 +1,11 @@
+@page "/account/denied"
+@{
+    ViewData["Title"] = "Not available";
+}
+@section Band {
+    <div>
+        <h1>Not available for your role</h1>
+        <p>You are signed in as @User.Identity?.Name. This page belongs to a different role.</p>
+    </div>
+}
+<a class="button" asp-page="/Applications/Index">Go to History</a>

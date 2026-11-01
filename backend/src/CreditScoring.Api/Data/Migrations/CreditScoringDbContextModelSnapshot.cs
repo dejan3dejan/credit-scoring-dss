@@ -143,6 +143,10 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("submitted_by");
 
+                    b.Property<Guid?>("SubmittedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("submitted_by_user_id");
+
                     b.Property<int>("YearsAtResidence")
                         .HasColumnType("integer")
                         .HasColumnName("years_at_residence");
@@ -152,6 +156,8 @@ namespace CreditScoring.Api.Data.Migrations
                     b.HasIndex("ApplicantName");
 
                     b.HasIndex("SubmittedAt");
+
+                    b.HasIndex("SubmittedByUserId");
 
                     b.ToTable("credit_applications", (string)null);
                 });
@@ -236,6 +242,10 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("decided_by");
 
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
                     b.Property<bool>("IsOverride")
                         .HasColumnType("boolean")
                         .HasColumnName("is_override");
@@ -256,12 +266,64 @@ namespace CreditScoring.Api.Data.Migrations
                     b.HasIndex("CreditApplicationId")
                         .IsUnique();
 
+                    b.HasIndex("DecidedByUserId");
+
                     b.HasIndex("IsOverride", "Outcome");
 
                     b.ToTable("officer_decisions", null, t =>
                         {
                             t.HasCheckConstraint("ck_officer_decisions_override_reason", "is_override = false OR reason IS NOT NULL");
                         });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("role");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("user_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserName")
+                        .IsUnique();
+
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditDecision", b =>
@@ -280,6 +342,11 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasForeignKey("CreditScoring.Api.Domain.OfficerDecision", "CreditApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>

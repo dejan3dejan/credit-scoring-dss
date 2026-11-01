@@ -10,7 +10,4 @@ public sealed record RecordDecisionRequest
 
     [StringLength(BusinessLimits.DecisionReasonMaxLength), Display(Name = "Reason")]
     public string? Reason { get; init; }
-
-    [Required, StringLength(BusinessLimits.SubmittedByMaxLength), Display(Name = "Decided by")]
-    public string? DecidedBy { get; init; }
 }

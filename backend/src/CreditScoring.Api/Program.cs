@@ -1,8 +1,10 @@
+using CreditScoring.Api.Auth;
 using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Data;
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Ml;
 using CreditScoring.Api.Ui;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
@@ -39,12 +41,24 @@ builder.Services.AddControllers(options =>
     .AddJsonOptions(options => ApiJson.Configure(options.JsonSerializerOptions));
 builder.Services.AddOpenApi();
 
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(CookieSetup.Configure);
+builder.Services.AddAuthorization(Policies.Configure);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<CookieForwardingHandler>();
+
 builder.Services.AddOptions<UiOptions>()
     .Bind(builder.Configuration.GetSection(UiOptions.SectionName));
 builder.Services.AddHttpClient<ApplicationsApi>((services, client) =>
     client.BaseAddress = services.GetRequiredService<IOptions<UiOptions>>().Value.ApiBaseUrl
-        ?? SelfAddress.Choose(services.GetRequiredService<IServer>().Features.GetRequiredFeature<IServerAddressesFeature>().Addresses));
-builder.Services.AddRazorPages();
+        ?? SelfAddress.Choose(services.GetRequiredService<IServer>().Features.GetRequiredFeature<IServerAddressesFeature>().Addresses))
+    .AddHttpMessageHandler<CookieForwardingHandler>();
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AllowAnonymousToPage("/Account/Login");
+    options.Conventions.AllowAnonymousToPage("/Error");
+    options.Conventions.AuthorizePage("/Applications/New", Policies.CanDecide);
+});
 
 var app = builder.Build();
 
@@ -52,7 +66,11 @@ app.UseRequestLocalization("en-GB");
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    using var scope = app.Services.CreateScope();
+    var seed = app.Configuration.GetSection(SeedOptions.SectionName).Get<SeedOptions>() ?? new SeedOptions();
+    await UserSeeder.SeedAsync(scope.ServiceProvider.GetRequiredService<CreditScoringDbContext>(), seed.Users, TimeProvider.System.GetUtcNow());
+
+    app.MapOpenApi().AllowAnonymous();
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Credit scoring API v1"));
 }
 else
@@ -62,6 +80,8 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 app.MapRazorPages();
