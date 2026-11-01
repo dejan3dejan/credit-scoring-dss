@@ -16,7 +16,8 @@ public class LabelsTests
             .Append(typeof(DecisionStatus))
             .Append(typeof(Recommendation))
             .Append(typeof(FinalDecision))
-            .Append(typeof(ReviewFilter));
+            .Append(typeof(ReviewFilter))
+            .Append(typeof(ModelRole));
         return new(types);
     }
 
@@ -50,6 +51,8 @@ public class LabelsTests
     [InlineData(MlErrorCodes.UnexpectedStatus)]
     [InlineData(MlErrorCodes.InvalidResponse)]
     [InlineData(DecisionErrorCodes.ModelMismatch)]
+    [InlineData(DecisionErrorCodes.NoActiveModel)]
+    [InlineData("model_not_found")]
     [InlineData("validation_error")]
     [InlineData("model_unavailable")]
     [InlineData("internal_error")]

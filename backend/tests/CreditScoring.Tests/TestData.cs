@@ -8,12 +8,23 @@ internal static class TestData
 {
     public const string ModelId = "credit_rf_isotonic_v1";
     public const double Threshold = 1.0 / 6.0;
+    public const string Dataset = "statlog_german_credit";
 
     public static readonly DateTimeOffset Now = new(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
 
     public static readonly Actor Officer = new(Guid.Parse("0192f000-0000-7000-8000-000000000001"), "Tester");
 
     public static readonly Client Client = Client.Create("Test Applicant", null, Officer, Now);
+
+    public static ScoringModel ShadowModel(string modelId, double threshold = Threshold) =>
+        ModelRegistry.Register(modelId, "Test model", Dataset, threshold, Officer, Now).Model;
+
+    public static ScoringModel ActiveModel(string modelId = ModelId, double threshold = Threshold)
+    {
+        var model = ShadowModel(modelId, threshold);
+        ModelRegistry.Promote([model], modelId, "test", Officer, Now);
+        return model;
+    }
 
     public static CreateApplicationRequest ValidRequest() => new()
     {

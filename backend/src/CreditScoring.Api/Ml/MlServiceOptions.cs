@@ -11,7 +11,4 @@ public class MlServiceOptions
 
     [Range(1, 60)]
     public int TimeoutSeconds { get; set; }
-
-    [Required]
-    public string ExpectedModelId { get; set; } = "";
 }

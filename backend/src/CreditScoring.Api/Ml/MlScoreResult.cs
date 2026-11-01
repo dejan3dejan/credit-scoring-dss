@@ -19,3 +19,16 @@ public static class MlErrorCodes
     public const string UnexpectedStatus = "unexpected_status";
     public const string InvalidResponse = "invalid_response";
 }
+
+public sealed record MlModelInfo(
+    string ModelId,
+    string ModelName,
+    string Dataset,
+    double RecommendedThreshold,
+    DateTimeOffset CreatedAt);
+
+public abstract record MlCatalogResult;
+
+public sealed record MlCatalog(IReadOnlyList<MlModelInfo> Models) : MlCatalogResult;
+
+public sealed record MlCatalogUnavailable(string ErrorCode, string Message) : MlCatalogResult;

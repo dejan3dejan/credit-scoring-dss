@@ -3,6 +3,9 @@
 @using System.Globalization
 @{
     ViewData["Title"] = "Model";
+    var active = Model.Active;
+    var threshold = active?.Threshold ?? 0;
+    var isCostRatioThreshold = Math.Abs(threshold - 1.0 / 6.0) < 1e-9;
 }
 
 @section Band {
@@ -12,47 +15,170 @@
     </div>
 }
 
-<div class="cards">
-    <section class="panel">
-        <div class="card-title">Deployed model</div>
-        <dl class="kv">
-            <div><dt>Model</dt><dd class="mono">@Model.ModelId</dd></div>
-            <div><dt>Type</dt><dd>Random forest, isotonic calibration</dd></div>
-            <div><dt>Output</dt><dd>P(bad), probability of default</dd></div>
-            <div><dt>Reject rule</dt><dd>P(bad) ≥ @Model.Threshold.ToString("P1") <span class="muted mono">(@Model.Threshold.ToString("0.####", CultureInfo.InvariantCulture))</span></dd></div>
-            <div><dt>Recommendation only</dt><dd>The loan officer decides</dd></div>
-        </dl>
-    </section>
+@if (active is null)
+{
+    <div class="alert" role="alert">No model is set as active, so new applications are recorded without a score.</div>
+}
+else
+{
+    <div class="cards">
+        <section class="panel">
+            <div class="card-title">Deployed model</div>
+            <dl class="kv">
+                <div><dt>Model</dt><dd class="mono">@active.ModelId</dd></div>
+                <div><dt>Type</dt><dd>@Labels.ModelName(active.DisplayName)</dd></div>
+                <div><dt>Output</dt><dd>P(bad), probability of default</dd></div>
+                <div><dt>Reject rule</dt><dd>P(bad) ≥ @threshold.ToString("P1") <span class="muted mono">(@threshold.ToString("0.####", CultureInfo.InvariantCulture))</span></dd></div>
+                <div><dt>Recommendation only</dt><dd>The loan officer decides</dd></div>
+            </dl>
+        </section>
 
+        <section class="panel">
+            <div class="card-title">Why the threshold is @threshold.ToString("P1")</div>
+            <div class="prose">
+                @if (isCostRatioThreshold)
+                {
+                    <p>Approving an applicant who later defaults is assumed to cost <strong>5 times</strong> as much as rejecting a good applicant.</p>
+                    <p>Rejecting is then cheaper on average once P(bad) reaches 1 / (1 + 5) = 1/6, about 16.7%. Below that, approving is cheaper.</p>
+                    <p class="muted">The 5 : 1 cost ratio is an assumption of this thesis, not a bank's figure.</p>
+                }
+                else
+                {
+                    <p>This threshold was recommended with the model and fixed when it was registered. A different threshold means registering the model again.</p>
+                }
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="card-title">Training data</div>
+            <dl class="kv">
+                <div><dt>Dataset</dt><dd>Statlog German Credit</dd></div>
+                <div><dt>Dataset id</dt><dd class="mono">@active.Dataset</dd></div>
+                <div><dt>Size</dt><dd>1,000 applications, 20 inputs</dd></div>
+                <div><dt>Period and currency</dt><dd>1970s, Deutsche Mark</dd></div>
+                <div><dt>Category meanings</dt><dd>Corrected table, Grömping (2019)</dd></div>
+            </dl>
+        </section>
+
+        <section class="panel">
+            <div class="card-title">Accepted inputs</div>
+            <dl class="kv">
+                <div><dt>Credit amount</dt><dd>@BusinessLimits.MinCreditAmount.ToString("N0") – @BusinessLimits.MaxCreditAmount.ToString("N0") DM</dd></div>
+                <div><dt>Loan term</dt><dd>@BusinessLimits.MinDurationMonths – @BusinessLimits.MaxDurationMonths months</dd></div>
+                <div><dt>Age</dt><dd>@BusinessLimits.MinAge – @BusinessLimits.MaxAge years</dd></div>
+                <div><dt>Why these ranges</dt><dd>They follow the training data</dd></div>
+            </dl>
+        </section>
+    </div>
+}
+
+@if (Model.CanManage)
+{
+    <h2 class="section-title">Registry</h2>
+    @if (Model.Conflict is { } conflict)
+    {
+        <div class="alert" role="alert">@conflict</div>
+    }
+    <div asp-validation-summary="ModelOnly" class="alert"></div>
     <section class="panel">
-        <div class="card-title">Why the threshold is @Model.Threshold.ToString("P1")</div>
-        <div class="prose">
-            <p>Approving an applicant who later defaults is assumed to cost <strong>5 times</strong> as much as rejecting a good applicant.</p>
-            <p>Rejecting is then cheaper on average once P(bad) reaches 1 / (1 + 5) = 1/6, about 16.7%. Below that, approving is cheaper.</p>
-            <p class="muted">The 5 : 1 cost ratio is an assumption of this thesis, not a bank's figure.</p>
+        <div class="registry">
+            @foreach (var m in Model.Models)
+            {
+                var tone = m.Role switch { ModelRole.Active => "approve", ModelRole.Shadow => "pending", _ => "retired" };
+                var posted = Model.ModelId == m.ModelId;
+                <div class="registry-row">
+                    <div class="registry-main">
+                        <div class="registry-name">
+                            @Labels.ModelName(m.DisplayName)
+                            <span class="status status-@tone">@Labels.Of(m.Role)</span>
+                        </div>
+                        <div class="registry-meta"><span class="mono">@m.ModelId</span> · rejects at @m.Threshold.ToString("P1") · registered @m.RegisteredAt.ToLocalTime().ToString("d MMM yyyy")</div>
+                    </div>
+                    @if (m.Role == ModelRole.Shadow)
+                    {
+                        <form method="post" class="registry-form">
+                            <input type="hidden" name="ModelId" value="@m.ModelId">
+                            <div class="registry-actions">
+                                <input name="Reason" value="@(posted ? Model.Reason : null)" placeholder="Reason for the change" maxlength="@BusinessLimits.DecisionReasonMaxLength" aria-label="Reason for changing @m.ModelId" class="@(posted && !ViewData.ModelState.IsValid ? "input-validation-error" : null)">
+                                <button type="submit" class="button button-small" asp-page-handler="Promote">Make active</button>
+                                <button type="submit" class="button button-small" asp-page-handler="Retire">Retire</button>
+                            </div>
+                            @if (posted)
+                            {
+                                <span asp-validation-for="Reason" class="error"></span>
+                            }
+                        </form>
+                    }
+                </div>
+            }
         </div>
+        <div class="panel-foot">Shadow models score every new application next to the active one. Only the active model makes the recommendation, and officers do not see shadow scores.</div>
     </section>
 
+    <h2 class="section-title">Available to register</h2>
     <section class="panel">
-        <div class="card-title">Training data</div>
-        <dl class="kv">
-            <div><dt>Dataset</dt><dd>Statlog German Credit</dd></div>
-            <div><dt>Size</dt><dd>1,000 applications, 20 inputs</dd></div>
-            <div><dt>Period and currency</dt><dd>1970s, Deutsche Mark</dd></div>
-            <div><dt>Category meanings</dt><dd>Corrected table, Grömping (2019)</dd></div>
-        </dl>
+        @if (Model.Available is null)
+        {
+            <div class="empty">
+                <h2>The inference service could not list its models</h2>
+                <p>Registered models are unaffected. Try again once the service is running.</p>
+            </div>
+        }
+        else if (Model.Available.Count == 0)
+        {
+            <div class="empty">
+                <h2>Nothing new to register</h2>
+                <p>Every model the inference service serves is already in the registry.</p>
+            </div>
+        }
+        else
+        {
+            <div class="registry">
+                @foreach (var m in Model.Available)
+                {
+                    <div class="registry-row">
+                        <div class="registry-main">
+                            <div class="registry-name">@Labels.ModelName(m.ModelName)</div>
+                            <div class="registry-meta"><span class="mono">@m.ModelId</span> · recommended threshold @m.RecommendedThreshold.ToString("P1") · trained @m.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</div>
+                        </div>
+                        <form method="post" asp-page-handler="Register">
+                            <input type="hidden" name="ModelId" value="@m.ModelId">
+                            <button type="submit" class="button button-small">Register as shadow</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+        <div class="panel-foot">A model starts as a shadow. Its threshold is the one it was trained with and cannot be changed afterwards.</div>
     </section>
 
+    <h2 class="section-title">Change log</h2>
     <section class="panel">
-        <div class="card-title">Accepted inputs</div>
-        <dl class="kv">
-            <div><dt>Credit amount</dt><dd>@BusinessLimits.MinCreditAmount.ToString("N0") – @BusinessLimits.MaxCreditAmount.ToString("N0") DM</dd></div>
-            <div><dt>Loan term</dt><dd>@BusinessLimits.MinDurationMonths – @BusinessLimits.MaxDurationMonths months</dd></div>
-            <div><dt>Age</dt><dd>@BusinessLimits.MinAge – @BusinessLimits.MaxAge years</dd></div>
-            <div><dt>Why these ranges</dt><dd>They follow the training data</dd></div>
-        </dl>
+        @if (Model.Events.Count == 0)
+        {
+            <div class="empty"><h2>No changes yet</h2><p>Registrations and role changes appear here with who made them and why.</p></div>
+        }
+        else
+        {
+            <ol class="registry-log">
+                @foreach (var e in Model.Events)
+                {
+                    <li>
+                        <div>
+                            <span class="mono">@e.ModelId</span>
+                            @(e.FromRole is { } from ? $"{Labels.Of(from)} → {Labels.Of(e.ToRole)}" : $"registered as {Labels.Of(e.ToRole).ToLowerInvariant()}")
+                        </div>
+                        @if (e.Reason is { } reason)
+                        {
+                            <div class="registry-reason">“@reason”</div>
+                        }
+                        <div class="registry-meta">@e.ChangedBy · @e.ChangedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</div>
+                    </li>
+                }
+            </ol>
+        }
     </section>
-</div>
+}
 
 <section class="panel limits">
     <div class="card-title">Known limitations</div>

@@ -7,18 +7,17 @@ namespace CreditScoring.Tests.Decisions;
 public class CreditDecisionServiceTests
 {
     private const string ModelId = TestData.ModelId;
+    private const string Challenger = "credit_lr_isotonic_v1";
     private const double Threshold = TestData.Threshold;
 
-    private static (CreditDecisionService Service, FakeMlClient Ml) Create(
-        MlScoreResult result,
-        double threshold = Threshold)
+    private static (CreditDecisionService Service, FakeMlClient Ml) Create(MlScoreResult result)
     {
         var ml = new FakeMlClient { Result = result };
-        return (TestServices.DecisionService(ml, new ManualTimeProvider(TestData.Now), threshold), ml);
+        return (TestServices.DecisionService(ml, new ManualTimeProvider(TestData.Now)), ml);
     }
 
-    private static Task<CreditDecision> Evaluate(MlScoreResult result, CancellationToken ct = default) =>
-        Create(result).Service.EvaluateAsync(TestData.ContractApplication(), ct);
+    private static async Task<CreditDecision> Evaluate(MlScoreResult result, CancellationToken ct = default) =>
+        (await Create(result).Service.EvaluateAsync(TestData.ContractApplication(), [TestData.ActiveModel()], ct)).Decision;
 
     [Theory]
     [InlineData(0.0)]
@@ -47,19 +46,21 @@ public class CreditDecisionServiceTests
     }
 
     [Fact]
-    public async Task Threshold_comes_from_configuration()
+    public async Task Threshold_comes_from_the_active_model()
     {
-        var (service, _) = Create(new MlScore(0.3, ModelId), threshold: 0.5);
+        var (service, _) = Create(new MlScore(0.3, ModelId));
 
-        var decision = await service.EvaluateAsync(TestData.ContractApplication(), CancellationToken.None);
+        var evaluation = await service.EvaluateAsync(
+            TestData.ContractApplication(), [TestData.ActiveModel(threshold: 0.5)], CancellationToken.None);
 
-        Assert.Equal(Recommendation.Approve, decision.Recommendation);
-        Assert.Equal(0.5, decision.ThresholdUsed);
+        Assert.Equal(Recommendation.Approve, evaluation.Decision.Recommendation);
+        Assert.Equal(0.5, evaluation.Decision.ThresholdUsed);
     }
 
     [Theory]
     [InlineData("validation_error", 422)]
     [InlineData("model_unavailable", 503)]
+    [InlineData("model_not_found", 404)]
     [InlineData("internal_error", 500)]
     [InlineData(MlErrorCodes.Timeout, null)]
     [InlineData(MlErrorCodes.Unreachable, null)]
@@ -76,7 +77,7 @@ public class CreditDecisionServiceTests
     }
 
     [Fact]
-    public async Task Unexpected_model_id_records_scoring_unavailable()
+    public async Task Score_from_another_model_records_scoring_unavailable()
     {
         var decision = await Evaluate(new MlScore(0.05, "credit_rf_isotonic_v2"));
 
@@ -86,13 +87,80 @@ public class CreditDecisionServiceTests
     }
 
     [Fact]
-    public async Task Sends_the_mapped_application_to_the_ml_client()
+    public async Task Without_an_active_model_scoring_is_unavailable_and_nothing_is_called()
     {
         var (service, ml) = Create(new MlScore(0.1, ModelId));
 
-        await service.EvaluateAsync(TestData.ContractApplication(), CancellationToken.None);
+        var evaluation = await service.EvaluateAsync(
+            TestData.ContractApplication(), [TestData.ShadowModel(Challenger)], CancellationToken.None);
 
+        Assert.Equal(DecisionStatus.ScoringUnavailable, evaluation.Decision.Status);
+        Assert.Equal(DecisionErrorCodes.NoActiveModel, evaluation.Decision.ErrorCode);
+        Assert.Empty(evaluation.ShadowScores);
+        Assert.Empty(ml.ScoredModels);
+    }
+
+    [Fact]
+    public async Task Sends_the_mapped_application_to_the_active_model()
+    {
+        var (service, ml) = Create(new MlScore(0.1, ModelId));
+
+        await service.EvaluateAsync(TestData.ContractApplication(), [TestData.ActiveModel()], CancellationToken.None);
+
+        Assert.Equal([ModelId], ml.ScoredModels);
         Assert.Equal(TestData.ContractRequest, ml.LastRequest);
+    }
+
+    [Fact]
+    public async Task Shadows_are_scored_at_their_own_threshold_and_do_not_decide()
+    {
+        var (service, ml) = Create(new MlScore(0.1, ModelId));
+        ml.ResultsByModel[Challenger] = new MlScore(0.25, Challenger);
+
+        var evaluation = await service.EvaluateAsync(
+            TestData.ContractApplication(),
+            [TestData.ShadowModel(Challenger, threshold: 0.2), TestData.ActiveModel()],
+            CancellationToken.None);
+
+        Assert.Equal(Recommendation.Approve, evaluation.Decision.Recommendation);
+        Assert.Equal(ModelId, evaluation.Decision.ModelId);
+        var shadow = Assert.Single(evaluation.ShadowScores);
+        Assert.Equal(Challenger, shadow.ModelId);
+        Assert.Equal(DecisionStatus.Scored, shadow.Status);
+        Assert.Equal(0.25, shadow.PBad);
+        Assert.Equal(0.2, shadow.ThresholdUsed);
+        Assert.Equal(Recommendation.Reject, shadow.Recommendation);
+        Assert.Equal(TestData.Now, shadow.ScoredAt);
+    }
+
+    [Fact]
+    public async Task Shadow_failure_is_kept_and_does_not_change_the_decision()
+    {
+        var (service, ml) = Create(new MlScore(0.3, ModelId));
+        ml.ResultsByModel[Challenger] = new MlFailure(MlErrorCodes.Timeout, null, "slow", []);
+
+        var evaluation = await service.EvaluateAsync(
+            TestData.ContractApplication(), [TestData.ActiveModel(), TestData.ShadowModel(Challenger)], CancellationToken.None);
+
+        Assert.Equal(DecisionStatus.Scored, evaluation.Decision.Status);
+        Assert.Equal(Recommendation.Reject, evaluation.Decision.Recommendation);
+        var shadow = Assert.Single(evaluation.ShadowScores);
+        Assert.Equal((Challenger, DecisionStatus.ScoringUnavailable, MlErrorCodes.Timeout), (shadow.ModelId, shadow.Status, shadow.ErrorCode));
+        Assert.Null(shadow.PBad);
+    }
+
+    [Fact]
+    public async Task Retired_models_are_not_scored()
+    {
+        var (service, ml) = Create(new MlScore(0.1, ModelId));
+        var active = TestData.ActiveModel();
+        var retired = TestData.ShadowModel(Challenger);
+        ModelRegistry.Retire([active, retired], Challenger, "worse", TestData.Officer, TestData.Now);
+
+        var evaluation = await service.EvaluateAsync(TestData.ContractApplication(), [active, retired], CancellationToken.None);
+
+        Assert.Empty(evaluation.ShadowScores);
+        Assert.Equal([ModelId], ml.ScoredModels);
     }
 
     [Fact]
@@ -104,7 +172,7 @@ public class CreditDecisionServiceTests
             .SetValue(application, (LoanPurpose)99);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => service.EvaluateAsync(application, CancellationToken.None));
+            () => service.EvaluateAsync(application, [TestData.ActiveModel()], CancellationToken.None));
         Assert.Null(ml.LastRequest);
     }
 

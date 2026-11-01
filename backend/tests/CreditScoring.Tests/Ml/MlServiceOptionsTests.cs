@@ -12,7 +12,6 @@ public class MlServiceOptionsTests
     {
         BaseUrl = new Uri("http://localhost:8000/"),
         TimeoutSeconds = 5,
-        ExpectedModelId = "credit_rf_isotonic_v1",
     };
 
     [Fact]
@@ -37,15 +36,6 @@ public class MlServiceOptionsTests
     {
         var options = Valid();
         options.TimeoutSeconds = seconds;
-
-        Assert.False(IsValid(options));
-    }
-
-    [Fact]
-    public void Blank_expected_model_id_is_invalid()
-    {
-        var options = Valid();
-        options.ExpectedModelId = "";
 
         Assert.False(IsValid(options));
     }

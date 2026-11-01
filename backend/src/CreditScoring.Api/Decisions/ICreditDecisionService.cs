@@ -4,7 +4,10 @@ namespace CreditScoring.Api.Decisions;
 
 public interface ICreditDecisionService
 {
-    Task<CreditDecision> EvaluateAsync(CreditApplication application, CancellationToken cancellationToken);
+    Task<Evaluation> EvaluateAsync(
+        CreditApplication application,
+        IReadOnlyCollection<ScoringModel> models,
+        CancellationToken cancellationToken);
 
     OfficerDecisionResult RecordOfficerDecision(
         CreditApplication application,
@@ -16,7 +19,10 @@ public interface ICreditDecisionService
 public static class DecisionErrorCodes
 {
     public const string ModelMismatch = "model_mismatch";
+    public const string NoActiveModel = "no_active_model";
 }
+
+public sealed record Evaluation(CreditDecision Decision, IReadOnlyList<ShadowScore> ShadowScores);
 
 public abstract record OfficerDecisionResult;
 

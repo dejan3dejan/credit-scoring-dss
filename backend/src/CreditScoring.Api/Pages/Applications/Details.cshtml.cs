@@ -19,6 +19,8 @@ public class DetailsModel(ApplicationsApi api, IAuthorizationService authorizati
 
     public bool CanDecide { get; private set; }
 
+    public List<ShadowScoreResponse>? ShadowScores { get; private set; }
+
     public async Task<IActionResult> OnGetAsync(Guid id, CancellationToken cancellationToken)
     {
         if (!await LoadAsync(id, cancellationToken))
@@ -57,6 +59,8 @@ public class DetailsModel(ApplicationsApi api, IAuthorizationService authorizati
 
         Application = application;
         CanDecide = (await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
+        if ((await authorization.AuthorizeAsync(User, Policies.CanSeeStats)).Succeeded)
+            ShadowScores = await api.GetShadowScoresAsync(id, cancellationToken);
         return true;
     }
 }

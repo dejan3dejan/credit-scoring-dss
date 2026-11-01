@@ -18,10 +18,15 @@ public sealed record AlreadyDecided : SubmitResult;
 
 public sealed record ClientCreated(ClientResponse Client) : SubmitResult;
 
+public sealed record Done : SubmitResult;
+
+public sealed record Conflicted(string Message) : SubmitResult;
+
 public class ApplicationsApi(HttpClient http)
 {
     private const string Path = "api/applications";
     private const string ClientsPath = "api/clients";
+    private const string ModelsPath = "api/models";
 
     private static readonly JsonSerializerOptions Json = CreateJson();
 
@@ -111,6 +116,57 @@ public class ApplicationsApi(HttpClient http)
         if (response.StatusCode != HttpStatusCode.OK)
             throw Unexpected(response);
         return await ReadAsync<PagedResult<ApplicationSummary>>(response, Json, cancellationToken);
+    }
+
+    public Task<List<ScoringModelResponse>> ListModelsAsync(CancellationToken cancellationToken) =>
+        GetOkAsync<List<ScoringModelResponse>>(ModelsPath, cancellationToken);
+
+    public Task<List<ModelEventResponse>> ListModelEventsAsync(CancellationToken cancellationToken) =>
+        GetOkAsync<List<ModelEventResponse>>($"{ModelsPath}/events", cancellationToken);
+
+    public Task<List<ShadowScoreResponse>> GetShadowScoresAsync(Guid id, CancellationToken cancellationToken) =>
+        GetOkAsync<List<ShadowScoreResponse>>($"{Path}/{id}/shadow-scores", cancellationToken);
+
+    public async Task<List<AvailableModelResponse>?> ListAvailableModelsAsync(CancellationToken cancellationToken)
+    {
+        using var response = await http.GetAsync($"{ModelsPath}/available", cancellationToken);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.OK => await ReadAsync<List<AvailableModelResponse>>(response, Json, cancellationToken),
+            HttpStatusCode.ServiceUnavailable => null,
+            _ => throw Unexpected(response),
+        };
+    }
+
+    public Task<SubmitResult> RegisterModelAsync(string modelId, CancellationToken cancellationToken) =>
+        ChangeModelsAsync(ModelsPath, new RegisterModelRequest { ModelId = modelId }, cancellationToken);
+
+    public Task<SubmitResult> PromoteModelAsync(string modelId, string? reason, CancellationToken cancellationToken) =>
+        ChangeModelsAsync($"{ModelsPath}/{Uri.EscapeDataString(modelId)}/promote", new ChangeModelRoleRequest { Reason = reason }, cancellationToken);
+
+    public Task<SubmitResult> RetireModelAsync(string modelId, string? reason, CancellationToken cancellationToken) =>
+        ChangeModelsAsync($"{ModelsPath}/{Uri.EscapeDataString(modelId)}/retire", new ChangeModelRoleRequest { Reason = reason }, cancellationToken);
+
+    private async Task<SubmitResult> ChangeModelsAsync<TRequest>(string uri, TRequest request, CancellationToken cancellationToken)
+    {
+        using var response = await http.PostAsJsonAsync(uri, request, Json, cancellationToken);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.OK or HttpStatusCode.Created => new Done(),
+            HttpStatusCode.BadRequest => new Invalid(
+                (await ReadAsync<ValidationProblemDetails>(response, JsonSerializerOptions.Web, cancellationToken)).Errors),
+            HttpStatusCode.Conflict => new Conflicted(
+                (await ReadAsync<ProblemDetails>(response, JsonSerializerOptions.Web, cancellationToken)).Title ?? "The change conflicts with another one."),
+            _ => throw Unexpected(response),
+        };
+    }
+
+    private async Task<T> GetOkAsync<T>(string uri, CancellationToken cancellationToken)
+    {
+        using var response = await http.GetAsync(uri, cancellationToken);
+        if (response.StatusCode != HttpStatusCode.OK)
+            throw Unexpected(response);
+        return await ReadAsync<T>(response, Json, cancellationToken);
     }
 
     private static string ListUri(HistoryQuery query)

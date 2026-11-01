@@ -53,17 +53,84 @@ public class MlClientTests
         }));
 
     [Fact]
-    public async Task Posts_the_contract_json_to_v1_predict()
+    public async Task Posts_the_contract_json_to_the_models_v2_predict_path()
     {
         var (client, handler) = Respond(HttpStatusCode.OK, """{"model_id":"m","p_bad":0.2}""");
 
-        await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
+        await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
-        Assert.Equal(new Uri("http://ml.test/v1/predict"), handler.LastRequest.RequestUri);
+        Assert.Equal(new Uri("http://ml.test/v2/models/credit_rf_isotonic_v1/predict"), handler.LastRequest.RequestUri);
         Assert.True(
             JsonNode.DeepEquals(JsonNode.Parse(ContractExampleJson), JsonNode.Parse(handler.LastBody!)),
             handler.LastBody);
+    }
+
+    [Fact]
+    public async Task Model_id_is_escaped_in_the_path()
+    {
+        var (client, handler) = Respond(HttpStatusCode.OK, """{"model_id":"a/b c","p_bad":0.2}""");
+
+        await client.PredictAsync("a/b c", TestData.ContractRequest, CancellationToken.None);
+
+        Assert.Equal("/v2/models/a%2Fb%20c/predict", handler.LastRequest!.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task Unknown_model_keeps_the_model_not_found_code()
+    {
+        var (client, _) = Respond(HttpStatusCode.NotFound,
+            """{"error":{"code":"model_not_found","message":"No loaded model has id 'x'"}}""");
+
+        var result = await client.PredictAsync("x", TestData.ContractRequest, CancellationToken.None);
+
+        var failure = Assert.IsType<MlFailure>(result);
+        Assert.Equal(("model_not_found", 404), (failure.ErrorCode, failure.HttpStatus));
+    }
+
+    [Fact]
+    public async Task Catalog_lists_the_loaded_models()
+    {
+        var (client, handler) = Respond(HttpStatusCode.OK, """
+            {"models":[{"model_id":"credit_lr_isotonic_v1","model_name":"LogisticRegression","dataset":"statlog_german_credit",
+              "recommended_threshold":{"value":0.16666666666666666,"rule":"reject iff P(bad) >= value","derivation":"x"},
+              "created_at":"2026-11-01T19:23:42+00:00","library_versions":{"python":"3.13.8"}}]}
+            """);
+
+        var result = await client.ListModelsAsync(CancellationToken.None);
+
+        Assert.Equal(new Uri("http://ml.test/v2/models"), handler.LastRequest!.RequestUri);
+        var catalog = Assert.IsType<MlCatalog>(result);
+        var model = Assert.Single(catalog.Models);
+        Assert.Equal(
+            new MlModelInfo("credit_lr_isotonic_v1", "LogisticRegression", "statlog_german_credit", 1.0 / 6.0,
+                new DateTimeOffset(2026, 11, 1, 19, 23, 42, TimeSpan.Zero)),
+            model);
+    }
+
+    [Theory]
+    [InlineData("""{"models":[{"model_id":"m","model_name":"x","dataset":"d","created_at":"2026-11-01T00:00:00Z"}]}""")]
+    [InlineData("""{"models":[{"model_id":"","model_name":"x","dataset":"d","recommended_threshold":{"value":0.2},"created_at":"2026-11-01T00:00:00Z"}]}""")]
+    [InlineData("""{"models":[{"model_id":"m","model_name":"x","dataset":"d","recommended_threshold":{"value":1.5},"created_at":"2026-11-01T00:00:00Z"}]}""")]
+    [InlineData("""{}""")]
+    [InlineData("not json")]
+    public async Task Catalog_with_an_unusable_entry_is_unavailable(string body)
+    {
+        var (client, _) = Respond(HttpStatusCode.OK, body);
+
+        var result = await client.ListModelsAsync(CancellationToken.None);
+
+        Assert.Equal(MlErrorCodes.InvalidResponse, Assert.IsType<MlCatalogUnavailable>(result).ErrorCode);
+    }
+
+    [Fact]
+    public async Task Catalog_connection_failure_is_unreachable()
+    {
+        var (client, _) = Create(_ => throw new HttpRequestException("connection refused"));
+
+        var result = await client.ListModelsAsync(CancellationToken.None);
+
+        Assert.Equal(MlErrorCodes.Unreachable, Assert.IsType<MlCatalogUnavailable>(result).ErrorCode);
     }
 
     [Fact]
@@ -71,7 +138,7 @@ public class MlClientTests
     {
         var (client, _) = Respond(HttpStatusCode.OK, """{"model_id":"credit_rf_isotonic_v1","p_bad":0.2731}""");
 
-        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         Assert.Equal(new MlScore(0.2731, "credit_rf_isotonic_v1"), result);
     }
@@ -89,7 +156,7 @@ public class MlClientTests
     {
         var (client, _) = Respond(HttpStatusCode.OK, body);
 
-        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(MlErrorCodes.InvalidResponse, failure.ErrorCode);
@@ -105,7 +172,7 @@ public class MlClientTests
         var body = $$$"""{"error":{"code":"{{{code}}}","message":"from service"}}""";
         var (client, _) = Respond((HttpStatusCode)status, body);
 
-        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(code, failure.ErrorCode);
@@ -124,7 +191,7 @@ public class MlClientTests
             """;
         var (client, _) = Respond(HttpStatusCode.UnprocessableEntity, body);
 
-        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(
@@ -141,7 +208,7 @@ public class MlClientTests
     {
         var (client, _) = Respond((HttpStatusCode)status, body);
 
-        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(MlErrorCodes.UnexpectedStatus, failure.ErrorCode);
@@ -159,7 +226,7 @@ public class MlClientTests
             },
             TimeSpan.FromMilliseconds(50));
 
-        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(MlErrorCodes.Timeout, failure.ErrorCode);
@@ -171,7 +238,7 @@ public class MlClientTests
     {
         var (client, _) = Create(_ => throw new HttpRequestException("connection refused"));
 
-        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(MlErrorCodes.Unreachable, failure.ErrorCode);
@@ -189,6 +256,6 @@ public class MlClientTests
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => client.PredictAsync(TestData.ContractRequest, cts.Token));
+            () => client.PredictAsync(TestData.ModelId, TestData.ContractRequest, cts.Token));
     }
 }

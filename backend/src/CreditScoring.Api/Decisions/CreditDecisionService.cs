@@ -1,19 +1,36 @@
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
-using Microsoft.Extensions.Options;
 
 namespace CreditScoring.Api.Decisions;
 
 public class CreditDecisionService(
     IMlClient ml,
-    IOptions<MlServiceOptions> mlOptions,
-    IOptions<DecisionOptions> decisionOptions,
     TimeProvider time,
     ILogger<CreditDecisionService> logger) : ICreditDecisionService
 {
-    public async Task<CreditDecision> EvaluateAsync(CreditApplication application, CancellationToken cancellationToken)
+    public async Task<Evaluation> EvaluateAsync(
+        CreditApplication application,
+        IReadOnlyCollection<ScoringModel> models,
+        CancellationToken cancellationToken)
     {
-        var result = await ml.PredictAsync(StatlogMapper.ToMlRequest(application), cancellationToken);
+        var request = StatlogMapper.ToMlRequest(application);
+        if (models.SingleOrDefault(m => m.Role == ModelRole.Active) is not { } active)
+        {
+            logger.LogError("No active scoring model is registered; recording the application as unscored");
+            return new Evaluation(CreditDecision.Unavailable(DecisionErrorCodes.NoActiveModel, time.GetUtcNow()), []);
+        }
+
+        var shadows = models.Where(m => m.Role == ModelRole.Shadow).ToList();
+        var decision = ScoreAsync(active, request, cancellationToken);
+        var shadowScores = shadows.Select(m => ScoreAsync(m, request, cancellationToken)).ToList();
+
+        var results = await Task.WhenAll(shadowScores.Prepend(decision));
+        return new Evaluation(results[0], shadows.Select((m, i) => ShadowScore.Of(m, results[i + 1])).ToList());
+    }
+
+    private async Task<CreditDecision> ScoreAsync(ScoringModel model, MlPredictRequest request, CancellationToken cancellationToken)
+    {
+        var result = await ml.PredictAsync(model.ModelId, request, cancellationToken);
         var now = time.GetUtcNow();
 
         switch (result)
@@ -21,16 +38,15 @@ public class CreditDecisionService(
             case MlFailure failure:
                 return CreditDecision.Unavailable(failure.ErrorCode, now);
 
-            case MlScore score when score.ModelId != mlOptions.Value.ExpectedModelId:
+            case MlScore score when score.ModelId != model.ModelId:
                 logger.LogWarning(
-                    "ML service answered with model {ModelId}, expected {ExpectedModelId}; not applying the threshold",
-                    score.ModelId, mlOptions.Value.ExpectedModelId);
+                    "ML service answered with model {ModelId}, asked for {RequestedModelId}; not applying the threshold",
+                    score.ModelId, model.ModelId);
                 return CreditDecision.Unavailable(DecisionErrorCodes.ModelMismatch, now);
 
             case MlScore score:
-                var threshold = decisionOptions.Value.RejectThreshold;
-                var recommendation = score.PBad >= threshold ? Recommendation.Reject : Recommendation.Approve;
-                return CreditDecision.Scored(score.PBad, score.ModelId, threshold, recommendation, now);
+                var recommendation = score.PBad >= model.Threshold ? Recommendation.Reject : Recommendation.Approve;
+                return CreditDecision.Scored(score.PBad, score.ModelId, model.Threshold, recommendation, now);
 
             default:
                 throw new InvalidOperationException($"unhandled ML result type {result.GetType().Name}");

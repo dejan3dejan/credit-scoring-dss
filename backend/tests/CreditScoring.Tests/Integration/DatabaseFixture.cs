@@ -33,6 +33,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await using var db = CreateContext();
         await db.Applications.ExecuteDeleteAsync();
         await db.Clients.ExecuteDeleteAsync();
+        await db.ModelEvents.ExecuteDeleteAsync();
+        await db.ScoringModels.Where(m => m.ModelId != TestData.ModelId).ExecuteDeleteAsync();
+        await db.ScoringModels.ExecuteUpdateAsync(m => m.SetProperty(x => x.Role, ModelRole.Active));
     }
 
     public Task DisposeAsync() => Task.CompletedTask;

@@ -1,21 +1,32 @@
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Ml;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace CreditScoring.Tests;
 
 internal sealed class FakeMlClient : IMlClient
 {
+    private readonly Lock gate = new();
+
     public MlScoreResult Result { get; set; } = new MlScore(0.1, TestData.ModelId);
+    public Dictionary<string, MlScoreResult> ResultsByModel { get; } = [];
+    public List<string> ScoredModels { get; } = [];
     public MlPredictRequest? LastRequest { get; private set; }
 
-    public Task<MlScoreResult> PredictAsync(MlPredictRequest request, CancellationToken cancellationToken)
+    public MlCatalogResult Catalog { get; set; } = new MlCatalog([]);
+
+    public Task<MlScoreResult> PredictAsync(string modelId, MlPredictRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        LastRequest = request;
-        return Task.FromResult(Result);
+        lock (gate)
+        {
+            ScoredModels.Add(modelId);
+            LastRequest = request;
+        }
+        return Task.FromResult(ResultsByModel.GetValueOrDefault(modelId, Result));
     }
+
+    public Task<MlCatalogResult> ListModelsAsync(CancellationToken cancellationToken) => Task.FromResult(Catalog);
 }
 
 internal sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider
@@ -27,18 +38,6 @@ internal sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider
 
 internal static class TestServices
 {
-    public static CreditDecisionService DecisionService(
-        IMlClient ml,
-        TimeProvider time,
-        double threshold = TestData.Threshold) => new(
-        ml,
-        Options.Create(new MlServiceOptions
-        {
-            BaseUrl = new Uri("http://ml.test/"),
-            TimeoutSeconds = 5,
-            ExpectedModelId = TestData.ModelId,
-        }),
-        Options.Create(new DecisionOptions { RejectThreshold = threshold }),
-        time,
-        NullLogger<CreditDecisionService>.Instance);
+    public static CreditDecisionService DecisionService(IMlClient ml, TimeProvider time) =>
+        new(ml, time, NullLogger<CreditDecisionService>.Instance);
 }

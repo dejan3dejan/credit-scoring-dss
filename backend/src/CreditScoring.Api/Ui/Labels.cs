@@ -84,6 +84,10 @@ public static class Labels
         [ReviewFilter.Approved] = "Approved",
         [ReviewFilter.Rejected] = "Rejected",
         [ReviewFilter.Override] = "Overrides",
+
+        [ModelRole.Active] = "Active",
+        [ModelRole.Shadow] = "Shadow",
+        [ModelRole.Retired] = "Retired",
     };
 
     private static readonly Dictionary<string, string> ScoringErrors = new()
@@ -92,11 +96,21 @@ public static class Labels
         [MlErrorCodes.Unreachable] = "The scoring service could not be reached.",
         [MlErrorCodes.UnexpectedStatus] = "The scoring service answered with an unexpected error.",
         [MlErrorCodes.InvalidResponse] = "The scoring service returned a score that could not be used.",
-        [DecisionErrorCodes.ModelMismatch] = "The score came from a model this system is not configured for.",
+        [DecisionErrorCodes.ModelMismatch] = "The score came from a different model than the one asked for.",
+        [DecisionErrorCodes.NoActiveModel] = "No scoring model is set as active.",
+        ["model_not_found"] = "The scoring service does not have this model loaded.",
         ["validation_error"] = "The scoring service rejected the input.",
         ["model_unavailable"] = "The scoring model is not loaded.",
         ["internal_error"] = "The scoring service failed while scoring.",
     };
+
+    private static readonly Dictionary<string, string> ModelNames = new()
+    {
+        ["RandomForest"] = "Random forest",
+        ["LogisticRegression"] = "Logistic regression",
+    };
+
+    public static string ModelName(string name) => ModelNames.GetValueOrDefault(name, name);
 
     public static string Of(Enum value) =>
         All.TryGetValue(value, out var label)

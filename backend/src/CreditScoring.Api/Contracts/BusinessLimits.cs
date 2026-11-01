@@ -24,4 +24,5 @@ public static class BusinessLimits
     public const int SubmittedByMaxLength = 100;
     public const int DecisionReasonMaxLength = 500;
     public const int UserNameMaxLength = 64;
+    public const int ModelIdMaxLength = 100;
 }

@@ -284,4 +284,36 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         Assert.True(summary.IsOverride);
         Assert.Null((await History(new HistoryQuery { Review = ReviewFilter.Pending })).Items.Single().FinalDecision);
     }
+
+    private async Task RegisterShadow(string modelId)
+    {
+        await using var db = database.CreateContext();
+        var (model, registered) = ModelRegistry.Register(modelId, "LogisticRegression", TestData.Dataset, TestData.Threshold, database.Officer.AsActor(), TestData.Now);
+        db.ScoringModels.Add(model);
+        db.ModelEvents.Add(registered);
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Submitting_stores_the_shadow_scores_beside_the_active_decision()
+    {
+        const string challenger = "credit_lr_isotonic_v1";
+        await RegisterShadow(challenger);
+        ml.ResultsByModel[challenger] = new MlScore(0.3, challenger);
+
+        var created = await Submit("Shadowed", new MlScore(0.1, TestData.ModelId));
+
+        Assert.Equal(Recommendation.Approve, created.Decision!.Recommendation);
+        var shadows = Assert.IsType<OkObjectResult>((await WithController(c => c.ShadowScores(created.Id, CancellationToken.None))).Result);
+        var shadow = Assert.Single(Assert.IsAssignableFrom<IEnumerable<ShadowScoreResponse>>(shadows.Value));
+        Assert.Equal((challenger, 0.3, Recommendation.Reject), (shadow.ModelId, shadow.PBad, shadow.Recommendation));
+    }
+
+    [Fact]
+    public async Task Shadow_scores_for_unknown_application_are_not_found()
+    {
+        var response = await WithController(c => c.ShadowScores(Guid.NewGuid(), CancellationToken.None));
+
+        Assert.IsType<NotFoundResult>(response.Result);
+    }
 }

@@ -30,10 +30,6 @@ builder.Services.AddHttpClient<IMlClient, MlClient>((services, client) =>
     client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 });
 
-builder.Services.AddOptions<DecisionOptions>()
-    .Bind(builder.Configuration.GetSection(DecisionOptions.SectionName))
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ICreditDecisionService, CreditDecisionService>();
 builder.Services.AddControllers(options =>

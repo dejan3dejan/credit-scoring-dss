@@ -11,41 +11,77 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
-    public async Task<MlScoreResult> PredictAsync(MlPredictRequest request, CancellationToken cancellationToken)
+    public async Task<MlScoreResult> PredictAsync(string modelId, MlPredictRequest request, CancellationToken cancellationToken)
     {
-        var result = await SendAsync(request, cancellationToken);
+        var result = await SendAsync(modelId, request, cancellationToken);
         if (result is MlFailure failure)
         {
             logger.LogWarning(
-                "ML scoring failed: {ErrorCode} (HTTP {HttpStatus}) {Message} {@Details}",
-                failure.ErrorCode, failure.HttpStatus, failure.Message, failure.Details);
+                "ML scoring with {ModelId} failed: {ErrorCode} (HTTP {HttpStatus}) {Message} {@Details}",
+                modelId, failure.ErrorCode, failure.HttpStatus, failure.Message, failure.Details);
         }
         return result;
     }
 
-    private async Task<MlScoreResult> SendAsync(MlPredictRequest request, CancellationToken cancellationToken)
+    public async Task<MlCatalogResult> ListModelsAsync(CancellationToken cancellationToken)
     {
-        HttpResponseMessage response;
-        string body;
+        var (failure, status, body) = await SendAsync(() => http.GetAsync("v2/models", cancellationToken), cancellationToken);
+        failure ??= status == HttpStatusCode.OK ? null : ParseError((int)status, body);
+        if (failure is null && ParseCatalog(body) is { } catalog)
+            return catalog;
+
+        failure ??= Failure(MlErrorCodes.InvalidResponse, 200, $"unusable catalog body: {Truncate(body)}");
+        logger.LogWarning("ML model catalog failed: {ErrorCode} (HTTP {HttpStatus}) {Message}",
+            failure.ErrorCode, failure.HttpStatus, failure.Message);
+        return new MlCatalogUnavailable(failure.ErrorCode, failure.Message);
+    }
+
+    private async Task<MlScoreResult> SendAsync(string modelId, MlPredictRequest request, CancellationToken cancellationToken)
+    {
+        var path = $"v2/models/{Uri.EscapeDataString(modelId)}/predict";
+        var (failure, status, body) = await SendAsync(() => http.PostAsJsonAsync(path, request, Json, cancellationToken), cancellationToken);
+        if (failure is not null)
+            return failure;
+        return status == HttpStatusCode.OK ? ParseScore(body) : ParseError((int)status, body);
+    }
+
+    private async Task<(MlFailure? Failure, HttpStatusCode Status, string Body)> SendAsync(
+        Func<Task<HttpResponseMessage>> send,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            response = await http.PostAsJsonAsync("v1/predict", request, Json, cancellationToken);
-            body = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var response = await send();
+            return (null, response.StatusCode, await response.Content.ReadAsStringAsync(cancellationToken));
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Failure(MlErrorCodes.Timeout, null, $"no response within {http.Timeout.TotalSeconds:0.###} s");
+            return (Failure(MlErrorCodes.Timeout, null, $"no response within {http.Timeout.TotalSeconds:0.###} s"), 0, "");
         }
         catch (HttpRequestException ex)
         {
-            return Failure(MlErrorCodes.Unreachable, null, ex.Message);
+            return (Failure(MlErrorCodes.Unreachable, null, ex.Message), 0, "");
         }
+    }
 
-        using (response)
+    private static MlCatalog? ParseCatalog(string body)
+    {
+        var models = TryDeserialize<CatalogBody>(body)?.Models;
+        if (models is null)
+            return null;
+
+        var parsed = new List<MlModelInfo>();
+        foreach (var m in models)
         {
-            var status = (int)response.StatusCode;
-            return response.StatusCode == HttpStatusCode.OK ? ParseScore(body) : ParseError(status, body);
+            if (string.IsNullOrWhiteSpace(m.ModelId) || string.IsNullOrWhiteSpace(m.ModelName) || string.IsNullOrWhiteSpace(m.Dataset)
+                || m.RecommendedThreshold?.Value is not { } threshold || !double.IsFinite(threshold) || threshold <= 0 || threshold >= 1
+                || m.CreatedAt is not { } createdAt)
+            {
+                return null;
+            }
+            parsed.Add(new MlModelInfo(m.ModelId, m.ModelName, m.Dataset, threshold, createdAt));
         }
+        return new MlCatalog(parsed);
     }
 
     private static MlScoreResult ParseScore(string body)
@@ -59,7 +95,7 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
         return new MlScore(pBad, parsed.ModelId);
     }
 
-    private static MlScoreResult ParseError(int status, string body)
+    private static MlFailure ParseError(int status, string body)
     {
         var error = TryDeserialize<ErrorEnvelope>(body)?.Error;
         if (error is null || string.IsNullOrWhiteSpace(error.Code))
@@ -92,6 +128,25 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
     {
         public string? ModelId { get; init; }
         public double? PBad { get; init; }
+    }
+
+    private sealed class CatalogBody
+    {
+        public List<CatalogModelBody>? Models { get; init; }
+    }
+
+    private sealed class CatalogModelBody
+    {
+        public string? ModelId { get; init; }
+        public string? ModelName { get; init; }
+        public string? Dataset { get; init; }
+        public ThresholdBody? RecommendedThreshold { get; init; }
+        public DateTimeOffset? CreatedAt { get; init; }
+    }
+
+    private sealed class ThresholdBody
+    {
+        public double? Value { get; init; }
     }
 
     private sealed class ErrorEnvelope

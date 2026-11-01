@@ -7,7 +7,6 @@ using CreditScoring.Api.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace CreditScoring.Api.Controllers;
 
@@ -34,7 +33,10 @@ public class ApplicationsController(
         }
 
         var application = request.ToDomain(time.GetUtcNow(), Credentials.ActorOf(User), client);
-        application.Decision = await decisions.EvaluateAsync(application, cancellationToken);
+        var models = await db.ScoringModels.AsNoTracking().ToListAsync(cancellationToken);
+        var evaluation = await decisions.EvaluateAsync(application, models, cancellationToken);
+        application.Decision = evaluation.Decision;
+        application.ShadowScores.AddRange(evaluation.ShadowScores);
 
         db.Applications.Add(application);
         await db.SaveChangesAsync(CancellationToken.None);
@@ -55,6 +57,23 @@ public class ApplicationsController(
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
         return application is null ? NotFound() : ApplicationResponse.From(application);
+    }
+
+    [HttpGet("{id:guid}/shadow-scores")]
+    [Authorize(Policy = Policies.CanSeeStats)]
+    [ProducesResponseType<IReadOnlyList<ShadowScoreResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<ShadowScoreResponse>>> ShadowScores(Guid id, CancellationToken cancellationToken)
+    {
+        if (!await db.Applications.AnyAsync(a => a.Id == id, cancellationToken))
+            return NotFound();
+
+        var scores = await db.ShadowScores
+            .AsNoTracking()
+            .Where(s => s.CreditApplicationId == id)
+            .OrderBy(s => s.ModelId)
+            .ToListAsync(cancellationToken);
+        return Ok(scores.Select(ShadowScoreResponse.From).ToList());
     }
 
     [HttpPost("{id:guid}/decision")]
@@ -84,7 +103,7 @@ public class ApplicationsController(
                 {
                     await db.SaveChangesAsync(CancellationToken.None);
                 }
-                catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+                catch (DbUpdateException ex) when (Pg.IsUniqueViolation(ex))
                 {
                     return AlreadyDecidedConflict();
                 }

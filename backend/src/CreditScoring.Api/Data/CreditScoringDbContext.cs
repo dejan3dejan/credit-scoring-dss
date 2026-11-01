@@ -12,6 +12,9 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
     public DbSet<OfficerDecision> OfficerDecisions => Set<OfficerDecision>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Client> Clients => Set<Client>();
+    public DbSet<ScoringModel> ScoringModels => Set<ScoringModel>();
+    public DbSet<ModelEvent> ModelEvents => Set<ModelEvent>();
+    public DbSet<ShadowScore> ShadowScores => Set<ShadowScore>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -54,6 +57,48 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
                 .WithOne()
                 .HasForeignKey<OfficerDecision>(d => d.CreditApplicationId)
                 .OnDelete(DeleteBehavior.Cascade);
+            application.HasMany(a => a.ShadowScores)
+                .WithOne()
+                .HasForeignKey(s => s.CreditApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ScoringModel>(model =>
+        {
+            model.ToTable("scoring_models", table =>
+                table.HasCheckConstraint("ck_scoring_models_threshold_range", "threshold > 0 AND threshold < 1"));
+            model.HasKey(m => m.ModelId);
+            model.Property(m => m.ModelId).HasMaxLength(BusinessLimits.ModelIdMaxLength);
+            model.Property(m => m.DisplayName).HasMaxLength(BusinessLimits.ModelIdMaxLength);
+            model.Property(m => m.Dataset).HasMaxLength(BusinessLimits.ModelIdMaxLength);
+            model.HasOne<User>().WithMany().HasForeignKey(m => m.RegisteredByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ModelEvent>(change =>
+        {
+            change.ToTable("model_events");
+            change.Property(e => e.ModelId).HasMaxLength(BusinessLimits.ModelIdMaxLength);
+            change.Property(e => e.Reason).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
+            change.Property(e => e.ChangedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            change.HasIndex(e => e.ChangedAt);
+            change.HasOne<ScoringModel>().WithMany().HasForeignKey(e => e.ModelId).OnDelete(DeleteBehavior.Restrict);
+            change.HasOne<User>().WithMany().HasForeignKey(e => e.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ShadowScore>(shadow =>
+        {
+            shadow.ToTable("shadow_scores", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_shadow_scores_status_fields",
+                    "(status = 'Scored' AND p_bad IS NOT NULL AND threshold_used IS NOT NULL AND recommendation IS NOT NULL AND error_code IS NULL)"
+                    + " OR (status = 'ScoringUnavailable' AND error_code IS NOT NULL AND p_bad IS NULL AND threshold_used IS NULL AND recommendation IS NULL)");
+                table.HasCheckConstraint("ck_shadow_scores_p_bad_range", "p_bad >= 0 AND p_bad <= 1");
+            });
+            shadow.Property(s => s.ModelId).HasMaxLength(BusinessLimits.ModelIdMaxLength);
+            shadow.Property(s => s.ErrorCode).HasMaxLength(64);
+            shadow.HasIndex(s => new { s.CreditApplicationId, s.ModelId }).IsUnique();
+            shadow.HasOne<ScoringModel>().WithMany().HasForeignKey(s => s.ModelId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<OfficerDecision>(decision =>

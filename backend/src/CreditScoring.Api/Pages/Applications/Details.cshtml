@@ -198,6 +198,46 @@
     </aside>
 </section>
 
+@if (Model.ShadowScores is { } shadows)
+{
+    <h2 class="section-title">Other models</h2>
+    <section class="panel">
+        @if (shadows.Count == 0)
+        {
+            <div class="empty">
+                <h2>No shadow models scored this application</h2>
+                <p>Models registered as shadows score new applications next to the active one.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var s in shadows)
+            {
+                var agrees = s.Recommendation is { } sr && d?.Recommendation is { } dr && sr == dr;
+                <div class="shadow-row">
+                    <div>
+                        <div class="mono">@s.ModelId</div>
+                        <div class="registry-meta">@s.ScoredAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")@(s.ThresholdUsed is { } st ? $" · rejects at {st:P1}" : "")</div>
+                    </div>
+                    <div class="shadow-score">
+                        @if (s.Status == DecisionStatus.Scored && s.Recommendation is { } shadowRecommendation)
+                        {
+                            <span class="num">@s.PBad?.ToString("P1")</span>
+                            <span class="status status-@(shadowRecommendation == Recommendation.Approve ? "approve" : "reject")">@Labels.Of(shadowRecommendation)</span>
+                            <span class="tag @(agrees ? "tag-agree" : "tag-override")">@(agrees ? "Agrees" : "Differs")</span>
+                        }
+                        else
+                        {
+                            <span class="status status-unavailable" title="@Labels.ScoringError(s.ErrorCode ?? "")">Not scored (@s.ErrorCode)</span>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        <div class="panel-foot">Shown to managers and risk staff only. Shadow scores never change the recommendation or the officer's decision.</div>
+    </section>
+}
+
 <h2 class="section-title">Application as submitted</h2>
 <div class="cards">
     <section class="panel">
