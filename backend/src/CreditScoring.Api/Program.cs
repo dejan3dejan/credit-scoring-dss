@@ -1,4 +1,5 @@
 using CreditScoring.Api.Data;
+using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Ml;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -20,6 +21,13 @@ builder.Services.AddHttpClient<IMlClient, MlClient>((services, client) =>
     client.BaseAddress = options.BaseUrl;
     client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 });
+
+builder.Services.AddOptions<DecisionOptions>()
+    .Bind(builder.Configuration.GetSection(DecisionOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<ICreditDecisionService, CreditDecisionService>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 

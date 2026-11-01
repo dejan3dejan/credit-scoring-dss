@@ -8,30 +8,6 @@ namespace CreditScoring.Tests.Ml;
 
 public class MlClientTests
 {
-    private static readonly MlPredictRequest ContractExample = new()
-    {
-        CheckingAccountStatus = "A12",
-        DurationMonths = 24,
-        CreditHistory = "A32",
-        Purpose = "A43",
-        CreditAmount = 3500,
-        SavingsAccount = "A61",
-        EmploymentDuration = "A73",
-        InstallmentRate = 3,
-        PersonalStatusSex = "A93",
-        OtherDebtorsGuarantors = "A101",
-        PresentResidenceSince = 2,
-        Property = "A123",
-        Age = 35,
-        OtherInstallmentPlans = "A143",
-        Housing = "A152",
-        ExistingCreditsCount = 1,
-        Job = "A173",
-        NumPeopleLiable = 1,
-        Telephone = "A191",
-        ForeignWorker = "A201",
-    };
-
     private const string ContractExampleJson = """
         {
           "checking_account_status": "A12",
@@ -81,7 +57,7 @@ public class MlClientTests
     {
         var (client, handler) = Respond(HttpStatusCode.OK, """{"model_id":"m","p_bad":0.2}""");
 
-        await client.PredictAsync(ContractExample, CancellationToken.None);
+        await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
 
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
         Assert.Equal(new Uri("http://ml.test/v1/predict"), handler.LastRequest.RequestUri);
@@ -95,7 +71,7 @@ public class MlClientTests
     {
         var (client, _) = Respond(HttpStatusCode.OK, """{"model_id":"credit_rf_isotonic_v1","p_bad":0.2731}""");
 
-        var result = await client.PredictAsync(ContractExample, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
 
         Assert.Equal(new MlScore(0.2731, "credit_rf_isotonic_v1"), result);
     }
@@ -113,7 +89,7 @@ public class MlClientTests
     {
         var (client, _) = Respond(HttpStatusCode.OK, body);
 
-        var result = await client.PredictAsync(ContractExample, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(MlErrorCodes.InvalidResponse, failure.ErrorCode);
@@ -129,7 +105,7 @@ public class MlClientTests
         var body = $$$"""{"error":{"code":"{{{code}}}","message":"from service"}}""";
         var (client, _) = Respond((HttpStatusCode)status, body);
 
-        var result = await client.PredictAsync(ContractExample, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(code, failure.ErrorCode);
@@ -148,7 +124,7 @@ public class MlClientTests
             """;
         var (client, _) = Respond(HttpStatusCode.UnprocessableEntity, body);
 
-        var result = await client.PredictAsync(ContractExample, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(
@@ -165,7 +141,7 @@ public class MlClientTests
     {
         var (client, _) = Respond((HttpStatusCode)status, body);
 
-        var result = await client.PredictAsync(ContractExample, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(MlErrorCodes.UnexpectedStatus, failure.ErrorCode);
@@ -183,7 +159,7 @@ public class MlClientTests
             },
             TimeSpan.FromMilliseconds(50));
 
-        var result = await client.PredictAsync(ContractExample, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(MlErrorCodes.Timeout, failure.ErrorCode);
@@ -195,7 +171,7 @@ public class MlClientTests
     {
         var (client, _) = Create(_ => throw new HttpRequestException("connection refused"));
 
-        var result = await client.PredictAsync(ContractExample, CancellationToken.None);
+        var result = await client.PredictAsync(TestData.ContractRequest, CancellationToken.None);
 
         var failure = Assert.IsType<MlFailure>(result);
         Assert.Equal(MlErrorCodes.Unreachable, failure.ErrorCode);
@@ -213,6 +189,6 @@ public class MlClientTests
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => client.PredictAsync(ContractExample, cts.Token));
+            () => client.PredictAsync(TestData.ContractRequest, cts.Token));
     }
 }
