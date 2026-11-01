@@ -1,49 +1,20 @@
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace CreditScoring.Tests.Decisions;
 
 public class CreditDecisionServiceTests
 {
-    private const string ModelId = "credit_rf_isotonic_v1";
-    private const double Threshold = 1.0 / 6.0;
+    private const string ModelId = TestData.ModelId;
+    private const double Threshold = TestData.Threshold;
 
-    private sealed class FakeMlClient : IMlClient
-    {
-        public MlScoreResult Result { get; set; } = new MlScore(0.1, ModelId);
-        public MlPredictRequest? LastRequest { get; private set; }
-
-        public Task<MlScoreResult> PredictAsync(MlPredictRequest request, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            LastRequest = request;
-            return Task.FromResult(Result);
-        }
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
-    private static (CreditDecisionService Service, FakeMlClient Ml) Create(MlScoreResult result)
+    private static (CreditDecisionService Service, FakeMlClient Ml) Create(
+        MlScoreResult result,
+        double threshold = Threshold)
     {
         var ml = new FakeMlClient { Result = result };
-        var service = new CreditDecisionService(
-            ml,
-            Options.Create(new MlServiceOptions
-            {
-                BaseUrl = new Uri("http://ml.test/"),
-                TimeoutSeconds = 5,
-                ExpectedModelId = ModelId,
-            }),
-            Options.Create(new DecisionOptions { RejectThreshold = Threshold }),
-            new FixedTimeProvider(TestData.Now),
-            NullLogger<CreditDecisionService>.Instance);
-        return (service, ml);
+        return (TestServices.DecisionService(ml, new ManualTimeProvider(TestData.Now), threshold), ml);
     }
 
     private static Task<CreditDecision> Evaluate(MlScoreResult result, CancellationToken ct = default) =>
@@ -73,6 +44,17 @@ public class CreditDecisionServiceTests
 
         Assert.Equal(DecisionStatus.Scored, decision.Status);
         Assert.Equal(Recommendation.Reject, decision.Recommendation);
+    }
+
+    [Fact]
+    public async Task Threshold_comes_from_configuration()
+    {
+        var (service, _) = Create(new MlScore(0.3, ModelId), threshold: 0.5);
+
+        var decision = await service.EvaluateAsync(TestData.ContractApplication(), CancellationToken.None);
+
+        Assert.Equal(Recommendation.Approve, decision.Recommendation);
+        Assert.Equal(0.5, decision.ThresholdUsed);
     }
 
     [Theory]
@@ -111,6 +93,19 @@ public class CreditDecisionServiceTests
         await service.EvaluateAsync(TestData.ContractApplication(), CancellationToken.None);
 
         Assert.Equal(TestData.ContractRequest, ml.LastRequest);
+    }
+
+    [Fact]
+    public async Task Impossible_application_throws_before_calling_the_ml_client()
+    {
+        var (service, ml) = Create(new MlScore(0.1, ModelId));
+        var application = TestData.ContractApplication();
+        typeof(CreditApplication).GetProperty(nameof(CreditApplication.Purpose))!
+            .SetValue(application, (LoanPurpose)99);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => service.EvaluateAsync(application, CancellationToken.None));
+        Assert.Null(ml.LastRequest);
     }
 
     [Fact]

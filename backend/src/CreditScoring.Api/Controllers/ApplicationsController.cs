@@ -54,7 +54,7 @@ public class ApplicationsController(
         if (!string.IsNullOrWhiteSpace(query.ApplicantName))
         {
             var pattern = "%" + EscapeLike(query.ApplicantName.Trim()) + "%";
-            applications = applications.Where(a => EF.Functions.ILike(a.ApplicantName, pattern));
+            applications = applications.Where(a => EF.Functions.ILike(a.ApplicantName, pattern, @"\"));
         }
         if (query.From is { } from)
         {

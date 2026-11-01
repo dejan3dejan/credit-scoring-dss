@@ -7,31 +7,7 @@ namespace CreditScoring.Tests.Contracts;
 
 public class CreateApplicationRequestTests
 {
-    private static CreateApplicationRequest Valid() => new()
-    {
-        ApplicantName = "  Test Applicant ",
-        SubmittedBy = " tester ",
-        DurationMonths = 24,
-        CreditAmount = 3500,
-        Age = 35,
-        InstallmentSharePercent = 22m,
-        YearsAtResidence = 2,
-        CreditsAtBank = 1,
-        Dependants = 0,
-        CheckingAccountStatus = CheckingAccountStatus.Negative,
-        CreditHistory = CreditHistory.NoCreditsOrAllPaidDuly,
-        Purpose = LoanPurpose.FurnitureOrEquipment,
-        SavingsAccount = SavingsAccount.UnknownOrNone,
-        EmploymentDuration = EmploymentDuration.From1To4Years,
-        PersonalStatusSex = PersonalStatusSex.MaleMarriedOrWidowed,
-        OtherDebtors = OtherDebtors.None,
-        Property = PropertyType.BuildingSocietySavingsOrLifeInsurance,
-        OtherInstallmentPlans = OtherInstallmentPlans.None,
-        Housing = Housing.Rent,
-        Job = JobType.SkilledEmployeeOrOfficial,
-        HasRegisteredTelephone = false,
-        IsForeignWorker = false,
-    };
+    private static CreateApplicationRequest Valid() => TestData.ValidRequest();
 
     private static List<string> Errors(CreateApplicationRequest request)
     {

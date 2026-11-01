@@ -1,3 +1,4 @@
+using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
 
@@ -5,7 +6,36 @@ namespace CreditScoring.Tests;
 
 internal static class TestData
 {
+    public const string ModelId = "credit_rf_isotonic_v1";
+    public const double Threshold = 1.0 / 6.0;
+
     public static readonly DateTimeOffset Now = new(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
+
+    public static CreateApplicationRequest ValidRequest() => new()
+    {
+        ApplicantName = "  Test Applicant ",
+        SubmittedBy = " tester ",
+        DurationMonths = 24,
+        CreditAmount = 3500,
+        Age = 35,
+        InstallmentSharePercent = 22m,
+        YearsAtResidence = 2,
+        CreditsAtBank = 1,
+        Dependants = 0,
+        CheckingAccountStatus = CheckingAccountStatus.Negative,
+        CreditHistory = CreditHistory.NoCreditsOrAllPaidDuly,
+        Purpose = LoanPurpose.FurnitureOrEquipment,
+        SavingsAccount = SavingsAccount.UnknownOrNone,
+        EmploymentDuration = EmploymentDuration.From1To4Years,
+        PersonalStatusSex = PersonalStatusSex.MaleMarriedOrWidowed,
+        OtherDebtors = OtherDebtors.None,
+        Property = PropertyType.BuildingSocietySavingsOrLifeInsurance,
+        OtherInstallmentPlans = OtherInstallmentPlans.None,
+        Housing = Housing.Rent,
+        Job = JobType.SkilledEmployeeOrOfficial,
+        HasRegisteredTelephone = false,
+        IsForeignWorker = false,
+    };
 
     public static readonly MlPredictRequest ContractRequest = new()
     {

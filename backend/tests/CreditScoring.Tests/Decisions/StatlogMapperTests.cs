@@ -1,5 +1,6 @@
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Domain;
+using CreditScoring.Api.Ml;
 
 namespace CreditScoring.Tests.Decisions;
 
@@ -12,6 +13,63 @@ public class StatlogMapperTests
     public void Contract_example_application_maps_to_the_contract_example_request()
     {
         Assert.Equal(TestData.ContractRequest, StatlogMapper.ToMlRequest(TestData.ContractApplication()));
+    }
+
+    [Fact]
+    public void Every_field_lands_in_its_own_slot()
+    {
+        var application = new CreditApplication
+        {
+            ApplicantName = "Distinct Codes",
+            SubmittedBy = "tester",
+            SubmittedAt = TestData.Now,
+            DurationMonths = 60,
+            CreditAmount = 15_000,
+            Age = 70,
+            InstallmentSharePercent = 40m,
+            YearsAtResidence = 7,
+            CreditsAtBank = 6,
+            Dependants = 3,
+            CheckingAccountStatus = CheckingAccountStatus.NoAccount,
+            CreditHistory = CreditHistory.PastPaymentDelays,
+            Purpose = LoanPurpose.Business,
+            SavingsAccount = SavingsAccount.AtLeast1000,
+            EmploymentDuration = EmploymentDuration.Unemployed,
+            PersonalStatusSex = PersonalStatusSex.FemaleSingle,
+            OtherDebtors = OtherDebtors.Guarantor,
+            Property = PropertyType.RealEstate,
+            OtherInstallmentPlans = OtherInstallmentPlans.Bank,
+            Housing = Housing.ForFree,
+            Job = JobType.ManagerSelfEmployedOrHighlyQualified,
+            HasRegisteredTelephone = true,
+            IsForeignWorker = false,
+        };
+
+        var expected = new MlPredictRequest
+        {
+            CheckingAccountStatus = "A11",
+            DurationMonths = 60,
+            CreditHistory = "A30",
+            Purpose = "A410",
+            CreditAmount = 15_000,
+            SavingsAccount = "A65",
+            EmploymentDuration = "A71",
+            InstallmentRate = 1,
+            PersonalStatusSex = "A94",
+            OtherDebtorsGuarantors = "A103",
+            PresentResidenceSince = 4,
+            Property = "A124",
+            Age = 70,
+            OtherInstallmentPlans = "A141",
+            Housing = "A151",
+            ExistingCreditsCount = 4,
+            Job = "A174",
+            NumPeopleLiable = 2,
+            Telephone = "A192",
+            ForeignWorker = "A201",
+        };
+
+        Assert.Equal(expected, StatlogMapper.ToMlRequest(application));
     }
 
     [Theory]
