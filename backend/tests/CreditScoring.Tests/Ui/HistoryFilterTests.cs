@@ -1,3 +1,4 @@
+using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ui;
 
@@ -50,6 +51,13 @@ public class HistoryFilterTests
     {
         Assert.Equal("Ana", new HistoryFilter { Name = "  Ana " }.ToQuery(Zone, 20).ApplicantName);
         Assert.Null(new HistoryFilter { Name = "   " }.ToQuery(Zone, 20).ApplicantName);
+    }
+
+    [Fact]
+    public void Review_filter_passes_through()
+    {
+        Assert.Equal(ReviewFilter.Override, new HistoryFilter { Review = ReviewFilter.Override }.ToQuery(Zone, 20).Review);
+        Assert.Null(new HistoryFilter().ToQuery(Zone, 20).Review);
     }
 
     [Fact]

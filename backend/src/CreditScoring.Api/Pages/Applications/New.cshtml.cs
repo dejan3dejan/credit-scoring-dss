@@ -23,7 +23,7 @@ public class NewModel(ApplicationsApi api) : PageModel
             case Submitted submitted:
                 return RedirectToPage("Details", new { id = submitted.Application.Id });
             case Invalid invalid:
-                FormErrors.Apply(ModelState, nameof(Input), invalid.Errors);
+                FormErrors.Apply<CreateApplicationRequest>(ModelState, nameof(Input), invalid.Errors);
                 return Page();
             default:
                 throw new UnreachableException();

@@ -1,3 +1,4 @@
+using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Ui;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
@@ -8,8 +9,22 @@ public class FormErrorsTests
     private static ModelStateDictionary Apply(Dictionary<string, string[]> errors)
     {
         var state = new ModelStateDictionary();
-        FormErrors.Apply(state, "Input", errors);
+        FormErrors.Apply<CreateApplicationRequest>(state, "Input", errors);
         return state;
+    }
+
+    [Fact]
+    public void Keys_map_against_the_given_request_type()
+    {
+        var state = new ModelStateDictionary();
+        FormErrors.Apply<RecordDecisionRequest>(state, "Review", new Dictionary<string, string[]>
+        {
+            ["reason"] = ["needed"],
+            ["creditAmount"] = ["not on this form"],
+        });
+
+        Assert.Equal(["needed"], state["Review.Reason"]!.Errors.Select(e => e.ErrorMessage));
+        Assert.Equal(["not on this form"], state[""]!.Errors.Select(e => e.ErrorMessage));
     }
 
     [Fact]

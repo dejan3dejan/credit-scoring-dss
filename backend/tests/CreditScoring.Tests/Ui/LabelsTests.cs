@@ -14,7 +14,9 @@ public class LabelsTests
             .Select(p => Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType)
             .Where(t => t.IsEnum)
             .Append(typeof(DecisionStatus))
-            .Append(typeof(Recommendation));
+            .Append(typeof(Recommendation))
+            .Append(typeof(FinalDecision))
+            .Append(typeof(ReviewFilter));
         return new(types);
     }
 

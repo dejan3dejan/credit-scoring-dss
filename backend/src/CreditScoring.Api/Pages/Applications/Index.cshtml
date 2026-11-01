@@ -27,12 +27,25 @@
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         <input name="name" value="@Model.Name" placeholder="Search by applicant name" aria-label="Applicant name" maxlength="@BusinessLimits.ApplicantNameMaxLength" autocomplete="off">
     </label>
-    <nav class="segmented" aria-label="Result">
-        @foreach (var (value, label) in outcomes)
-        {
-            <a asp-page="Index" asp-all-route-data="Model.RouteFor(value)" class="@(Model.Outcome == value ? "selected" : null)">@label</a>
-        }
-    </nav>
+    <div class="filter-group">
+        <span class="filter-label" id="model-filter">Model</span>
+        <nav class="segmented" aria-labelledby="model-filter">
+            @foreach (var (value, label) in outcomes)
+            {
+                <a asp-page="Index" asp-all-route-data="Model.RouteFor(value)" class="@(Model.Outcome == value ? "selected" : null)">@label</a>
+            }
+        </nav>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label" id="review-filter">Decision</span>
+        <nav class="segmented" aria-labelledby="review-filter">
+            <a asp-page="Index" asp-all-route-data="Model.RouteFor((ReviewFilter?)null)" class="@(Model.Review is null ? "selected" : null)">All</a>
+            @foreach (var review in Enum.GetValues<ReviewFilter>())
+            {
+                <a asp-page="Index" asp-all-route-data="Model.RouteFor(review)" class="@(Model.Review == review ? "selected" : null)">@(review == ReviewFilter.Pending ? "Pending" : Labels.Of(review))</a>
+            }
+        </nav>
+    </div>
     <div class="dates">
         <input type="date" name="from" value="@Model.From?.ToString("yyyy-MM-dd")" aria-label="From date">
         <span>to</span>
@@ -41,6 +54,10 @@
     @if (Model.Outcome is { } outcome)
     {
         <input type="hidden" name="outcome" value="@outcome">
+    }
+    @if (Model.Review is { } reviewValue)
+    {
+        <input type="hidden" name="review" value="@reviewValue">
     }
     <button type="submit" class="button">Search</button>
     @if (Model.IsFiltered)
@@ -68,26 +85,38 @@
                     Recommendation.Reject => "reject",
                     _ => "unavailable",
                 };
-                var status = item.Recommendation is { } rec ? Labels.Of(rec) : "Unavailable";
+                var modelText = item.Recommendation is { } rec ? $"{Labels.Of(rec)} {item.PBad?.ToString("P1")}" : "unavailable";
                 var submitted = item.SubmittedAt.ToLocalTime();
                 <a class="chat" asp-page="Details" asp-route-id="@item.Id">
                     <span class="avatar tone-@Avatar.Tone(item.ApplicantName)" aria-hidden="true">@Avatar.Initials(item.ApplicantName)</span>
                     <span class="chat-main">
                         <span class="chat-name">@item.ApplicantName</span>
-                        <span class="chat-line">@item.CreditAmount.ToString("N0") DM · @item.DurationMonths months · by @item.SubmittedBy</span>
+                        <span class="chat-line">
+                            <span class="model-dot model-dot-@tone" aria-hidden="true"></span>Model: @modelText · @item.CreditAmount.ToString("N0") DM · @item.DurationMonths months
+                        </span>
                     </span>
                     <span class="chat-end">
                         <span class="chat-time">@submitted.ToString("d MMM, HH:mm")</span>
                         <span class="chat-score">
-                            <span class="chat-pbad">@(item.PBad?.ToString("P1") ?? "–")</span>
-                            <span class="status status-@tone">@status</span>
+                            @if (item.IsOverride == true)
+                            {
+                                <span class="tag tag-override">Override</span>
+                            }
+                            @if (item.FinalDecision is { } final)
+                            {
+                                <span class="status status-@(final == FinalDecision.Approve ? "approve" : "reject")">@Labels.Of(final)</span>
+                            }
+                            else
+                            {
+                                <span class="status status-pending">Awaiting decision</span>
+                            }
                         </span>
                     </span>
                 </a>
             }
         </div>
         <div class="pager">
-            <span>@first–@last of @r.TotalCount · P(bad) is the estimated probability of default</span>
+            <span>@first–@last of @r.TotalCount · The percentage is P(bad), the estimated probability of default</span>
             <div class="pager-links">
                 @if (r.Page > 1)
                 {

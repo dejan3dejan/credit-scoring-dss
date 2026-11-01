@@ -96,6 +96,109 @@
     </div>
 </div>
 
+<section class="panel decision" id="decision">
+    <div class="panel-body">
+        <div class="panel-head">
+            <h2>Your decision</h2>
+            <p>The recommendation supports you. The decision, and the reason for it, are yours.</p>
+        </div>
+
+        @if (a.OfficerDecision is { } od)
+        {
+            var finalTone = od.Outcome == FinalDecision.Approve ? "approve" : "reject";
+            <div class="final">
+                <span class="verdict verdict-sm verdict-@finalTone">@Labels.Of(od.Outcome)</span>
+                @if (od.IsOverride)
+                {
+                    <span class="tag tag-override">Override</span>
+                }
+            </div>
+            @if (od.Reason is { } reason)
+            {
+                <blockquote class="reason">@reason</blockquote>
+            }
+            <p class="muted">Recorded by @od.DecidedBy on @od.DecidedAt.ToLocalTime().ToString("d MMM yyyy 'at' HH:mm"). A recorded decision cannot be changed.</p>
+        }
+        else
+        {
+            var recommended = d?.Recommendation;
+            @if (Model.AlreadyDecidedElsewhere)
+            {
+                <div class="alert" role="alert">A decision was already recorded for this application, so yours was not saved.</div>
+            }
+            <form method="post" novalidate class="decision-form">
+                <div asp-validation-summary="ModelOnly" class="alert"></div>
+                <div class="field">
+                    <span class="field-label" id="outcome-label">@Html.DisplayNameFor(m => m.Review.Outcome)</span>
+                    <div class="segmented segmented-lg" role="radiogroup" aria-labelledby="outcome-label">
+                        <input type="radio" asp-for="Review.Outcome" value="Approve" id="outcome-approve"><label for="outcome-approve">Approve</label>
+                        <input type="radio" asp-for="Review.Outcome" value="Reject" id="outcome-reject"><label for="outcome-reject">Reject</label>
+                    </div>
+                    <span asp-validation-for="Review.Outcome" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Review.Reason"></label>
+                    <textarea asp-for="Review.Reason" rows="3" maxlength="@BusinessLimits.DecisionReasonMaxLength" placeholder="What you weighed, in a sentence or two"></textarea>
+                    <span class="hint">
+                        @(recommended is { } rec
+                            ? $"Required if you decide against the recommendation ({Labels.Of(rec)})."
+                            : "Required: no recommendation was made for this application.")
+                    </span>
+                    <span asp-validation-for="Review.Reason" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Review.DecidedBy"></label>
+                    <input asp-for="Review.DecidedBy" autocomplete="name" maxlength="@BusinessLimits.SubmittedByMaxLength">
+                    <span asp-validation-for="Review.DecidedBy" class="error"></span>
+                </div>
+                <div class="decision-actions">
+                    <span class="muted">A recorded decision cannot be changed.</span>
+                    <button type="submit" class="button button-primary">Record decision</button>
+                </div>
+            </form>
+        }
+    </div>
+
+    <aside class="timeline-wrap">
+        <h3 class="timeline-title">Timeline</h3>
+        <ol class="timeline">
+            <li class="done">
+                <span class="timeline-what">Submitted by @a.SubmittedBy</span>
+                <span class="timeline-when">@a.SubmittedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</span>
+            </li>
+            @if (d is null)
+            {
+                <li class="failed"><span class="timeline-what">No scoring result recorded</span></li>
+            }
+            else if (d.Status == DecisionStatus.Scored)
+            {
+                <li class="done">
+                    <span class="timeline-what">Scored @d.PBad?.ToString("P1"), model recommends @(d.Recommendation is { } r ? Labels.Of(r) : "–")</span>
+                    <span class="timeline-when">@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm") · <span class="mono">@d.ModelId</span></span>
+                </li>
+            }
+            else
+            {
+                <li class="failed">
+                    <span class="timeline-what">Scoring failed (<span class="mono">@d.ErrorCode</span>)</span>
+                    <span class="timeline-when">@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</span>
+                </li>
+            }
+            @if (a.OfficerDecision is { } decided)
+            {
+                <li class="done">
+                    <span class="timeline-what">@Labels.Of(decided.Outcome) by @decided.DecidedBy@(decided.IsOverride ? ", overriding the model" : "")</span>
+                    <span class="timeline-when">@decided.DecidedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</span>
+                </li>
+            }
+            else
+            {
+                <li class="pending"><span class="timeline-what">Awaiting the officer's decision</span></li>
+            }
+        </ol>
+    </aside>
+</section>
+
 <h2 class="section-title">Application as submitted</h2>
 <div class="cards">
     <section class="panel">

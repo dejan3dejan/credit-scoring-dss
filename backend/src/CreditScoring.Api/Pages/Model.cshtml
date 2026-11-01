@@ -1,0 +1,66 @@
+@page "/model"
+@model ModelModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Model";
+}
+
+@section Band {
+    <div>
+        <h1>Model</h1>
+        <p>What the scoring model is, what its number means, and where it should not be trusted.</p>
+    </div>
+}
+
+<div class="cards">
+    <section class="panel">
+        <div class="card-title">Deployed model</div>
+        <dl class="kv">
+            <div><dt>Model</dt><dd class="mono">@Model.ModelId</dd></div>
+            <div><dt>Type</dt><dd>Random forest, isotonic calibration</dd></div>
+            <div><dt>Output</dt><dd>P(bad), probability of default</dd></div>
+            <div><dt>Reject rule</dt><dd>P(bad) ≥ @Model.Threshold.ToString("P1") <span class="muted mono">(@Model.Threshold.ToString("0.####", CultureInfo.InvariantCulture))</span></dd></div>
+            <div><dt>Recommendation only</dt><dd>The loan officer decides</dd></div>
+        </dl>
+    </section>
+
+    <section class="panel">
+        <div class="card-title">Why the threshold is @Model.Threshold.ToString("P1")</div>
+        <div class="prose">
+            <p>Approving an applicant who later defaults is assumed to cost <strong>5 times</strong> as much as rejecting a good applicant.</p>
+            <p>Rejecting is then cheaper on average once P(bad) reaches 1 / (1 + 5) = 1/6, about 16.7%. Below that, approving is cheaper.</p>
+            <p class="muted">The 5 : 1 cost ratio is an assumption of this thesis, not a bank's figure.</p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="card-title">Training data</div>
+        <dl class="kv">
+            <div><dt>Dataset</dt><dd>Statlog German Credit</dd></div>
+            <div><dt>Size</dt><dd>1,000 applications, 20 inputs</dd></div>
+            <div><dt>Period and currency</dt><dd>1970s, Deutsche Mark</dd></div>
+            <div><dt>Category meanings</dt><dd>Corrected table, Grömping (2019)</dd></div>
+        </dl>
+    </section>
+
+    <section class="panel">
+        <div class="card-title">Accepted inputs</div>
+        <dl class="kv">
+            <div><dt>Credit amount</dt><dd>@BusinessLimits.MinCreditAmount.ToString("N0") – @BusinessLimits.MaxCreditAmount.ToString("N0") DM</dd></div>
+            <div><dt>Loan term</dt><dd>@BusinessLimits.MinDurationMonths – @BusinessLimits.MaxDurationMonths months</dd></div>
+            <div><dt>Age</dt><dd>@BusinessLimits.MinAge – @BusinessLimits.MaxAge years</dd></div>
+            <div><dt>Why these ranges</dt><dd>They follow the training data</dd></div>
+        </dl>
+    </section>
+</div>
+
+<section class="panel limits">
+    <div class="card-title">Known limitations</div>
+    <ul class="limit-list">
+        <li><strong>Old population.</strong> The data is German bank data from the 1970s. Its estimates describe that population, not today's applicants, and amounts must be entered in DM.</li>
+        <li><strong>Sensitive inputs.</strong> Personal status and sex, and foreign worker, are inputs because the original data has them, not as an endorsement. One category mixes "female non-single" with "male single", so sex cannot be read from it reliably.</li>
+        <li><strong>Two labels look odd.</strong> Under the corrected code table, "real estate" has the highest bad rate of the property groups, and the lowest installment burden has the highest bad rate. The code mapping is verified; which labels are right rests on Grömping (2019).</li>
+        <li><strong>A recommendation, not a decision.</strong> Every application needs the officer's decision, with a reason when it goes against the model or when no score was available.</li>
+        <li><strong>Performance figures</strong> are kept in the experiment log and are not shown on this page.</li>
+    </ul>
+</section>

@@ -159,4 +159,87 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         Assert.Equal(["at noon"], await NamesFor(new HistoryQuery { To = noon.AddHours(1) }));
         Assert.Equal(["at one"], await NamesFor(new HistoryQuery { From = noon.AddHours(1), To = noon.AddHours(2) }));
     }
+
+    private Task<ActionResult<ApplicationResponse>> Decide(Guid id, FinalDecision outcome, string? reason = null) =>
+        WithController(c => c.Decide(
+            id,
+            new RecordDecisionRequest { Outcome = outcome, Reason = reason, DecidedBy = " Ana " },
+            CancellationToken.None));
+
+    [Fact]
+    public async Task Officer_decision_is_saved_and_returned()
+    {
+        var created = await Submit("Ana Petrovic", new MlScore(0.1, TestData.ModelId));
+        clock.Now = TestData.Now.AddMinutes(5);
+
+        var response = await Decide(created.Id, FinalDecision.Reject, "income not verified");
+
+        var result = Assert.IsType<CreatedAtActionResult>(response.Result);
+        var body = Assert.IsType<ApplicationResponse>(result.Value);
+        Assert.Equal(FinalDecision.Reject, body.OfficerDecision!.Outcome);
+        Assert.True(body.OfficerDecision.IsOverride);
+        await using var db = database.CreateContext();
+        var saved = await db.OfficerDecisions.SingleAsync(d => d.CreditApplicationId == created.Id);
+        Assert.Equal("Ana", saved.DecidedBy);
+        Assert.Equal("income not verified", saved.Reason);
+        Assert.Equal(TestData.Now.AddMinutes(5), saved.DecidedAt);
+    }
+
+    [Fact]
+    public async Task Second_decision_is_a_conflict()
+    {
+        var created = await Submit("Ana Petrovic", new MlScore(0.1, TestData.ModelId));
+        await Decide(created.Id, FinalDecision.Approve);
+
+        var response = await Decide(created.Id, FinalDecision.Reject, "changed");
+
+        var conflict = Assert.IsType<ConflictObjectResult>(response.Result);
+        Assert.Equal(409, Assert.IsType<ProblemDetails>(conflict.Value).Status);
+        await using var db = database.CreateContext();
+        Assert.Equal(FinalDecision.Approve, (await db.OfficerDecisions.SingleAsync()).Outcome);
+    }
+
+    [Fact]
+    public async Task Decision_for_unknown_application_is_not_found()
+    {
+        var response = await Decide(Guid.NewGuid(), FinalDecision.Approve);
+
+        Assert.IsType<NotFoundResult>(response.Result);
+    }
+
+    [Fact]
+    public async Task Override_without_reason_is_a_validation_problem_on_reason()
+    {
+        var created = await Submit("Ana Petrovic", new MlScore(0.1, TestData.ModelId));
+
+        var response = await Decide(created.Id, FinalDecision.Reject);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(response.Result);
+        var problem = Assert.IsType<ValidationProblemDetails>(bad.Value);
+        Assert.Equal(["reason"], problem.Errors.Keys);
+        await using var db = database.CreateContext();
+        Assert.False(await db.OfficerDecisions.AnyAsync());
+    }
+
+    [Fact]
+    public async Task Review_filter_finds_pending_decided_and_overridden()
+    {
+        await Submit("pending", new MlScore(0.1, TestData.ModelId), TestData.Now);
+        var approved = await Submit("approved", new MlScore(0.1, TestData.ModelId), TestData.Now.AddMinutes(1));
+        var rejected = await Submit("rejected", new MlScore(0.3, TestData.ModelId), TestData.Now.AddMinutes(2));
+        var overridden = await Submit("overridden", new MlScore(0.3, TestData.ModelId), TestData.Now.AddMinutes(3));
+        await Decide(approved.Id, FinalDecision.Approve);
+        await Decide(rejected.Id, FinalDecision.Reject);
+        await Decide(overridden.Id, FinalDecision.Approve, "guarantor added");
+
+        Assert.Equal(["pending"], await NamesFor(new HistoryQuery { Review = ReviewFilter.Pending }));
+        Assert.Equal(["overridden", "approved"], await NamesFor(new HistoryQuery { Review = ReviewFilter.Approved }));
+        Assert.Equal(["rejected"], await NamesFor(new HistoryQuery { Review = ReviewFilter.Rejected }));
+        Assert.Equal(["overridden"], await NamesFor(new HistoryQuery { Review = ReviewFilter.Override }));
+
+        var summary = (await History(new HistoryQuery { Review = ReviewFilter.Override })).Items.Single();
+        Assert.Equal(FinalDecision.Approve, summary.FinalDecision);
+        Assert.True(summary.IsOverride);
+        Assert.Null((await History(new HistoryQuery { Review = ReviewFilter.Pending })).Items.Single().FinalDecision);
+    }
 }

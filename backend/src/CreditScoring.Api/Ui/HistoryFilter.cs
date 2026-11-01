@@ -16,6 +16,7 @@ public sealed record HistoryFilter
     public DateOnly? From { get; init; }
     public DateOnly? To { get; init; }
     public HistoryOutcome? Outcome { get; init; }
+    public ReviewFilter? Review { get; init; }
     public int Page { get; init; } = 1;
 
     public HistoryQuery ToQuery(TimeZoneInfo zone, int pageSize) => new()
@@ -30,6 +31,7 @@ public sealed record HistoryFilter
             HistoryOutcome.Reject => Domain.Recommendation.Reject,
             _ => null,
         },
+        Review = Review,
         Page = Math.Max(Page, 1),
         PageSize = pageSize,
     };

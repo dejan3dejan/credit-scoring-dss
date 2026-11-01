@@ -1,3 +1,4 @@
+using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
@@ -75,6 +76,14 @@ public static class Labels
 
         [Recommendation.Approve] = "Approve",
         [Recommendation.Reject] = "Reject",
+
+        [FinalDecision.Approve] = "Approved",
+        [FinalDecision.Reject] = "Rejected",
+
+        [ReviewFilter.Pending] = "Awaiting decision",
+        [ReviewFilter.Approved] = "Approved",
+        [ReviewFilter.Rejected] = "Rejected",
+        [ReviewFilter.Override] = "Overrides",
     };
 
     private static readonly Dictionary<string, string> ScoringErrors = new()

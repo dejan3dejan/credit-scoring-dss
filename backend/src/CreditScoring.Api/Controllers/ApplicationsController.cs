@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Data;
 using CreditScoring.Api.Decisions;
+using CreditScoring.Api.Domain;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace CreditScoring.Api.Controllers;
 
@@ -37,10 +40,60 @@ public class ApplicationsController(
         var application = await db.Applications
             .AsNoTracking()
             .Include(a => a.Decision)
+            .Include(a => a.OfficerDecision)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
         return application is null ? NotFound() : ApplicationResponse.From(application);
     }
+
+    [HttpPost("{id:guid}/decision")]
+    [ProducesResponseType<ApplicationResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApplicationResponse>> Decide(
+        Guid id,
+        RecordDecisionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var application = await db.Applications
+            .Include(a => a.Decision)
+            .Include(a => a.OfficerDecision)
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+        if (application is null)
+            return NotFound();
+
+        switch (decisions.RecordOfficerDecision(application, request.Outcome!.Value, request.Reason, request.DecidedBy!))
+        {
+            case DecisionRecorded recorded:
+                application.OfficerDecision = recorded.Decision;
+                try
+                {
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+                catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+                {
+                    return AlreadyDecidedConflict();
+                }
+                return CreatedAtAction(nameof(Get), new { id }, ApplicationResponse.From(application));
+
+            case DecisionRefused refused:
+                ModelState.AddModelError(refused.Field, refused.Message);
+                return BadRequest(new ValidationProblemDetails(ModelState) { Status = StatusCodes.Status400BadRequest });
+
+            case AlreadyDecided:
+                return AlreadyDecidedConflict();
+
+            default:
+                throw new UnreachableException();
+        }
+    }
+
+    private ConflictObjectResult AlreadyDecidedConflict() => Conflict(new ProblemDetails
+    {
+        Status = StatusCodes.Status409Conflict,
+        Title = "A decision is already recorded for this application.",
+    });
 
     [HttpGet]
     [ProducesResponseType<PagedResult<ApplicationSummary>>(StatusCodes.Status200OK)]
@@ -75,6 +128,15 @@ public class ApplicationsController(
             applications = applications.Where(a => a.Decision!.Recommendation == recommendation);
         }
 
+        applications = query.Review switch
+        {
+            ReviewFilter.Pending => applications.Where(a => a.OfficerDecision == null),
+            ReviewFilter.Approved => applications.Where(a => a.OfficerDecision!.Outcome == FinalDecision.Approve),
+            ReviewFilter.Rejected => applications.Where(a => a.OfficerDecision!.Outcome == FinalDecision.Reject),
+            ReviewFilter.Override => applications.Where(a => a.OfficerDecision!.IsOverride),
+            _ => applications,
+        };
+
         var total = await applications.CountAsync(cancellationToken);
         var items = await applications
             .OrderByDescending(a => a.SubmittedAt)
@@ -89,7 +151,9 @@ public class ApplicationsController(
                 a.DurationMonths,
                 a.Decision == null ? null : a.Decision.Status,
                 a.Decision == null ? null : a.Decision.Recommendation,
-                a.Decision == null ? null : a.Decision.PBad))
+                a.Decision == null ? null : a.Decision.PBad,
+                a.OfficerDecision == null ? null : a.OfficerDecision.Outcome,
+                a.OfficerDecision == null ? null : a.OfficerDecision.IsOverride))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ApplicationSummary>(items, query.Page, query.PageSize, total);

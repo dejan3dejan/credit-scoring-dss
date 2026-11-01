@@ -9,6 +9,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
 {
     public DbSet<CreditApplication> Applications => Set<CreditApplication>();
     public DbSet<CreditDecision> Decisions => Set<CreditDecision>();
+    public DbSet<OfficerDecision> OfficerDecisions => Set<OfficerDecision>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -29,6 +30,19 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
                 .WithOne()
                 .HasForeignKey<CreditDecision>(d => d.CreditApplicationId)
                 .OnDelete(DeleteBehavior.Cascade);
+            application.HasOne(a => a.OfficerDecision)
+                .WithOne()
+                .HasForeignKey<OfficerDecision>(d => d.CreditApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OfficerDecision>(decision =>
+        {
+            decision.ToTable("officer_decisions", table =>
+                table.HasCheckConstraint("ck_officer_decisions_override_reason", "is_override = false OR reason IS NOT NULL"));
+            decision.Property(d => d.Reason).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
+            decision.Property(d => d.DecidedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            decision.HasIndex(d => new { d.IsOverride, d.Outcome });
         });
 
         modelBuilder.Entity<CreditDecision>(decision =>

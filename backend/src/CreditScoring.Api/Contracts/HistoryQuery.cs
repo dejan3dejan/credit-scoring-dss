@@ -4,6 +4,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CreditScoring.Api.Contracts;
 
+public enum ReviewFilter
+{
+    Pending = 1,
+    Approved = 2,
+    Rejected = 3,
+    Override = 4,
+}
+
 public sealed record HistoryQuery
 {
     [FromQuery(Name = "applicantName"), StringLength(BusinessLimits.ApplicantNameMaxLength)]
@@ -20,6 +28,9 @@ public sealed record HistoryQuery
 
     [FromQuery(Name = "recommendation"), EnumDataType(typeof(Recommendation))]
     public Recommendation? Recommendation { get; init; }
+
+    [FromQuery(Name = "review"), EnumDataType(typeof(ReviewFilter))]
+    public ReviewFilter? Review { get; init; }
 
     [FromQuery(Name = "page"), Range(1, int.MaxValue)]
     public int Page { get; init; } = 1;

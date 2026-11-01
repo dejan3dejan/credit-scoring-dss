@@ -30,4 +30,5 @@ public class CreditApplication
     public required bool IsForeignWorker { get; init; }
 
     public CreditDecision? Decision { get; set; }
+    public OfficerDecision? OfficerDecision { get; set; }
 }

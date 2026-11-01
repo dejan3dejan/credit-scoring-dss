@@ -21,6 +21,21 @@ public sealed record DecisionResponse(
         decision.ErrorCode);
 }
 
+public sealed record OfficerDecisionResponse(
+    FinalDecision Outcome,
+    string? Reason,
+    string DecidedBy,
+    DateTimeOffset DecidedAt,
+    bool IsOverride)
+{
+    public static OfficerDecisionResponse From(OfficerDecision decision) => new(
+        decision.Outcome,
+        decision.Reason,
+        decision.DecidedBy,
+        decision.DecidedAt,
+        decision.IsOverride);
+}
+
 public sealed record ApplicationResponse
 {
     public required Guid Id { get; init; }
@@ -51,6 +66,7 @@ public sealed record ApplicationResponse
     public required bool IsForeignWorker { get; init; }
 
     public required DecisionResponse? Decision { get; init; }
+    public required OfficerDecisionResponse? OfficerDecision { get; init; }
 
     public static ApplicationResponse From(CreditApplication application) => new()
     {
@@ -79,6 +95,7 @@ public sealed record ApplicationResponse
         HasRegisteredTelephone = application.HasRegisteredTelephone,
         IsForeignWorker = application.IsForeignWorker,
         Decision = application.Decision is null ? null : DecisionResponse.From(application.Decision),
+        OfficerDecision = application.OfficerDecision is null ? null : OfficerDecisionResponse.From(application.OfficerDecision),
     };
 }
 
@@ -91,6 +108,8 @@ public sealed record ApplicationSummary(
     int DurationMonths,
     DecisionStatus? Status,
     Recommendation? Recommendation,
-    double? PBad);
+    double? PBad,
+    FinalDecision? FinalDecision,
+    bool? IsOverride);
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

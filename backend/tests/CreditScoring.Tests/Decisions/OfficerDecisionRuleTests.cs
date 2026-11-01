@@ -1,0 +1,76 @@
+using CreditScoring.Api.Decisions;
+using CreditScoring.Api.Domain;
+
+namespace CreditScoring.Tests.Decisions;
+
+public class OfficerDecisionRuleTests
+{
+    private static CreditDecisionService Service() =>
+        TestServices.DecisionService(new FakeMlClient(), new ManualTimeProvider(TestData.Now));
+
+    private static CreditApplication Scored(Recommendation recommendation)
+    {
+        var application = TestData.ContractApplication();
+        var pBad = recommendation == Recommendation.Approve ? 0.1 : 0.3;
+        application.Decision = CreditDecision.Scored(pBad, TestData.ModelId, TestData.Threshold, recommendation, TestData.Now);
+        return application;
+    }
+
+    private static CreditApplication Unavailable()
+    {
+        var application = TestData.ContractApplication();
+        application.Decision = CreditDecision.Unavailable("unreachable", TestData.Now);
+        return application;
+    }
+
+    [Fact]
+    public void Agreeing_without_a_reason_is_recorded_at_the_current_time()
+    {
+        var result = Service().RecordOfficerDecision(Scored(Recommendation.Approve), FinalDecision.Approve, null, "Ana");
+
+        var recorded = Assert.IsType<DecisionRecorded>(result);
+        Assert.False(recorded.Decision.IsOverride);
+        Assert.Equal(TestData.Now, recorded.Decision.DecidedAt);
+    }
+
+    [Fact]
+    public void Override_without_a_reason_is_refused_on_the_reason_field()
+    {
+        var result = Service().RecordOfficerDecision(Scored(Recommendation.Approve), FinalDecision.Reject, "  ", "Ana");
+
+        var refused = Assert.IsType<DecisionRefused>(result);
+        Assert.Equal("reason", refused.Field);
+        Assert.Contains("differs from the recommendation", refused.Message);
+    }
+
+    [Fact]
+    public void Override_with_a_reason_is_recorded_as_an_override()
+    {
+        var result = Service().RecordOfficerDecision(Scored(Recommendation.Reject), FinalDecision.Approve, "guarantor added", "Ana");
+
+        Assert.True(Assert.IsType<DecisionRecorded>(result).Decision.IsOverride);
+    }
+
+    [Fact]
+    public void Decision_without_a_score_needs_a_reason()
+    {
+        var refused = Assert.IsType<DecisionRefused>(
+            Service().RecordOfficerDecision(Unavailable(), FinalDecision.Approve, null, "Ana"));
+        Assert.Equal("reason", refused.Field);
+        Assert.Contains("no recommendation", refused.Message);
+
+        var recorded = Assert.IsType<DecisionRecorded>(
+            Service().RecordOfficerDecision(Unavailable(), FinalDecision.Approve, "manual check", "Ana"));
+        Assert.False(recorded.Decision.IsOverride);
+    }
+
+    [Fact]
+    public void Second_decision_is_refused_as_already_decided()
+    {
+        var application = Scored(Recommendation.Approve);
+        application.OfficerDecision = OfficerDecision.Record(Recommendation.Approve, FinalDecision.Approve, null, "Ana", TestData.Now);
+
+        Assert.IsType<AlreadyDecided>(
+            Service().RecordOfficerDecision(application, FinalDecision.Reject, "changed my mind", "Ana"));
+    }
+}

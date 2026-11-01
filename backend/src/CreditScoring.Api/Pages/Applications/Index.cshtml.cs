@@ -21,29 +21,36 @@ public class IndexModel(ApplicationsApi api) : PageModel
     [BindProperty(SupportsGet = true)]
     public HistoryOutcome? Outcome { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public ReviewFilter? Review { get; set; }
+
     [BindProperty(SupportsGet = true, Name = "p")]
     public int PageNumber { get; set; } = 1;
 
     public PagedResult<ApplicationSummary> Result { get; private set; } = null!;
 
-    public bool IsFiltered => !string.IsNullOrWhiteSpace(Name) || From is not null || To is not null || Outcome is not null;
+    public bool IsFiltered =>
+        !string.IsNullOrWhiteSpace(Name) || From is not null || To is not null || Outcome is not null || Review is not null;
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
-        var filter = new HistoryFilter { Name = Name, From = From, To = To, Outcome = Outcome, Page = PageNumber };
+        var filter = new HistoryFilter { Name = Name, From = From, To = To, Outcome = Outcome, Review = Review, Page = PageNumber };
         Result = await api.ListAsync(filter.ToQuery(TimeZoneInfo.Local, PageSize), cancellationToken);
     }
 
-    public Dictionary<string, string?> RouteFor(int page) => Route(Outcome, page);
+    public Dictionary<string, string?> RouteFor(int page) => Route(Outcome, Review, page);
 
-    public Dictionary<string, string?> RouteFor(HistoryOutcome? outcome) => Route(outcome, 1);
+    public Dictionary<string, string?> RouteFor(HistoryOutcome? outcome) => Route(outcome, Review, 1);
 
-    private Dictionary<string, string?> Route(HistoryOutcome? outcome, int page) => new()
+    public Dictionary<string, string?> RouteFor(ReviewFilter? review) => Route(Outcome, review, 1);
+
+    private Dictionary<string, string?> Route(HistoryOutcome? outcome, ReviewFilter? review, int page) => new()
     {
         ["name"] = Name,
         ["from"] = From?.ToString("yyyy-MM-dd"),
         ["to"] = To?.ToString("yyyy-MM-dd"),
         ["outcome"] = outcome?.ToString(),
+        ["review"] = review?.ToString(),
         ["p"] = page.ToString(),
     };
 }

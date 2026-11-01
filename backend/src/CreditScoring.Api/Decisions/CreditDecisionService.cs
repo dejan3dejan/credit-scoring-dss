@@ -36,4 +36,25 @@ public class CreditDecisionService(
                 throw new InvalidOperationException($"unhandled ML result type {result.GetType().Name}");
         }
     }
+
+    public OfficerDecisionResult RecordOfficerDecision(
+        CreditApplication application,
+        FinalDecision outcome,
+        string? reason,
+        string decidedBy)
+    {
+        if (application.OfficerDecision is not null)
+            return new AlreadyDecided();
+
+        var recommendation = application.Decision?.Recommendation;
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            if (recommendation is null)
+                return new DecisionRefused("reason", "Give a reason: no recommendation was made for this application.");
+            if (!OfficerDecision.Agrees(recommendation.Value, outcome))
+                return new DecisionRefused("reason", "Give a reason: your decision differs from the recommendation.");
+        }
+
+        return new DecisionRecorded(OfficerDecision.Record(recommendation, outcome, reason, decidedBy, time.GetUtcNow()));
+    }
 }

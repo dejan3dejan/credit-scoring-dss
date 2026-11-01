@@ -140,6 +140,65 @@ public class ApplicationsApiTests
         Assert.Equal(21, page.TotalCount);
     }
 
+    private static RecordDecisionRequest DecisionRequest() =>
+        new() { Outcome = FinalDecision.Reject, Reason = "income not verified", DecidedBy = "Ana" };
+
+    [Fact]
+    public async Task Decide_posts_to_the_application_decision_endpoint()
+    {
+        var id = Guid.NewGuid();
+        var (api, handler) = Respond(HttpStatusCode.Created, StoredApplicationJson());
+
+        var result = await api.DecideAsync(id, DecisionRequest(), CancellationToken.None);
+
+        Assert.IsType<Submitted>(result);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal($"http://app.test/api/applications/{id}/decision", handler.LastRequest.RequestUri!.ToString());
+        using var body = JsonDocument.Parse(handler.LastBody!);
+        Assert.Equal("Reject", body.RootElement.GetProperty("outcome").GetString());
+        Assert.Equal("income not verified", body.RootElement.GetProperty("reason").GetString());
+    }
+
+    [Fact]
+    public async Task Decide_returns_field_errors_on_validation_problem()
+    {
+        var (api, _) = Respond(HttpStatusCode.BadRequest, """{"status":400,"errors":{"reason":["needed"]}}""");
+
+        var result = await api.DecideAsync(Guid.NewGuid(), DecisionRequest(), CancellationToken.None);
+
+        Assert.Equal(["needed"], Assert.IsType<Invalid>(result).Errors["reason"]);
+    }
+
+    [Fact]
+    public async Task Decide_reports_an_existing_decision_on_conflict()
+    {
+        var (api, _) = Respond(HttpStatusCode.Conflict, """{"status":409,"title":"already decided"}""");
+
+        Assert.IsType<AlreadyDecided>(await api.DecideAsync(Guid.NewGuid(), DecisionRequest(), CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.OK)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    public async Task Decide_fails_loud_on_any_other_status(HttpStatusCode status)
+    {
+        var (api, _) = Respond(status, "{}");
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => api.DecideAsync(Guid.NewGuid(), DecisionRequest(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task List_sends_the_review_filter()
+    {
+        var (api, handler) = Respond(HttpStatusCode.OK, """{"items":[],"page":1,"pageSize":20,"totalCount":0}""");
+
+        await api.ListAsync(new HistoryQuery { Review = ReviewFilter.Override }, CancellationToken.None);
+
+        Assert.Equal("Override", QueryHelpers.ParseQuery(handler.LastRequest!.RequestUri!.Query)["review"]);
+    }
+
     [Fact]
     public async Task List_fails_loud_on_bad_request()
     {

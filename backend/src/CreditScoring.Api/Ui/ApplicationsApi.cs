@@ -14,6 +14,8 @@ public sealed record Submitted(ApplicationResponse Application) : SubmitResult;
 
 public sealed record Invalid(IDictionary<string, string[]> Errors) : SubmitResult;
 
+public sealed record AlreadyDecided : SubmitResult;
+
 public class ApplicationsApi(HttpClient http)
 {
     private const string Path = "api/applications";
@@ -35,6 +37,19 @@ public class ApplicationsApi(HttpClient http)
             HttpStatusCode.Created => new Submitted(await ReadAsync<ApplicationResponse>(response, Json, cancellationToken)),
             HttpStatusCode.BadRequest => new Invalid(
                 (await ReadAsync<ValidationProblemDetails>(response, JsonSerializerOptions.Web, cancellationToken)).Errors),
+            _ => throw Unexpected(response),
+        };
+    }
+
+    public async Task<SubmitResult> DecideAsync(Guid id, RecordDecisionRequest request, CancellationToken cancellationToken)
+    {
+        using var response = await http.PostAsJsonAsync($"{Path}/{id}/decision", request, Json, cancellationToken);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.Created => new Submitted(await ReadAsync<ApplicationResponse>(response, Json, cancellationToken)),
+            HttpStatusCode.BadRequest => new Invalid(
+                (await ReadAsync<ValidationProblemDetails>(response, JsonSerializerOptions.Web, cancellationToken)).Errors),
+            HttpStatusCode.Conflict => new AlreadyDecided(),
             _ => throw Unexpected(response),
         };
     }
@@ -72,6 +87,7 @@ public class ApplicationsApi(HttpClient http)
         Add("to", query.To?.ToString("O"));
         Add("status", query.Status);
         Add("recommendation", query.Recommendation);
+        Add("review", query.Review);
         Add("page", query.Page);
         Add("pageSize", query.PageSize);
         return QueryHelpers.AddQueryString(Path, parameters);

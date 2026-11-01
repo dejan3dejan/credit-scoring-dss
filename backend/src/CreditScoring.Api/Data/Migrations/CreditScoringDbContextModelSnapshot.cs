@@ -215,6 +215,55 @@ namespace CreditScoring.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.OfficerDecision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<DateTimeOffset>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<string>("DecidedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("decided_by");
+
+                    b.Property<bool>("IsOverride")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_override");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditApplicationId")
+                        .IsUnique();
+
+                    b.HasIndex("IsOverride", "Outcome");
+
+                    b.ToTable("officer_decisions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_officer_decisions_override_reason", "is_override = false OR reason IS NOT NULL");
+                        });
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditDecision", b =>
                 {
                     b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
@@ -224,9 +273,20 @@ namespace CreditScoring.Api.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.OfficerDecision", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithOne("OfficerDecision")
+                        .HasForeignKey("CreditScoring.Api.Domain.OfficerDecision", "CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
                 {
                     b.Navigation("Decision");
+
+                    b.Navigation("OfficerDecision");
                 });
 #pragma warning restore 612, 618
         }
