@@ -13,9 +13,11 @@ internal static class TestData
 
     public static readonly Actor Officer = new(Guid.Parse("0192f000-0000-7000-8000-000000000001"), "Tester");
 
+    public static readonly Client Client = Client.Create("Test Applicant", null, Officer, Now);
+
     public static CreateApplicationRequest ValidRequest() => new()
     {
-        ApplicantName = "  Test Applicant ",
+        ClientId = Client.Id,
         DurationMonths = 24,
         CreditAmount = 3500,
         Age = 35,
@@ -65,6 +67,8 @@ internal static class TestData
     public static CreditApplication ContractApplication() => new()
     {
         ApplicantName = "Test Applicant",
+        ClientId = Client.Id,
+        Client = Client,
         SubmittedBy = "tester",
         SubmittedAt = Now,
         DurationMonths = 24,

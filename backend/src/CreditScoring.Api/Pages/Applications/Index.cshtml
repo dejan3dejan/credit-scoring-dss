@@ -79,40 +79,7 @@
         <div class="chats">
             @foreach (var item in r.Items)
             {
-                var tone = item.Recommendation switch
-                {
-                    Recommendation.Approve => "approve",
-                    Recommendation.Reject => "reject",
-                    _ => "unavailable",
-                };
-                var modelText = item.Recommendation is { } rec ? $"{Labels.Of(rec)} {item.PBad?.ToString("P1")}" : "unavailable";
-                var submitted = item.SubmittedAt.ToLocalTime();
-                <a class="chat" asp-page="Details" asp-route-id="@item.Id">
-                    <span class="avatar tone-@Avatar.Tone(item.ApplicantName)" aria-hidden="true">@Avatar.Initials(item.ApplicantName)</span>
-                    <span class="chat-main">
-                        <span class="chat-name">@item.ApplicantName</span>
-                        <span class="chat-line">
-                            <span class="model-dot model-dot-@tone" aria-hidden="true"></span>Model: @modelText · @item.CreditAmount.ToString("N0") DM · @item.DurationMonths months
-                        </span>
-                    </span>
-                    <span class="chat-end">
-                        <span class="chat-time">@submitted.ToString("d MMM, HH:mm")</span>
-                        <span class="chat-score">
-                            @if (item.IsOverride == true)
-                            {
-                                <span class="tag tag-override">Override</span>
-                            }
-                            @if (item.FinalDecision is { } final)
-                            {
-                                <span class="status status-@(final == FinalDecision.Approve ? "approve" : "reject")">@Labels.Of(final)</span>
-                            }
-                            else
-                            {
-                                <span class="status status-pending">Awaiting decision</span>
-                            }
-                        </span>
-                    </span>
-                </a>
+                <partial name="_ApplicationRow" model="item" />
             }
         </div>
         <div class="pager">

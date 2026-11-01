@@ -19,8 +19,8 @@
                 <svg width="8" height="12" viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1 1.5 6 6 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 History
             </a>
-            <h1>@a.ApplicantName</h1>
-            <p>@a.CreditAmount.ToString("N0") DM over @a.DurationMonths months · @Labels.Of(a.Purpose) · submitted by @a.SubmittedBy</p>
+            <h1><a class="title-link" asp-page="/Clients/Details" asp-route-id="@a.ClientId">@a.ApplicantName</a></h1>
+            <p><span class="mono">@a.ClientNumber</span> · @a.CreditAmount.ToString("N0") DM over @a.DurationMonths months · @Labels.Of(a.Purpose) · submitted by @a.SubmittedBy</p>
         </div>
     </div>
     <a class="button" asp-page="New">New application</a>

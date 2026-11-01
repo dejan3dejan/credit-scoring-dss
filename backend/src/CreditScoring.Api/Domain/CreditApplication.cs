@@ -3,6 +3,8 @@ namespace CreditScoring.Api.Domain;
 public class CreditApplication
 {
     public Guid Id { get; private set; }
+    public Guid ClientId { get; init; }
+    public Client? Client { get; set; }
     public required string ApplicantName { get; init; }
     public required string SubmittedBy { get; init; }
     public Guid? SubmittedByUserId { get; init; }

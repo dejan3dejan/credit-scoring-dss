@@ -58,6 +58,7 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToPage("/Account/Login");
     options.Conventions.AllowAnonymousToPage("/Error");
     options.Conventions.AuthorizePage("/Applications/New", Policies.CanDecide);
+    options.Conventions.AuthorizePage("/Clients/New", Policies.CanDecide);
 });
 
 var app = builder.Build();

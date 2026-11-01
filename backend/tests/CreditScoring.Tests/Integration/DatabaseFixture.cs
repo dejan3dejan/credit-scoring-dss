@@ -9,11 +9,11 @@ public sealed class DatabaseFixture : IAsyncLifetime
     private const string DefaultConnectionString =
         "Host=localhost;Port=5433;Database=credit_scoring_test;Username=credit_scoring;Password=dev_only_password";
 
-    private readonly string connectionString =
+    public static readonly string ConnectionString =
         Environment.GetEnvironmentVariable("CREDITSCORING_TEST_DB") ?? DefaultConnectionString;
 
     public CreditScoringDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<CreditScoringDbContext>().UseNpgsql(connectionString).Options);
+        new(new DbContextOptionsBuilder<CreditScoringDbContext>().UseNpgsql(ConnectionString).Options);
 
     public User Officer { get; private set; } = null!;
 
@@ -32,6 +32,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     {
         await using var db = CreateContext();
         await db.Applications.ExecuteDeleteAsync();
+        await db.Clients.ExecuteDeleteAsync();
     }
 
     public Task DisposeAsync() => Task.CompletedTask;

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CreditScoring.Api.Domain;
 
 namespace CreditScoring.Api.Contracts;
@@ -39,6 +40,8 @@ public sealed record OfficerDecisionResponse(
 public sealed record ApplicationResponse
 {
     public required Guid Id { get; init; }
+    public required Guid ClientId { get; init; }
+    public required string ClientNumber { get; init; }
     public required string ApplicantName { get; init; }
     public required string SubmittedBy { get; init; }
     public required DateTimeOffset SubmittedAt { get; init; }
@@ -71,6 +74,9 @@ public sealed record ApplicationResponse
     public static ApplicationResponse From(CreditApplication application) => new()
     {
         Id = application.Id,
+        ClientId = application.ClientId,
+        ClientNumber = application.Client?.ClientNumber
+            ?? throw new InvalidOperationException("the application's client must be loaded to build a response"),
         ApplicantName = application.ApplicantName,
         SubmittedBy = application.SubmittedBy,
         SubmittedAt = application.SubmittedAt,
@@ -101,6 +107,7 @@ public sealed record ApplicationResponse
 
 public sealed record ApplicationSummary(
     Guid Id,
+    Guid ClientId,
     string ApplicantName,
     string SubmittedBy,
     DateTimeOffset SubmittedAt,
@@ -110,6 +117,21 @@ public sealed record ApplicationSummary(
     Recommendation? Recommendation,
     double? PBad,
     FinalDecision? FinalDecision,
-    bool? IsOverride);
+    bool? IsOverride)
+{
+    public static readonly Expression<Func<CreditApplication, ApplicationSummary>> FromApplication = a => new ApplicationSummary(
+        a.Id,
+        a.ClientId,
+        a.ApplicantName,
+        a.SubmittedBy,
+        a.SubmittedAt,
+        a.CreditAmount,
+        a.DurationMonths,
+        a.Decision == null ? null : a.Decision.Status,
+        a.Decision == null ? null : a.Decision.Recommendation,
+        a.Decision == null ? null : a.Decision.PBad,
+        a.OfficerDecision == null ? null : a.OfficerDecision.Outcome,
+        a.OfficerDecision == null ? null : a.OfficerDecision.IsOverride);
+}
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

@@ -1,0 +1,39 @@
+@page "/clients/new"
+@model CreditScoring.Api.Pages.Clients.NewModel
+@{
+    ViewData["Title"] = "New client";
+}
+
+@section Band {
+    <div>
+        <h1>New client</h1>
+        <p>Add the applicant once. Their applications and decisions are then kept together on one profile.</p>
+    </div>
+}
+
+<form method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert"></div>
+    <section class="panel">
+        <div class="panel-body">
+            <div class="grid">
+                <div class="field span-2">
+                    <label asp-for="Input.FullName"></label>
+                    <input asp-for="Input.FullName" placeholder="As on the identity document" autocomplete="off" maxlength="@BusinessLimits.ApplicantNameMaxLength" autofocus>
+                    <span asp-validation-for="Input.FullName" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.DateOfBirth"></label>
+                    <input asp-for="Input.DateOfBirth" type="date">
+                    <span class="hint">Optional. Used to fill in the applicant's age.</span>
+                    <span asp-validation-for="Input.DateOfBirth" class="error"></span>
+                </div>
+            </div>
+        </div>
+        <div class="panel-foot">A client number is assigned automatically. No national ID is stored.</div>
+    </section>
+
+    <div class="action-bar">
+        <span>Next: the application for this client.</span>
+        <button type="submit" class="button button-primary">Add client and continue</button>
+    </div>
+</form>

@@ -16,9 +16,12 @@ public sealed record Invalid(IDictionary<string, string[]> Errors) : SubmitResul
 
 public sealed record AlreadyDecided : SubmitResult;
 
+public sealed record ClientCreated(ClientResponse Client) : SubmitResult;
+
 public class ApplicationsApi(HttpClient http)
 {
     private const string Path = "api/applications";
+    private const string ClientsPath = "api/clients";
 
     private static readonly JsonSerializerOptions Json = CreateJson();
 
@@ -50,6 +53,43 @@ public class ApplicationsApi(HttpClient http)
             HttpStatusCode.BadRequest => new Invalid(
                 (await ReadAsync<ValidationProblemDetails>(response, JsonSerializerOptions.Web, cancellationToken)).Errors),
             HttpStatusCode.Conflict => new AlreadyDecided(),
+            _ => throw Unexpected(response),
+        };
+    }
+
+    public async Task<SubmitResult> CreateClientAsync(CreateClientRequest request, CancellationToken cancellationToken)
+    {
+        using var response = await http.PostAsJsonAsync(ClientsPath, request, Json, cancellationToken);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.Created => new ClientCreated(await ReadAsync<ClientResponse>(response, Json, cancellationToken)),
+            HttpStatusCode.BadRequest => new Invalid(
+                (await ReadAsync<ValidationProblemDetails>(response, JsonSerializerOptions.Web, cancellationToken)).Errors),
+            _ => throw Unexpected(response),
+        };
+    }
+
+    public async Task<PagedResult<ClientSummary>> ListClientsAsync(ClientQuery query, CancellationToken cancellationToken)
+    {
+        var uri = QueryHelpers.AddQueryString(ClientsPath, new Dictionary<string, string?>
+        {
+            ["search"] = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search,
+            ["page"] = query.Page.ToString(CultureInfo.InvariantCulture),
+            ["pageSize"] = query.PageSize.ToString(CultureInfo.InvariantCulture),
+        }.Where(p => p.Value is not null));
+        using var response = await http.GetAsync(uri, cancellationToken);
+        if (response.StatusCode != HttpStatusCode.OK)
+            throw Unexpected(response);
+        return await ReadAsync<PagedResult<ClientSummary>>(response, Json, cancellationToken);
+    }
+
+    public async Task<ClientDetail?> GetClientAsync(Guid id, CancellationToken cancellationToken)
+    {
+        using var response = await http.GetAsync($"{ClientsPath}/{id}", cancellationToken);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.OK => await ReadAsync<ClientDetail>(response, Json, cancellationToken),
+            HttpStatusCode.NotFound => null,
             _ => throw Unexpected(response),
         };
     }

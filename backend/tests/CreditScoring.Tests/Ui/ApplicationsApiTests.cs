@@ -199,6 +199,51 @@ public class ApplicationsApiTests
         Assert.Equal("Override", QueryHelpers.ParseQuery(handler.LastRequest!.RequestUri!.Query)["review"]);
     }
 
+    private const string ClientJson =
+        """{"id":"0192f000-0000-7000-8000-0000000000c1","clientNumber":"C-000007","fullName":"Ana","dateOfBirth":"1985-05-01","createdAt":"2026-11-01T12:00:00+00:00"}""";
+
+    [Fact]
+    public async Task Create_client_posts_and_returns_the_new_client()
+    {
+        var (api, handler) = Respond(HttpStatusCode.Created, ClientJson);
+
+        var result = await api.CreateClientAsync(new CreateClientRequest { FullName = "Ana", DateOfBirth = new DateOnly(1985, 5, 1) }, CancellationToken.None);
+
+        Assert.Equal("http://app.test/api/clients", handler.LastRequest!.RequestUri!.ToString());
+        Assert.Contains("\"dateOfBirth\":\"1985-05-01\"", handler.LastBody);
+        Assert.Equal("C-000007", Assert.IsType<ClientCreated>(result).Client.ClientNumber);
+    }
+
+    [Fact]
+    public async Task Create_client_returns_field_errors()
+    {
+        var (api, _) = Respond(HttpStatusCode.BadRequest, """{"status":400,"errors":{"fullName":["required"]}}""");
+
+        var result = await api.CreateClientAsync(new CreateClientRequest(), CancellationToken.None);
+
+        Assert.Equal(["required"], Assert.IsType<Invalid>(result).Errors["fullName"]);
+    }
+
+    [Fact]
+    public async Task List_clients_sends_the_search()
+    {
+        var (api, handler) = Respond(HttpStatusCode.OK, """{"items":[],"page":1,"pageSize":20,"totalCount":0}""");
+
+        await api.ListClientsAsync(new ClientQuery { Search = "a&b" }, CancellationToken.None);
+
+        var query = QueryHelpers.ParseQuery(handler.LastRequest!.RequestUri!.Query);
+        Assert.Equal("/api/clients", handler.LastRequest.RequestUri.AbsolutePath);
+        Assert.Equal("a&b", query["search"]);
+    }
+
+    [Fact]
+    public async Task Get_client_returns_null_when_not_found()
+    {
+        var (api, _) = Respond(HttpStatusCode.NotFound, "");
+
+        Assert.Null(await api.GetClientAsync(Guid.NewGuid(), CancellationToken.None));
+    }
+
     [Fact]
     public async Task List_fails_loud_on_bad_request()
     {

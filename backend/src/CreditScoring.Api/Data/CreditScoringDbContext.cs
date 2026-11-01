@@ -11,6 +11,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
     public DbSet<CreditDecision> Decisions => Set<CreditDecision>();
     public DbSet<OfficerDecision> OfficerDecisions => Set<OfficerDecision>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Client> Clients => Set<Client>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -19,6 +20,22 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasSequence<long>("client_number_seq");
+
+        modelBuilder.Entity<Client>(client =>
+        {
+            client.ToTable("clients");
+            client.Property(c => c.ClientNumber)
+                .HasMaxLength(BusinessLimits.ClientNumberMaxLength)
+                .HasDefaultValueSql("'C-' || lpad(nextval('client_number_seq')::text, 6, '0')")
+                .HasSentinel("")
+                .ValueGeneratedOnAdd();
+            client.Property(c => c.FullName).HasMaxLength(BusinessLimits.ApplicantNameMaxLength);
+            client.HasIndex(c => c.ClientNumber).IsUnique();
+            client.HasIndex(c => c.FullName);
+            client.HasOne<User>().WithMany().HasForeignKey(c => c.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<CreditApplication>(application =>
         {
             application.ToTable("credit_applications");
@@ -28,6 +45,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             application.HasIndex(a => a.SubmittedAt);
             application.HasIndex(a => a.ApplicantName);
             application.HasOne<User>().WithMany().HasForeignKey(a => a.SubmittedByUserId).OnDelete(DeleteBehavior.Restrict);
+            application.HasOne(a => a.Client).WithMany().HasForeignKey(a => a.ClientId).OnDelete(DeleteBehavior.Restrict);
             application.HasOne(a => a.Decision)
                 .WithOne()
                 .HasForeignKey<CreditDecision>(d => d.CreditApplicationId)

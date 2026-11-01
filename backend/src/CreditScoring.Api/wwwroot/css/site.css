@@ -451,6 +451,19 @@ body.bare .footer { border-top: 0; text-align: center; }
 .signin-form { display: grid; gap: 16px; padding: 24px; }
 .signin-button { width: 100%; }
 
+.client-card { display: flex; align-items: center; gap: 14px; padding: 16px 20px; margin-bottom: 20px; }
+.client-card-main { flex: 1; min-width: 0; }
+.client-card-name { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.note-spaced { margin-bottom: 20px; }
+.band-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.title-link { color: inherit; }
+.title-link:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stat-row .panel + .panel { margin-top: 0; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 18px 20px; }
+.stat-value { font-family: var(--font-display); font-size: 28px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.stat-label { color: var(--muted); font-size: 13px; }
+
 .empty { padding: 56px 24px; text-align: center; }
 .empty h2 { font-size: 16px; }
 .empty p { margin: 6px 0 0; color: var(--muted); }

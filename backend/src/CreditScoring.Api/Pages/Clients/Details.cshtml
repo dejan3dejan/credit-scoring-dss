@@ -1,0 +1,59 @@
+@page "/clients/{id:guid}"
+@model CreditScoring.Api.Pages.Clients.DetailsModel
+@{
+    var c = Model.Client;
+    ViewData["Title"] = c.FullName;
+    var latest = c.Applications.FirstOrDefault();
+    var decided = c.Applications.Count(a => a.FinalDecision is not null);
+    var approved = c.Applications.Count(a => a.FinalDecision == FinalDecision.Approve);
+}
+
+@section Band {
+    <div class="band-person">
+        <span class="avatar avatar-lg tone-@Avatar.Tone(c.FullName)" aria-hidden="true">@Avatar.Initials(c.FullName)</span>
+        <div>
+            <a class="back" asp-page="/Clients/Index">
+                <svg width="8" height="12" viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1 1.5 6 6 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Clients
+            </a>
+            <h1>@c.FullName</h1>
+            <p><span class="mono">@c.ClientNumber</span>@(c.DateOfBirth is { } dob ? $" · born {dob:d MMM yyyy}" : "") · client since @c.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</p>
+        </div>
+    </div>
+    @if (Model.CanDecide)
+    {
+        <div class="band-actions">
+            @if (latest is not null)
+            {
+                <a class="button" asp-page="/Applications/New" asp-route-clientId="@c.Id" asp-route-from="@latest.Id">Start from last application</a>
+            }
+            <a class="button button-primary" asp-page="/Applications/New" asp-route-clientId="@c.Id">New application</a>
+        </div>
+    }
+}
+
+<div class="stat-row">
+    <div class="panel stat"><span class="stat-value">@c.Applications.Count</span><span class="stat-label">Applications</span></div>
+    <div class="panel stat"><span class="stat-value">@decided</span><span class="stat-label">Decided</span></div>
+    <div class="panel stat"><span class="stat-value">@approved</span><span class="stat-label">Approved</span></div>
+</div>
+
+<h2 class="section-title">Applications</h2>
+<section class="panel">
+    @if (c.Applications.Count == 0)
+    {
+        <div class="empty">
+            <h2>No applications yet</h2>
+            <p>Applications for this client appear here with their recommendation and decision.</p>
+        </div>
+    }
+    else
+    {
+        <div class="chats">
+            @foreach (var item in c.Applications)
+            {
+                <partial name="_ApplicationRow" model="item" />
+            }
+        </div>
+    }
+</section>

@@ -6,13 +6,51 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace CreditScoring.Api.Pages.Applications;
 
-public class NewModel(ApplicationsApi api) : PageModel
+public class NewModel(ApplicationsApi api, TimeProvider time) : PageModel
 {
     [BindProperty]
     public CreateApplicationRequest Input { get; set; } = new();
 
-    public void OnGet()
+    [BindProperty(SupportsGet = true)]
+    public Guid? ClientId { get; set; }
+
+    [BindProperty(SupportsGet = true, Name = "from")]
+    public Guid? FromApplication { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Search { get; set; }
+
+    public ClientDetail? Client { get; private set; }
+
+    public PagedResult<ClientSummary>? Clients { get; private set; }
+
+    public ApplicationResponse? Prefilled { get; private set; }
+
+    public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
+        if (ClientId is not { } clientId)
+        {
+            Clients = await api.ListClientsAsync(new ClientQuery { Search = Search, PageSize = 8 }, cancellationToken);
+            return Page();
+        }
+
+        Client = await api.GetClientAsync(clientId, cancellationToken);
+        if (Client is null)
+            return NotFound();
+
+        if (FromApplication is { } fromId)
+        {
+            Prefilled = await api.GetAsync(fromId, cancellationToken);
+            if (Prefilled is null || Prefilled.ClientId != clientId)
+                return NotFound();
+            Input = CreateApplicationRequest.From(Prefilled);
+        }
+        else
+        {
+            var today = DateOnly.FromDateTime(time.GetLocalNow().DateTime);
+            Input = new CreateApplicationRequest { ClientId = clientId, Age = Domain.Client.AgeOn(Client.DateOfBirth, today) };
+        }
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
@@ -25,6 +63,8 @@ public class NewModel(ApplicationsApi api) : PageModel
                 return RedirectToPage("Details", new { id = submitted.Application.Id });
             case Invalid invalid:
                 FormErrors.Apply<CreateApplicationRequest>(ModelState, nameof(Input), invalid.Errors, formatErrors);
+                if (Input.ClientId is { } clientId)
+                    Client = await api.GetClientAsync(clientId, cancellationToken);
                 return Page();
             default:
                 throw new UnreachableException();

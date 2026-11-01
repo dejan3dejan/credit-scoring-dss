@@ -50,6 +50,7 @@
                             <a asp-page="/Applications/New" class="@(current == "/Applications/New" ? "active" : null)">New application</a>
                         }
                         <a asp-page="/Applications/Index" class="@(current is "/Applications/Index" or "/Applications/Details" ? "active" : null)">History</a>
+                        <a asp-page="/Clients/Index" class="@(current is "/Clients/Index" or "/Clients/Details" or "/Clients/New" ? "active" : null)">Clients</a>
                         <a asp-page="/Model" class="@(current == "/Model" ? "active" : null)">Model</a>
                     </nav>
                 }

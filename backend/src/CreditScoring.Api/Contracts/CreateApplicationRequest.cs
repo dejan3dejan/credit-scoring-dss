@@ -5,8 +5,8 @@ namespace CreditScoring.Api.Contracts;
 
 public sealed record CreateApplicationRequest
 {
-    [Required, StringLength(BusinessLimits.ApplicantNameMaxLength), Display(Name = "Applicant name")]
-    public string? ApplicantName { get; init; }
+    [Required, Display(Name = "Client")]
+    public Guid? ClientId { get; init; }
 
     [Required, Range(BusinessLimits.MinDurationMonths, BusinessLimits.MaxDurationMonths), Display(Name = "Loan term (months)")]
     public int? DurationMonths { get; init; }
@@ -68,9 +68,11 @@ public sealed record CreateApplicationRequest
     [Required, Display(Name = "Foreign worker")]
     public bool? IsForeignWorker { get; init; }
 
-    public CreditApplication ToDomain(DateTimeOffset submittedAt, Actor submittedBy) => new()
+    public CreditApplication ToDomain(DateTimeOffset submittedAt, Actor submittedBy, Client client) => new()
     {
-        ApplicantName = ApplicantName!.Trim(),
+        ClientId = client.Id,
+        Client = client,
+        ApplicantName = client.FullName,
         SubmittedBy = submittedBy.Name,
         SubmittedByUserId = submittedBy.UserId,
         SubmittedAt = submittedAt,
@@ -94,5 +96,30 @@ public sealed record CreateApplicationRequest
         Job = Job!.Value,
         HasRegisteredTelephone = HasRegisteredTelephone!.Value,
         IsForeignWorker = IsForeignWorker!.Value,
+    };
+
+    public static CreateApplicationRequest From(ApplicationResponse previous) => new()
+    {
+        ClientId = previous.ClientId,
+        DurationMonths = previous.DurationMonths,
+        CreditAmount = previous.CreditAmount,
+        Age = previous.Age,
+        InstallmentSharePercent = previous.InstallmentSharePercent,
+        YearsAtResidence = previous.YearsAtResidence,
+        CreditsAtBank = previous.CreditsAtBank,
+        Dependants = previous.Dependants,
+        CheckingAccountStatus = previous.CheckingAccountStatus,
+        CreditHistory = previous.CreditHistory,
+        Purpose = previous.Purpose,
+        SavingsAccount = previous.SavingsAccount,
+        EmploymentDuration = previous.EmploymentDuration,
+        PersonalStatusSex = previous.PersonalStatusSex,
+        OtherDebtors = previous.OtherDebtors,
+        Property = previous.Property,
+        OtherInstallmentPlans = previous.OtherInstallmentPlans,
+        Housing = previous.Housing,
+        Job = previous.Job,
+        HasRegisteredTelephone = previous.HasRegisteredTelephone,
+        IsForeignWorker = previous.IsForeignWorker,
     };
 }

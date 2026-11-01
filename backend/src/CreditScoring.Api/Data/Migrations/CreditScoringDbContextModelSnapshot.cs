@@ -21,6 +21,53 @@ namespace CreditScoring.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence("client_number_seq");
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.Client", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ClientNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("client_number")
+                        .HasDefaultValueSql("'C-' || lpad(nextval('client_number_seq')::text, 6, '0')");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date")
+                        .HasColumnName("date_of_birth");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("full_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientNumber")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("FullName");
+
+                    b.ToTable("clients", (string)null);
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -43,6 +90,10 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
                         .HasColumnName("checking_account_status");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
 
                     b.Property<int>("CreditAmount")
                         .HasColumnType("integer")
@@ -154,6 +205,8 @@ namespace CreditScoring.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicantName");
+
+                    b.HasIndex("ClientId");
 
                     b.HasIndex("SubmittedAt");
 
@@ -318,12 +371,28 @@ namespace CreditScoring.Api.Data.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.Client", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
                 {
+                    b.HasOne("CreditScoring.Api.Domain.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("CreditScoring.Api.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("SubmittedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditDecision", b =>

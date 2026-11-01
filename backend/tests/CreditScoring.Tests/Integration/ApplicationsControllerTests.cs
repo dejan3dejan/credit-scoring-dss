@@ -40,10 +40,41 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     {
         ml.Result = result;
         clock.Now = at ?? TestData.Now;
+        var clientId = await ClientNamed(name);
         var response = await WithController(c =>
-            c.Create(TestData.ValidRequest() with { ApplicantName = name }, CancellationToken.None));
+            c.Create(TestData.ValidRequest() with { ClientId = clientId }, CancellationToken.None));
         var created = Assert.IsType<CreatedAtActionResult>(response.Result);
         return Assert.IsType<ApplicationResponse>(created.Value);
+    }
+
+    private async Task<Guid> ClientNamed(string name)
+    {
+        await using var db = database.CreateContext();
+        var client = Client.Create(name, null, database.Officer.AsActor(), TestData.Now);
+        db.Clients.Add(client);
+        await db.SaveChangesAsync();
+        return client.Id;
+    }
+
+    [Fact]
+    public async Task Unknown_client_is_a_validation_problem_on_client_id()
+    {
+        var response = await WithController(c =>
+            c.Create(TestData.ValidRequest() with { ClientId = Guid.NewGuid() }, CancellationToken.None));
+
+        var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
+        Assert.Equal(["clientId"], problem.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task Application_takes_the_client_name_as_a_snapshot_and_returns_the_client_number()
+    {
+        var created = await Submit("Ana Petrovic", new MlScore(0.1, TestData.ModelId));
+
+        await using var db = database.CreateContext();
+        var client = await db.Clients.SingleAsync(c => c.Id == created.ClientId);
+        Assert.Equal("Ana Petrovic", created.ApplicantName);
+        Assert.Equal(client.ClientNumber, created.ClientNumber);
     }
 
     private async Task<PagedResult<ApplicationSummary>> History(HistoryQuery query)

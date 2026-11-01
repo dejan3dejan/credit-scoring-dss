@@ -29,9 +29,10 @@ public class CreateApplicationRequestTests
     [Fact]
     public void ToDomain_maps_every_field_and_trims_names()
     {
-        var application = Valid().ToDomain(TestData.Now, TestData.Officer);
+        var application = Valid().ToDomain(TestData.Now, TestData.Officer, TestData.Client);
 
         Assert.Equal("Test Applicant", application.ApplicantName);
+        Assert.Equal(TestData.Client.Id, application.ClientId);
         Assert.Equal("Tester", application.SubmittedBy);
         Assert.Equal(TestData.Officer.UserId, application.SubmittedByUserId);
         Assert.Equal(TestData.Now, application.SubmittedAt);
@@ -137,25 +138,18 @@ public class CreateApplicationRequestTests
             Errors(Valid() with { Age = 17, YearsAtResidence = 40 }));
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Blank_names_are_invalid(string name)
+    [Fact]
+    public void Client_is_required()
     {
-        Assert.Equal(
-            [nameof(CreateApplicationRequest.ApplicantName)],
-            Errors(Valid() with { ApplicantName = name }));
+        Assert.Equal([nameof(CreateApplicationRequest.ClientId)], Errors(Valid() with { ClientId = null }));
     }
 
     [Fact]
-    public void Overlong_names_are_invalid()
+    public void Previous_application_prefills_every_answer_and_the_client()
     {
-        var request = Valid() with
-        {
-            ApplicantName = new string('a', BusinessLimits.ApplicantNameMaxLength + 1),
-        };
+        var previous = ApplicationResponse.From(TestData.ContractApplication());
 
-        Assert.Equal([nameof(CreateApplicationRequest.ApplicantName)], Errors(request));
+        Assert.Equal(Valid(), CreateApplicationRequest.From(previous));
     }
 
     [Fact]

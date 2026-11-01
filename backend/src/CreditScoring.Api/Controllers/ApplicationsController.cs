@@ -26,7 +26,14 @@ public class ApplicationsController(
         CreateApplicationRequest request,
         CancellationToken cancellationToken)
     {
-        var application = request.ToDomain(time.GetUtcNow(), Credentials.ActorOf(User));
+        var client = await db.Clients.FirstOrDefaultAsync(c => c.Id == request.ClientId, cancellationToken);
+        if (client is null)
+        {
+            ModelState.AddModelError("clientId", "No client with this id exists.");
+            return BadRequest(new ValidationProblemDetails(ModelState) { Status = StatusCodes.Status400BadRequest });
+        }
+
+        var application = request.ToDomain(time.GetUtcNow(), Credentials.ActorOf(User), client);
         application.Decision = await decisions.EvaluateAsync(application, cancellationToken);
 
         db.Applications.Add(application);
@@ -42,6 +49,7 @@ public class ApplicationsController(
     {
         var application = await db.Applications
             .AsNoTracking()
+            .Include(a => a.Client)
             .Include(a => a.Decision)
             .Include(a => a.OfficerDecision)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
@@ -61,6 +69,7 @@ public class ApplicationsController(
         CancellationToken cancellationToken)
     {
         var application = await db.Applications
+            .Include(a => a.Client)
             .Include(a => a.Decision)
             .Include(a => a.OfficerDecision)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
@@ -110,8 +119,8 @@ public class ApplicationsController(
 
         if (!string.IsNullOrWhiteSpace(query.ApplicantName))
         {
-            var pattern = "%" + EscapeLike(query.ApplicantName.Trim()) + "%";
-            applications = applications.Where(a => EF.Functions.ILike(a.ApplicantName, pattern, @"\"));
+            var pattern = Like.Contains(query.ApplicantName);
+            applications = applications.Where(a => EF.Functions.ILike(a.ApplicantName, pattern, Like.Escape));
         }
         if (query.From is { } from)
         {
@@ -146,23 +155,9 @@ public class ApplicationsController(
             .OrderByDescending(a => a.SubmittedAt)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(a => new ApplicationSummary(
-                a.Id,
-                a.ApplicantName,
-                a.SubmittedBy,
-                a.SubmittedAt,
-                a.CreditAmount,
-                a.DurationMonths,
-                a.Decision == null ? null : a.Decision.Status,
-                a.Decision == null ? null : a.Decision.Recommendation,
-                a.Decision == null ? null : a.Decision.PBad,
-                a.OfficerDecision == null ? null : a.OfficerDecision.Outcome,
-                a.OfficerDecision == null ? null : a.OfficerDecision.IsOverride))
+            .Select(ApplicationSummary.FromApplication)
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ApplicationSummary>(items, query.Page, query.PageSize, total);
     }
-
-    private static string EscapeLike(string value) =>
-        value.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
 }
