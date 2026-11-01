@@ -6,24 +6,39 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@ViewData["Title"] · Credit Scoring DSS</title>
+    <meta name="theme-color" content="#ffffff">
+    <title>@ViewData["Title"] · Credit Scoring</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
 </head>
 <body>
-    <header class="topbar">
-        <div class="container topbar-inner">
-            <a class="brand" asp-page="/Applications/New">
-                <span class="brand-mark" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="currentColor"/></svg>
-                </span>
-                <span>Credit Scoring <span class="brand-sub">Decision Support</span></span>
-            </a>
-            <nav class="nav">
+    <header class="header">
+        <div class="container">
+            <div class="header-top">
+                <a class="brand" asp-page="/Applications/New">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="currentColor"/></svg>
+                    </span>
+                    Credit Scoring
+                    <span class="brand-slash" aria-hidden="true">/</span>
+                    <span class="brand-env">Decision Support</span>
+                </a>
+                <span class="header-meta">Amounts in 1970s DM</span>
+            </div>
+            <nav class="tabs">
                 <a asp-page="/Applications/New" class="@(current == "/Applications/New" ? "active" : null)">New application</a>
                 <a asp-page="/Applications/Index" class="@(current is "/Applications/Index" or "/Applications/Details" ? "active" : null)">History</a>
             </nav>
         </div>
     </header>
+
+    @if (IsSectionDefined("Band"))
+    {
+        <section class="band">
+            <div class="container band-inner">
+                @await RenderSectionAsync("Band")
+            </div>
+        </section>
+    }
 
     <main class="container main">
         @RenderBody()

@@ -1,98 +1,105 @@
 @page "/applications/{id:guid}"
 @model CreditScoring.Api.Pages.Applications.DetailsModel
+@using System.Globalization
 @{
     var a = Model.Application;
     var d = a.Decision;
     ViewData["Title"] = a.ApplicantName;
     string YesNo(bool value) => value ? "Yes" : "No";
+    string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    const double Radius = 90;
+    var circumference = 2 * Math.PI * Radius;
 }
 
-<div class="page-head page-head-row">
-    <div>
-        <a class="back" asp-page="Index">← History</a>
-        <h1>@a.ApplicantName</h1>
-        <p class="lead">
-            Submitted @a.SubmittedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm") by @a.SubmittedBy
-            <span class="dot-sep">·</span> <span class="mono">@a.Id</span>
-        </p>
+@section Band {
+    <div class="band-person">
+        <span class="avatar avatar-lg tone-@Avatar.Tone(a.ApplicantName)" aria-hidden="true">@Avatar.Initials(a.ApplicantName)</span>
+        <div>
+            <a class="back" asp-page="Index">
+                <svg width="8" height="12" viewBox="0 0 8 12" aria-hidden="true"><path d="M6 1 1.5 6 6 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                History
+            </a>
+            <h1>@a.ApplicantName</h1>
+            <p>@a.CreditAmount.ToString("N0") DM over @a.DurationMonths months · @Labels.Of(a.Purpose) · submitted by @a.SubmittedBy</p>
+        </div>
     </div>
     <a class="button" asp-page="New">New application</a>
-</div>
-
-@if (d is null)
-{
-    <section class="card result result-unavailable">
-        <h2>No decision recorded</h2>
-        <p>This application has no stored scoring result.</p>
-    </section>
 }
-else if (d.Status == DecisionStatus.Scored && d.PBad is { } pBad && d.ThresholdUsed is { } threshold && d.Recommendation is { } recommendation)
-{
-    var tone = recommendation == Recommendation.Approve ? "approve" : "reject";
-    <section class="card result result-@tone">
-        <div class="result-main">
-            <div>
-                <div class="eyebrow">Recommended action</div>
-                <div class="verdict">
-                    <span class="badge badge-@tone badge-lg">@Labels.Of(recommendation)</span>
+
+<section class="panel">
+    @if (d is not null && d.Status == DecisionStatus.Scored && d.PBad is { } pBad && d.ThresholdUsed is { } threshold && d.Recommendation is { } recommendation)
+    {
+        var tone = recommendation == Recommendation.Approve ? "approve" : "reject";
+        var angle = threshold * 2 * Math.PI;
+        <div class="result">
+            <div class="gauge" role="img" aria-label="Probability of default @pBad.ToString("P1"), reject threshold @threshold.ToString("P1")">
+                <svg viewBox="0 0 200 200" aria-hidden="true">
+                    <circle class="gauge-track" cx="100" cy="100" r="@N(Radius)"/>
+                    <circle class="gauge-value gauge-@tone" cx="100" cy="100" r="@N(Radius)"
+                            stroke-dasharray="@N(Math.Max(pBad * circumference, 0.01)) @N(circumference)"/>
+                    <line class="gauge-tick"
+                          x1="@N(100 + 76 * Math.Cos(angle))" y1="@N(100 + 76 * Math.Sin(angle))"
+                          x2="@N(100 + 104 * Math.Cos(angle))" y2="@N(100 + 104 * Math.Sin(angle))"/>
+                </svg>
+                <div class="gauge-center">
+                    <div class="gauge-number">@pBad.ToString("P1")</div>
+                    <div class="gauge-caption">Probability of default</div>
                 </div>
-                <p class="result-why">
-                    @if (recommendation == Recommendation.Approve)
-                    {
-                        <text>The estimated probability of default is below the reject threshold.</text>
-                    }
-                    else
-                    {
-                        <text>The estimated probability of default is at or above the reject threshold.</text>
-                    }
+            </div>
+            <div>
+                <div class="eyebrow">Recommendation</div>
+                <div class="verdict verdict-@tone">@Labels.Of(recommendation)</div>
+                <p class="result-text">
+                    @(recommendation == Recommendation.Approve
+                        ? "The estimated probability of default is below the reject threshold, marked on the ring."
+                        : "The estimated probability of default is at or above the reject threshold, marked on the ring.")
                 </p>
-            </div>
-            <div class="metric">
-                <div class="eyebrow">Probability of default, P(bad)</div>
-                <div class="metric-value">@pBad.ToString("P1")</div>
-                <div class="muted">Reject at or above @threshold.ToString("P1")</div>
+                <dl class="facts">
+                    <div><dt>P(bad)</dt><dd class="mono">@pBad.ToString("0.0000", CultureInfo.InvariantCulture)</dd></div>
+                    <div><dt>Reject at</dt><dd class="mono">≥ @threshold.ToString("0.0000", CultureInfo.InvariantCulture)</dd></div>
+                    <div><dt>Model</dt><dd class="mono">@d.ModelId</dd></div>
+                    <div><dt>Scored</dt><dd>@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd></div>
+                </dl>
             </div>
         </div>
-
-        <div class="meter" role="img" aria-label="P(bad) @pBad.ToString("P1") against threshold @threshold.ToString("P1")">
-            <div class="meter-fill meter-@tone" style="width: @((pBad * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
-            <div class="meter-mark" style="left: @((threshold * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"><span>Threshold</span></div>
+    }
+    else
+    {
+        <div class="result">
+            <div class="gauge-empty">No score</div>
+            <div>
+                <div class="eyebrow">Recommendation</div>
+                <div class="verdict verdict-unavailable">Scoring unavailable</div>
+                <p class="result-text">
+                    @(d?.ErrorCode is { } code ? Labels.ScoringError(code) ?? "The scoring service failed." : "No scoring result was recorded.")
+                    No recommendation was made and no score was substituted. Assess the application manually, or submit it again once scoring is available.
+                </p>
+                <dl class="facts">
+                    <div><dt>Error code</dt><dd class="mono">@(d?.ErrorCode ?? "none")</dd></div>
+                    <div><dt>Attempted</dt><dd>@(d?.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm") ?? "–")</dd></div>
+                </dl>
+            </div>
         </div>
-        <div class="meter-scale"><span>0%</span><span>50%</span><span>100%</span></div>
+    }
+    <div class="panel-foot">
+        <span>Reference <span class="mono">@a.Id</span></span>
+        <span>Submitted @a.SubmittedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</span>
+    </div>
+</section>
 
-        <dl class="meta">
-            <div><dt>Model</dt><dd class="mono">@d.ModelId</dd></div>
-            <div><dt>Scored</dt><dd>@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm:ss")</dd></div>
-            <div><dt>Threshold</dt><dd>@threshold.ToString("0.####") (reject if P(bad) ≥ threshold)</dd></div>
-        </dl>
-    </section>
-}
-else
-{
-    <section class="card result result-unavailable">
-        <div class="eyebrow">Recommended action</div>
-        <div class="verdict"><span class="badge badge-unavailable badge-lg">@Labels.Of(DecisionStatus.ScoringUnavailable)</span></div>
-        <p class="result-why">
-            @(d.ErrorCode is { } code ? Labels.ScoringError(code) ?? "The scoring service failed." : "The scoring service failed.")
-            No recommendation was made and no default score was substituted. Assess the application manually, or submit it again once scoring is available.
-        </p>
-        <dl class="meta">
-            <div><dt>Error code</dt><dd class="mono">@(d.ErrorCode ?? "none")</dd></div>
-            <div><dt>Attempted</dt><dd>@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm:ss")</dd></div>
-        </dl>
-    </section>
-}
-
-<div class="notice">
-    <strong>Decision support, not a decision.</strong>
-    The model estimates risk from 20 answers and recommends an action; the loan officer makes and owns the credit decision.
-    The model was trained on German credit data from the 1970s, so amounts are in Deutsche Mark and its estimates reflect that population.
+<div class="note">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm.75 10.5h-1.5v-4.5h1.5v4.5ZM8 5.75a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>
+    <div>
+        <strong>Decision support, not a decision.</strong>
+        The model estimates risk from 20 answers and recommends an action; the loan officer makes and owns the credit decision.
+        It was trained on German credit data from the 1970s, so amounts are in Deutsche Mark and its estimates reflect that population.
+    </div>
 </div>
 
 <h2 class="section-title">Application as submitted</h2>
-<div class="snapshot">
-    <section class="card">
-        <h3>Applicant</h3>
+<div class="cards">
+    <section class="panel">
+        <div class="card-title">Applicant</div>
         <dl class="kv">
             <div><dt>Age</dt><dd>@a.Age years</dd></div>
             <div><dt>Dependants</dt><dd>@a.Dependants</dd></div>
@@ -101,18 +108,18 @@ else
             <div><dt>Foreign worker</dt><dd>@YesNo(a.IsForeignWorker)</dd></div>
         </dl>
     </section>
-    <section class="card">
-        <h3>Loan</h3>
+    <section class="panel">
+        <div class="card-title">Loan</div>
         <dl class="kv">
             <div><dt>Credit amount</dt><dd class="num">@a.CreditAmount.ToString("N0") DM</dd></div>
-            <div><dt>Loan term</dt><dd>@a.DurationMonths months</dd></div>
+            <div><dt>Term</dt><dd>@a.DurationMonths months</dd></div>
             <div><dt>Purpose</dt><dd>@Labels.Of(a.Purpose)</dd></div>
-            <div><dt>Installment share of income</dt><dd class="num">@a.InstallmentSharePercent.ToString("0.##")%</dd></div>
+            <div><dt>Installment share</dt><dd class="num">@a.InstallmentSharePercent.ToString("0.##")%</dd></div>
             <div><dt>Other debtors or guarantors</dt><dd>@Labels.Of(a.OtherDebtors)</dd></div>
         </dl>
     </section>
-    <section class="card">
-        <h3>Finances</h3>
+    <section class="panel">
+        <div class="card-title">Finances</div>
         <dl class="kv">
             <div><dt>Checking account</dt><dd>@Labels.Of(a.CheckingAccountStatus)</dd></div>
             <div><dt>Savings</dt><dd>@Labels.Of(a.SavingsAccount)</dd></div>
@@ -122,8 +129,8 @@ else
             <div><dt>Most valuable property</dt><dd>@Labels.Of(a.Property)</dd></div>
         </dl>
     </section>
-    <section class="card">
-        <h3>Work and housing</h3>
+    <section class="panel">
+        <div class="card-title">Work and housing</div>
         <dl class="kv">
             <div><dt>Current employment</dt><dd>@Labels.Of(a.EmploymentDuration)</dd></div>
             <div><dt>Job</dt><dd>@Labels.Of(a.Job)</dd></div>

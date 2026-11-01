@@ -34,12 +34,16 @@ public class IndexModel(ApplicationsApi api) : PageModel
         Result = await api.ListAsync(filter.ToQuery(TimeZoneInfo.Local, PageSize), cancellationToken);
     }
 
-    public Dictionary<string, string?> RouteFor(int page) => new()
+    public Dictionary<string, string?> RouteFor(int page) => Route(Outcome, page);
+
+    public Dictionary<string, string?> RouteFor(HistoryOutcome? outcome) => Route(outcome, 1);
+
+    private Dictionary<string, string?> Route(HistoryOutcome? outcome, int page) => new()
     {
         ["name"] = Name,
         ["from"] = From?.ToString("yyyy-MM-dd"),
         ["to"] = To?.ToString("yyyy-MM-dd"),
-        ["outcome"] = Outcome?.ToString(),
+        ["outcome"] = outcome?.ToString(),
         ["p"] = page.ToString(),
     };
 }

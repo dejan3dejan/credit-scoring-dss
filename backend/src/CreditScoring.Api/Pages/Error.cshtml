@@ -2,8 +2,10 @@
 @{
     ViewData["Title"] = "Error";
 }
-<div class="page-head">
-    <h1>Something went wrong</h1>
-    <p class="lead">The request could not be completed. Nothing was recorded as a decision. Try again, and if it keeps failing, check the server log.</p>
-</div>
+@section Band {
+    <div>
+        <h1>Something went wrong</h1>
+        <p>The request could not be completed and nothing was recorded as a decision. Try again; if it keeps failing, check the server log.</p>
+    </div>
+}
 <a class="button" asp-page="/Applications/New">Back to new application</a>

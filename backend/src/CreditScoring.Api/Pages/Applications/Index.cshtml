@@ -5,110 +5,99 @@
     var r = Model.Result;
     var first = r.TotalCount == 0 ? 0 : (r.Page - 1) * r.PageSize + 1;
     var last = Math.Min(r.Page * r.PageSize, r.TotalCount);
+    var outcomes = new (HistoryOutcome? Value, string Label)[]
+    {
+        (null, "All"),
+        (HistoryOutcome.Approve, "Approve"),
+        (HistoryOutcome.Reject, "Reject"),
+        (HistoryOutcome.ScoringUnavailable, "Unavailable"),
+    };
 }
 
-<div class="page-head page-head-row">
+@section Band {
     <div>
         <h1>History</h1>
-        <p class="lead">Every submitted application and the recommendation it received, newest first.</p>
+        <p>Every application and the recommendation it received, newest first.</p>
     </div>
     <a class="button button-primary" asp-page="New">New application</a>
-</div>
+}
 
-<form method="get" class="card filters">
-    <div class="field">
-        <label for="name">Applicant name</label>
-        <input id="name" name="name" value="@Model.Name" placeholder="Search by name" maxlength="@BusinessLimits.ApplicantNameMaxLength" autocomplete="off">
-    </div>
-    <div class="field">
-        <label for="from">From</label>
-        <input id="from" name="from" type="date" value="@Model.From?.ToString("yyyy-MM-dd")">
-    </div>
-    <div class="field">
-        <label for="to">To</label>
-        <input id="to" name="to" type="date" value="@Model.To?.ToString("yyyy-MM-dd")">
-    </div>
-    <div class="field">
-        <label for="outcome">Result</label>
-        <select id="outcome" name="outcome">
-            <option value="">All results</option>
-            @foreach (var outcome in Enum.GetValues<HistoryOutcome>())
-            {
-                var label = outcome == HistoryOutcome.ScoringUnavailable ? Labels.Of(DecisionStatus.ScoringUnavailable) : outcome.ToString();
-                <option value="@outcome" selected="@(Model.Outcome == outcome)">@label</option>
-            }
-        </select>
-    </div>
-    <div class="filter-actions">
-        <button type="submit" class="button button-primary">Apply</button>
-        @if (Model.IsFiltered)
+<form method="get" class="toolbar">
+    <label class="search">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input name="name" value="@Model.Name" placeholder="Search by applicant name" aria-label="Applicant name" maxlength="@BusinessLimits.ApplicantNameMaxLength" autocomplete="off">
+    </label>
+    <nav class="segmented" aria-label="Result">
+        @foreach (var (value, label) in outcomes)
         {
-            <a class="button button-ghost" asp-page="Index">Clear</a>
+            <a asp-page="Index" asp-all-route-data="Model.RouteFor(value)" class="@(Model.Outcome == value ? "selected" : null)">@label</a>
         }
+    </nav>
+    <div class="dates">
+        <input type="date" name="from" value="@Model.From?.ToString("yyyy-MM-dd")" aria-label="From date">
+        <span>to</span>
+        <input type="date" name="to" value="@Model.To?.ToString("yyyy-MM-dd")" aria-label="To date">
     </div>
+    @if (Model.Outcome is { } outcome)
+    {
+        <input type="hidden" name="outcome" value="@outcome">
+    }
+    <button type="submit" class="button">Search</button>
+    @if (Model.IsFiltered)
+    {
+        <a asp-page="Index">Clear</a>
+    }
 </form>
 
-@if (r.TotalCount == 0)
-{
-    <div class="card empty">
-        <h2>@(Model.IsFiltered ? "No applications match these filters" : "No applications yet")</h2>
-        <p class="muted">@(Model.IsFiltered ? "Try a wider date range or clear the filters." : "Submitted applications appear here with their recommendation.")</p>
-    </div>
-}
-else
-{
-    <div class="card table-card">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Submitted</th>
-                    <th>Applicant</th>
-                    <th class="num">Amount</th>
-                    <th class="num">Term</th>
-                    <th class="num">P(bad)</th>
-                    <th>Result</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in r.Items)
+<section class="panel">
+    @if (r.TotalCount == 0)
+    {
+        <div class="empty">
+            <h2>@(Model.IsFiltered ? "No results" : "No applications yet")</h2>
+            <p>@(Model.IsFiltered ? "No applications match these filters." : "Submitted applications appear here with their recommendation.")</p>
+        </div>
+    }
+    else
+    {
+        <div class="chats">
+            @foreach (var item in r.Items)
+            {
+                var tone = item.Recommendation switch
                 {
-                    <tr>
-                        <td class="nowrap">@item.SubmittedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</td>
-                        <td>
-                            <a class="row-link" asp-page="Details" asp-route-id="@item.Id">@item.ApplicantName</a>
-                            <div class="muted small">by @item.SubmittedBy</div>
-                        </td>
-                        <td class="num nowrap">@item.CreditAmount.ToString("N0") DM</td>
-                        <td class="num nowrap">@item.DurationMonths mo</td>
-                        <td class="num">@(item.PBad?.ToString("P1") ?? "–")</td>
-                        <td>
-                            @if (item.Recommendation is { } rec)
-                            {
-                                var tone = rec == Recommendation.Approve ? "approve" : "reject";
-                                <span class="badge badge-@tone">@Labels.Of(rec)</span>
-                            }
-                            else
-                            {
-                                <span class="badge badge-unavailable">@Labels.Of(DecisionStatus.ScoringUnavailable)</span>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-
-    <div class="pager">
-        <span class="muted">Showing @first–@last of @r.TotalCount</span>
-        <div class="pager-links">
-            @if (r.Page > 1)
-            {
-                <a class="button" asp-page="Index" asp-all-route-data="Model.RouteFor(r.Page - 1)">Previous</a>
-            }
-            @if (last < r.TotalCount)
-            {
-                <a class="button" asp-page="Index" asp-all-route-data="Model.RouteFor(r.Page + 1)">Next</a>
+                    Recommendation.Approve => "approve",
+                    Recommendation.Reject => "reject",
+                    _ => "unavailable",
+                };
+                var status = item.Recommendation is { } rec ? Labels.Of(rec) : "Unavailable";
+                var submitted = item.SubmittedAt.ToLocalTime();
+                <a class="chat" asp-page="Details" asp-route-id="@item.Id">
+                    <span class="avatar tone-@Avatar.Tone(item.ApplicantName)" aria-hidden="true">@Avatar.Initials(item.ApplicantName)</span>
+                    <span class="chat-main">
+                        <span class="chat-name">@item.ApplicantName</span>
+                        <span class="chat-line">@item.CreditAmount.ToString("N0") DM · @item.DurationMonths months · by @item.SubmittedBy</span>
+                    </span>
+                    <span class="chat-end">
+                        <span class="chat-time">@submitted.ToString("d MMM, HH:mm")</span>
+                        <span class="chat-score">
+                            <span class="chat-pbad">@(item.PBad?.ToString("P1") ?? "–")</span>
+                            <span class="status status-@tone">@status</span>
+                        </span>
+                    </span>
+                </a>
             }
         </div>
-    </div>
-}
+        <div class="pager">
+            <span>@first–@last of @r.TotalCount · P(bad) is the estimated probability of default</span>
+            <div class="pager-links">
+                @if (r.Page > 1)
+                {
+                    <a class="button button-small" asp-page="Index" asp-all-route-data="Model.RouteFor(r.Page - 1)">Previous</a>
+                }
+                @if (last < r.TotalCount)
+                {
+                    <a class="button button-small" asp-page="Index" asp-all-route-data="Model.RouteFor(r.Page + 1)">Next</a>
+                }
+            </div>
+        </div>
+    }
+</section>
