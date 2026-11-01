@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,8 +20,8 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
         modelBuilder.Entity<CreditApplication>(application =>
         {
             application.ToTable("credit_applications");
-            application.Property(a => a.ApplicantName).HasMaxLength(200);
-            application.Property(a => a.SubmittedBy).HasMaxLength(100);
+            application.Property(a => a.ApplicantName).HasMaxLength(BusinessLimits.ApplicantNameMaxLength);
+            application.Property(a => a.SubmittedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
             application.Property(a => a.InstallmentSharePercent).HasPrecision(5, 2);
             application.HasIndex(a => a.SubmittedAt);
             application.HasIndex(a => a.ApplicantName);

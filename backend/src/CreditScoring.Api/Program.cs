@@ -1,6 +1,8 @@
+using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Data;
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Ml;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -28,7 +30,9 @@ builder.Services.AddOptions<DecisionOptions>()
     .ValidateOnStart();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ICreditDecisionService, CreditDecisionService>();
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+        options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))
+    .AddJsonOptions(options => ApiJson.Configure(options.JsonSerializerOptions));
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -36,6 +40,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Credit scoring API v1"));
 }
 
 app.UseHttpsRedirection();
