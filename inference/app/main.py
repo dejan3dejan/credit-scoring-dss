@@ -7,8 +7,9 @@ from pathlib import Path
 import pandas as pd
 from fastapi import FastAPI, Request, Response
 
-from app.errors import ModelUnavailable, install_handlers
-from app.schemas import CATEGORY_CODES, FEATURES, Health, ModelInfo, PredictRequest, PredictResponse
+from app.errors import ModelNotFound, ModelUnavailable, install_handlers
+from app.schemas import (CATEGORY_CODES, FEATURES, Health, ModelInfo, ModelList, ModelSummary, PredictRequest,
+                         PredictResponse)
 from src.models.artifact import load_artifact
 
 logger = logging.getLogger("uvicorn.error.inference")
@@ -16,6 +17,7 @@ logger = logging.getLogger("uvicorn.error.inference")
 DEFAULT_MODEL_PATH = (
     Path(__file__).resolve().parents[2] / "ml" / "models" / "credit_rf_isotonic_v1.joblib"
 )
+DATASET = "statlog_german_credit"
 
 
 def check_contract_matches(metadata):
@@ -38,8 +40,30 @@ def load_model(model_path):
     return model, metadata
 
 
-def create_app(model_path=None) -> FastAPI:
+def load_models_dir(models_dir):
+    models = {}
+    for path in sorted(Path(models_dir).glob("*.joblib")):
+        try:
+            model, metadata = load_model(path)
+        except Exception:
+            logger.exception("skipping %s: it failed to load or does not match the contract", path)
+            continue
+        models[metadata["model_id"]] = (model, metadata)
+        logger.info("loaded %s for /v2", metadata["model_id"])
+    return models
+
+
+def score(model, metadata, body):
+    X = pd.DataFrame([body.model_dump()], columns=FEATURES)
+    p_bad = float(model.predict_proba(X)[0, 1])
+    if not (math.isfinite(p_bad) and 0.0 <= p_bad <= 1.0):
+        raise ValueError(f"model returned p_bad={p_bad}, outside [0, 1]")
+    return PredictResponse(model_id=metadata["model_id"], p_bad=p_bad)
+
+
+def create_app(model_path=None, models_dir=None) -> FastAPI:
     model_path = Path(model_path or os.environ.get("MODEL_PATH", DEFAULT_MODEL_PATH))
+    models_dir = Path(models_dir or os.environ.get("MODELS_DIR", model_path.parent))
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -49,6 +73,7 @@ def create_app(model_path=None) -> FastAPI:
         except Exception:
             logger.exception("model load failed for %s; scoring endpoints return 503", model_path)
             app.state.model, app.state.metadata = None, None
+        app.state.models = load_models_dir(models_dir)
         yield
 
     app = FastAPI(title="Credit scoring inference", version="1", lifespan=lifespan)
@@ -62,11 +87,28 @@ def create_app(model_path=None) -> FastAPI:
     @app.post("/v1/predict", response_model=PredictResponse)
     def predict(body: PredictRequest, request: Request):
         model, metadata = loaded(request)
-        X = pd.DataFrame([body.model_dump()], columns=FEATURES)
-        p_bad = float(model.predict_proba(X)[0, 1])
-        if not (math.isfinite(p_bad) and 0.0 <= p_bad <= 1.0):
-            raise ValueError(f"model returned p_bad={p_bad}, outside [0, 1]")
-        return PredictResponse(model_id=metadata["model_id"], p_bad=p_bad)
+        return score(model, metadata, body)
+
+    @app.get("/v2/models", response_model=ModelList)
+    def list_models(request: Request):
+        return ModelList(models=[
+            ModelSummary(
+                model_id=model_id,
+                model_name=metadata["model_name"],
+                dataset=DATASET,
+                recommended_threshold=metadata["recommended_threshold"],
+                created_at=metadata["created_at"],
+                library_versions=metadata["library_versions"],
+            )
+            for model_id, (_, metadata) in sorted(request.app.state.models.items())
+        ])
+
+    @app.post("/v2/models/{model_id}/predict", response_model=PredictResponse)
+    def predict_with(model_id: str, body: PredictRequest, request: Request):
+        if model_id not in request.app.state.models:
+            raise ModelNotFound(model_id)
+        model, metadata = request.app.state.models[model_id]
+        return score(model, metadata, body)
 
     @app.get("/v1/model", response_model=ModelInfo)
     def model_info(request: Request):
@@ -82,10 +124,11 @@ def create_app(model_path=None) -> FastAPI:
     @app.get("/health", response_model=Health)
     def health(request: Request, response: Response):
         metadata = request.app.state.metadata
+        loaded_ids = sorted(request.app.state.models)
         if request.app.state.model is None:
             response.status_code = 503
-            return Health(status="degraded", model_loaded=False, model_id=None)
-        return Health(status="ok", model_loaded=True, model_id=metadata["model_id"])
+            return Health(status="degraded", model_loaded=False, model_id=None, models_loaded=loaded_ids)
+        return Health(status="ok", model_loaded=True, model_id=metadata["model_id"], models_loaded=loaded_ids)
 
     return app
 

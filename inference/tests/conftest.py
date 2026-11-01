@@ -49,22 +49,26 @@ def synthetic_training_data(n=400, seed=0):
     return df[FEATURES], y
 
 
-@pytest.fixture(scope="session")
-def artifact_path(tmp_path_factory):
+def make_artifact(out_dir, model_id="test_model_v1", model_name="LogReg", C=1.0):
     X, y = synthetic_training_data()
     model = Pipeline([
         ("preprocess", build_preprocessing_pipeline()),
-        ("clf", LogisticRegression(max_iter=1000)),
+        ("clf", LogisticRegression(C=C, max_iter=1000)),
     ]).fit(X, y)
     metadata = build_metadata(
-        model_id="test_model_v1", model_name="LogReg", calibration="none", threshold=1 / 6,
+        model_id=model_id, model_name=model_name, calibration="none", threshold=1 / 6,
         cost_fn=5, cost_fp=1, seed=0, X_train=X, y_train=y, data_sha256="0" * 64,
         created_at="2026-01-01T00:00:00+00:00",
         library_versions={"scikit-learn": sklearn.__version__, "python": "test"},
         evaluation_ref="none",
     )
-    model_path, _ = save_artifact(model, metadata, tmp_path_factory.mktemp("models"))
+    model_path, _ = save_artifact(model, metadata, out_dir)
     return model_path
+
+
+@pytest.fixture(scope="session")
+def artifact_path(tmp_path_factory):
+    return make_artifact(tmp_path_factory.mktemp("models"))
 
 
 @pytest.fixture

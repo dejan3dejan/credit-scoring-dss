@@ -45,7 +45,8 @@ def test_model_info_serves_metadata(client):
 def test_health_ok(client):
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok", "model_loaded": True, "model_id": "test_model_v1"}
+    assert resp.json() == {"status": "ok", "model_loaded": True, "model_id": "test_model_v1",
+                           "models_loaded": ["test_model_v1"]}
 
 
 @pytest.mark.skipif(not (REAL_MODEL.exists() and REAL_DATA.exists()),

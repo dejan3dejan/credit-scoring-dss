@@ -71,7 +71,7 @@ def test_model_info_returns_503(degraded_client):
 def test_health_reports_degraded(degraded_client):
     resp = degraded_client.get("/health")
     assert resp.status_code == 503
-    assert resp.json() == {"status": "degraded", "model_loaded": False, "model_id": None}
+    assert resp.json() == {"status": "degraded", "model_loaded": False, "model_id": None, "models_loaded": []}
 
 
 def test_invalid_request_is_422_even_when_degraded(degraded_client):

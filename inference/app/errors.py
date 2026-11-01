@@ -9,6 +9,12 @@ class ModelUnavailable(Exception):
     pass
 
 
+class ModelNotFound(Exception):
+    def __init__(self, model_id):
+        super().__init__(model_id)
+        self.model_id = model_id
+
+
 def error_response(status, code, message, details=None):
     error = {"code": code, "message": message}
     if details is not None:
@@ -60,6 +66,10 @@ def install_handlers(app: FastAPI):
     @app.exception_handler(ModelUnavailable)
     async def on_model_unavailable(request: Request, exc: ModelUnavailable):
         return error_response(503, "model_unavailable", "Model is not loaded; the service cannot score")
+
+    @app.exception_handler(ModelNotFound)
+    async def on_model_not_found(request: Request, exc: ModelNotFound):
+        return error_response(404, "model_not_found", f"No loaded model has id {exc.model_id!r}")
 
     @app.exception_handler(Exception)
     async def on_unexpected(request: Request, exc: Exception):

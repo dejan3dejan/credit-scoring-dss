@@ -59,7 +59,21 @@ class ModelInfo(BaseModel):
     library_versions: dict[str, str]
 
 
+class ModelSummary(BaseModel):
+    model_id: str
+    model_name: str
+    dataset: str
+    recommended_threshold: Threshold
+    created_at: str
+    library_versions: dict[str, str]
+
+
+class ModelList(BaseModel):
+    models: list[ModelSummary]
+
+
 class Health(BaseModel):
     status: Literal["ok", "degraded"]
     model_loaded: bool
     model_id: str | None
+    models_loaded: list[str]
