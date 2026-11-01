@@ -6,6 +6,7 @@
     var bare = ViewData["Bare"] is true;
     var signedIn = User.Identity?.IsAuthenticated == true;
     var canDecide = signedIn && (await Authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
+    var canSeeStats = signedIn && (await Authorization.AuthorizeAsync(User, Policies.CanSeeStats)).Succeeded;
     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 }
 <!DOCTYPE html>
@@ -51,6 +52,10 @@
                         }
                         <a asp-page="/Applications/Index" class="@(current is "/Applications/Index" or "/Applications/Details" ? "active" : null)">History</a>
                         <a asp-page="/Clients/Index" class="@(current is "/Clients/Index" or "/Clients/Details" or "/Clients/New" ? "active" : null)">Clients</a>
+                        @if (canSeeStats)
+                        {
+                            <a asp-page="/Dashboard" class="@(current == "/Dashboard" ? "active" : null)">Dashboard</a>
+                        }
                         <a asp-page="/Model" class="@(current == "/Model" ? "active" : null)">Model</a>
                     </nav>
                 }

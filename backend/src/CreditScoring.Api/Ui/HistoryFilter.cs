@@ -36,7 +36,7 @@ public sealed record HistoryFilter
         PageSize = pageSize,
     };
 
-    private static DateTimeOffset StartOfDay(DateOnly date, TimeZoneInfo zone)
+    public static DateTimeOffset StartOfDay(DateOnly date, TimeZoneInfo zone)
     {
         var local = date.ToDateTime(TimeOnly.MinValue);
         return new DateTimeOffset(local, zone.GetUtcOffset(local));

@@ -7,8 +7,12 @@ namespace CreditScoring.Api.Pages;
 
 public class IndexModel(IAuthorizationService authorization) : PageModel
 {
-    public async Task<IActionResult> OnGetAsync() =>
-        (await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded
-            ? RedirectToPage("/Applications/New")
-            : RedirectToPage("/Applications/Index");
+    public async Task<IActionResult> OnGetAsync()
+    {
+        if ((await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded)
+            return RedirectToPage("/Applications/New");
+        if ((await authorization.AuthorizeAsync(User, Policies.CanSeeStats)).Succeeded)
+            return RedirectToPage("/Dashboard");
+        return RedirectToPage("/Applications/Index");
+    }
 }

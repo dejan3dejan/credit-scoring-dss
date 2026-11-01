@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CreditScoring.Api.Contracts;
+using CreditScoring.Api.Reporting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -126,6 +127,16 @@ public class ApplicationsApi(HttpClient http)
 
     public Task<List<ShadowScoreResponse>> GetShadowScoresAsync(Guid id, CancellationToken cancellationToken) =>
         GetOkAsync<List<ShadowScoreResponse>>($"{Path}/{id}/shadow-scores", cancellationToken);
+
+    public Task<DashboardStats> GetStatsAsync(StatsQuery query, CancellationToken cancellationToken)
+    {
+        var parameters = new Dictionary<string, string?>
+        {
+            ["from"] = query.From?.ToString("O"),
+            ["to"] = query.To?.ToString("O"),
+        }.Where(p => p.Value is not null);
+        return GetOkAsync<DashboardStats>(QueryHelpers.AddQueryString("api/stats", parameters), cancellationToken);
+    }
 
     public async Task<List<AvailableModelResponse>?> ListAvailableModelsAsync(CancellationToken cancellationToken)
     {

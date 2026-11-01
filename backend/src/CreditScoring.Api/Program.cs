@@ -55,6 +55,7 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToPage("/Error");
     options.Conventions.AuthorizePage("/Applications/New", Policies.CanDecide);
     options.Conventions.AuthorizePage("/Clients/New", Policies.CanDecide);
+    options.Conventions.AuthorizePage("/Dashboard", Policies.CanSeeStats);
 });
 
 var app = builder.Build();
