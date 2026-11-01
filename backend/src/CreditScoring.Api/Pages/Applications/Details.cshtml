@@ -1,0 +1,134 @@
+@page "/applications/{id:guid}"
+@model CreditScoring.Api.Pages.Applications.DetailsModel
+@{
+    var a = Model.Application;
+    var d = a.Decision;
+    ViewData["Title"] = a.ApplicantName;
+    string YesNo(bool value) => value ? "Yes" : "No";
+}
+
+<div class="page-head page-head-row">
+    <div>
+        <a class="back" asp-page="Index">← History</a>
+        <h1>@a.ApplicantName</h1>
+        <p class="lead">
+            Submitted @a.SubmittedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm") by @a.SubmittedBy
+            <span class="dot-sep">·</span> <span class="mono">@a.Id</span>
+        </p>
+    </div>
+    <a class="button" asp-page="New">New application</a>
+</div>
+
+@if (d is null)
+{
+    <section class="card result result-unavailable">
+        <h2>No decision recorded</h2>
+        <p>This application has no stored scoring result.</p>
+    </section>
+}
+else if (d.Status == DecisionStatus.Scored && d.PBad is { } pBad && d.ThresholdUsed is { } threshold && d.Recommendation is { } recommendation)
+{
+    var tone = recommendation == Recommendation.Approve ? "approve" : "reject";
+    <section class="card result result-@tone">
+        <div class="result-main">
+            <div>
+                <div class="eyebrow">Recommended action</div>
+                <div class="verdict">
+                    <span class="badge badge-@tone badge-lg">@Labels.Of(recommendation)</span>
+                </div>
+                <p class="result-why">
+                    @if (recommendation == Recommendation.Approve)
+                    {
+                        <text>The estimated probability of default is below the reject threshold.</text>
+                    }
+                    else
+                    {
+                        <text>The estimated probability of default is at or above the reject threshold.</text>
+                    }
+                </p>
+            </div>
+            <div class="metric">
+                <div class="eyebrow">Probability of default, P(bad)</div>
+                <div class="metric-value">@pBad.ToString("P1")</div>
+                <div class="muted">Reject at or above @threshold.ToString("P1")</div>
+            </div>
+        </div>
+
+        <div class="meter" role="img" aria-label="P(bad) @pBad.ToString("P1") against threshold @threshold.ToString("P1")">
+            <div class="meter-fill meter-@tone" style="width: @((pBad * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+            <div class="meter-mark" style="left: @((threshold * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"><span>Threshold</span></div>
+        </div>
+        <div class="meter-scale"><span>0%</span><span>50%</span><span>100%</span></div>
+
+        <dl class="meta">
+            <div><dt>Model</dt><dd class="mono">@d.ModelId</dd></div>
+            <div><dt>Scored</dt><dd>@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm:ss")</dd></div>
+            <div><dt>Threshold</dt><dd>@threshold.ToString("0.####") (reject if P(bad) ≥ threshold)</dd></div>
+        </dl>
+    </section>
+}
+else
+{
+    <section class="card result result-unavailable">
+        <div class="eyebrow">Recommended action</div>
+        <div class="verdict"><span class="badge badge-unavailable badge-lg">@Labels.Of(DecisionStatus.ScoringUnavailable)</span></div>
+        <p class="result-why">
+            @(d.ErrorCode is { } code ? Labels.ScoringError(code) ?? "The scoring service failed." : "The scoring service failed.")
+            No recommendation was made and no default score was substituted. Assess the application manually, or submit it again once scoring is available.
+        </p>
+        <dl class="meta">
+            <div><dt>Error code</dt><dd class="mono">@(d.ErrorCode ?? "none")</dd></div>
+            <div><dt>Attempted</dt><dd>@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm:ss")</dd></div>
+        </dl>
+    </section>
+}
+
+<div class="notice">
+    <strong>Decision support, not a decision.</strong>
+    The model estimates risk from 20 answers and recommends an action; the loan officer makes and owns the credit decision.
+    The model was trained on German credit data from the 1970s, so amounts are in Deutsche Mark and its estimates reflect that population.
+</div>
+
+<h2 class="section-title">Application as submitted</h2>
+<div class="snapshot">
+    <section class="card">
+        <h3>Applicant</h3>
+        <dl class="kv">
+            <div><dt>Age</dt><dd>@a.Age years</dd></div>
+            <div><dt>Dependants</dt><dd>@a.Dependants</dd></div>
+            <div><dt>Personal status and sex</dt><dd>@Labels.Of(a.PersonalStatusSex)</dd></div>
+            <div><dt>Telephone in own name</dt><dd>@YesNo(a.HasRegisteredTelephone)</dd></div>
+            <div><dt>Foreign worker</dt><dd>@YesNo(a.IsForeignWorker)</dd></div>
+        </dl>
+    </section>
+    <section class="card">
+        <h3>Loan</h3>
+        <dl class="kv">
+            <div><dt>Credit amount</dt><dd class="num">@a.CreditAmount.ToString("N0") DM</dd></div>
+            <div><dt>Loan term</dt><dd>@a.DurationMonths months</dd></div>
+            <div><dt>Purpose</dt><dd>@Labels.Of(a.Purpose)</dd></div>
+            <div><dt>Installment share of income</dt><dd class="num">@a.InstallmentSharePercent.ToString("0.##")%</dd></div>
+            <div><dt>Other debtors or guarantors</dt><dd>@Labels.Of(a.OtherDebtors)</dd></div>
+        </dl>
+    </section>
+    <section class="card">
+        <h3>Finances</h3>
+        <dl class="kv">
+            <div><dt>Checking account</dt><dd>@Labels.Of(a.CheckingAccountStatus)</dd></div>
+            <div><dt>Savings</dt><dd>@Labels.Of(a.SavingsAccount)</dd></div>
+            <div><dt>Credit history</dt><dd>@Labels.Of(a.CreditHistory)</dd></div>
+            <div><dt>Credits at this bank</dt><dd>@a.CreditsAtBank</dd></div>
+            <div><dt>Other installment plans</dt><dd>@Labels.Of(a.OtherInstallmentPlans)</dd></div>
+            <div><dt>Most valuable property</dt><dd>@Labels.Of(a.Property)</dd></div>
+        </dl>
+    </section>
+    <section class="card">
+        <h3>Work and housing</h3>
+        <dl class="kv">
+            <div><dt>Current employment</dt><dd>@Labels.Of(a.EmploymentDuration)</dd></div>
+            <div><dt>Job</dt><dd>@Labels.Of(a.Job)</dd></div>
+            <div><dt>Housing</dt><dd>@Labels.Of(a.Housing)</dd></div>
+            <div><dt>Years at current residence</dt><dd>@a.YearsAtResidence</dd></div>
+        </dl>
+    </section>
+</div>

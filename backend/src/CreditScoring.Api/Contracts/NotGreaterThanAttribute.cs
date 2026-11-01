@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 
 namespace CreditScoring.Api.Contracts;
 
@@ -12,8 +13,9 @@ public sealed class NotGreaterThanAttribute(string otherProperty) : ValidationAt
 
         if (value is int current && other.GetValue(validationContext.ObjectInstance) is int limit && current > limit)
         {
+            var otherName = other.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? otherProperty;
             return new ValidationResult(
-                $"{validationContext.DisplayName} cannot exceed {otherProperty}.",
+                $"{validationContext.DisplayName} cannot exceed {otherName}.",
                 validationContext.MemberName is { } member ? [member] : null);
         }
         return ValidationResult.Success;

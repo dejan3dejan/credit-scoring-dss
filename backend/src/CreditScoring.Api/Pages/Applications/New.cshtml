@@ -1,0 +1,228 @@
+@page "/applications/new"
+@model CreditScoring.Api.Pages.Applications.NewModel
+@{
+    ViewData["Title"] = "New application";
+    var errorCount = ModelState.ErrorCount;
+}
+
+<div class="page-head">
+    <h1>New credit application</h1>
+    <p class="lead">Enter the applicant's answers. The system scores the application and recommends an action; you make the decision. Every submission is saved to the history.</p>
+</div>
+
+@if (errorCount > 0)
+{
+    <div class="banner banner-error" role="alert">
+        <strong>@(errorCount == 1 ? "1 answer needs" : $"{errorCount} answers need") attention.</strong>
+        Nothing was saved. Correct the highlighted fields and submit again.
+    </div>
+}
+
+<form method="post" novalidate class="form">
+    <div asp-validation-summary="ModelOnly" class="banner banner-error"></div>
+
+    <section class="card section">
+        <div class="section-intro">
+            <h2>Applicant</h2>
+            <p>Who is applying.</p>
+        </div>
+        <div class="fields">
+            <div class="field span-2">
+                <label asp-for="Input.ApplicantName"></label>
+                <input asp-for="Input.ApplicantName" autocomplete="off" maxlength="@BusinessLimits.ApplicantNameMaxLength">
+                <span asp-validation-for="Input.ApplicantName" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.Age"></label>
+                <input asp-for="Input.Age" type="number" inputmode="numeric">
+                <span class="hint">@BusinessLimits.MinAge to @BusinessLimits.MaxAge years</span>
+                <span asp-validation-for="Input.Age" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.Dependants"></label>
+                <input asp-for="Input.Dependants" type="number" inputmode="numeric">
+                <span class="hint">People the applicant provides maintenance for</span>
+                <span asp-validation-for="Input.Dependants" class="error"></span>
+            </div>
+            <div class="field span-2">
+                <label asp-for="Input.PersonalStatusSex"></label>
+                <select asp-for="Input.PersonalStatusSex" asp-items="Labels.Options<PersonalStatusSex>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span class="hint">Required by the model as in the original data; its use is a stated limitation.</span>
+                <span asp-validation-for="Input.PersonalStatusSex" class="error"></span>
+            </div>
+            <fieldset class="field">
+                <legend>@Html.DisplayNameFor(m => m.Input.HasRegisteredTelephone)</legend>
+                <div class="segmented">
+                    <input type="radio" asp-for="Input.HasRegisteredTelephone" value="true" id="tel-yes"><label for="tel-yes">Yes</label>
+                    <input type="radio" asp-for="Input.HasRegisteredTelephone" value="false" id="tel-no"><label for="tel-no">No</label>
+                </div>
+                <span asp-validation-for="Input.HasRegisteredTelephone" class="error"></span>
+            </fieldset>
+            <fieldset class="field">
+                <legend>@Html.DisplayNameFor(m => m.Input.IsForeignWorker)</legend>
+                <div class="segmented">
+                    <input type="radio" asp-for="Input.IsForeignWorker" value="true" id="fw-yes"><label for="fw-yes">Yes</label>
+                    <input type="radio" asp-for="Input.IsForeignWorker" value="false" id="fw-no"><label for="fw-no">No</label>
+                </div>
+                <span asp-validation-for="Input.IsForeignWorker" class="error"></span>
+            </fieldset>
+        </div>
+    </section>
+
+    <section class="card section">
+        <div class="section-intro">
+            <h2>Loan</h2>
+            <p>What is being requested. Amounts are in 1970s Deutsche Mark (DM).</p>
+        </div>
+        <div class="fields">
+            <div class="field">
+                <label asp-for="Input.CreditAmount"></label>
+                <div class="affix">
+                    <input asp-for="Input.CreditAmount" type="number" inputmode="numeric">
+                    <span>DM</span>
+                </div>
+                <span class="hint">@BusinessLimits.MinCreditAmount.ToString("N0") to @BusinessLimits.MaxCreditAmount.ToString("N0") DM, the range the model was trained on</span>
+                <span asp-validation-for="Input.CreditAmount" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.DurationMonths"></label>
+                <div class="affix">
+                    <input asp-for="Input.DurationMonths" type="number" inputmode="numeric">
+                    <span>months</span>
+                </div>
+                <span class="hint">@BusinessLimits.MinDurationMonths to @BusinessLimits.MaxDurationMonths months</span>
+                <span asp-validation-for="Input.DurationMonths" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.Purpose"></label>
+                <select asp-for="Input.Purpose" asp-items="Labels.Options<LoanPurpose>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.Purpose" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.InstallmentSharePercent"></label>
+                <div class="affix">
+                    <input asp-for="Input.InstallmentSharePercent" type="number" inputmode="decimal" step="0.1">
+                    <span>%</span>
+                </div>
+                <span class="hint">Monthly installment as a share of disposable income</span>
+                <span asp-validation-for="Input.InstallmentSharePercent" class="error"></span>
+            </div>
+            <div class="field span-2">
+                <label asp-for="Input.OtherDebtors"></label>
+                <select asp-for="Input.OtherDebtors" asp-items="Labels.Options<OtherDebtors>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.OtherDebtors" class="error"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="card section">
+        <div class="section-intro">
+            <h2>Finances</h2>
+            <p>Accounts, savings and credit record.</p>
+        </div>
+        <div class="fields">
+            <div class="field">
+                <label asp-for="Input.CheckingAccountStatus"></label>
+                <select asp-for="Input.CheckingAccountStatus" asp-items="Labels.Options<CheckingAccountStatus>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.CheckingAccountStatus" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.SavingsAccount"></label>
+                <select asp-for="Input.SavingsAccount" asp-items="Labels.Options<SavingsAccount>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.SavingsAccount" class="error"></span>
+            </div>
+            <div class="field span-2">
+                <label asp-for="Input.CreditHistory"></label>
+                <select asp-for="Input.CreditHistory" asp-items="Labels.Options<CreditHistory>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.CreditHistory" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.CreditsAtBank"></label>
+                <input asp-for="Input.CreditsAtBank" type="number" inputmode="numeric">
+                <span class="hint">Including this one</span>
+                <span asp-validation-for="Input.CreditsAtBank" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.OtherInstallmentPlans"></label>
+                <select asp-for="Input.OtherInstallmentPlans" asp-items="Labels.Options<OtherInstallmentPlans>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.OtherInstallmentPlans" class="error"></span>
+            </div>
+            <div class="field span-2">
+                <label asp-for="Input.Property"></label>
+                <select asp-for="Input.Property" asp-items="Labels.Options<PropertyType>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.Property" class="error"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="card section">
+        <div class="section-intro">
+            <h2>Work and housing</h2>
+            <p>Employment and where the applicant lives.</p>
+        </div>
+        <div class="fields">
+            <div class="field">
+                <label asp-for="Input.EmploymentDuration"></label>
+                <select asp-for="Input.EmploymentDuration" asp-items="Labels.Options<EmploymentDuration>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.EmploymentDuration" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.Job"></label>
+                <select asp-for="Input.Job" asp-items="Labels.Options<JobType>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.Job" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.Housing"></label>
+                <select asp-for="Input.Housing" asp-items="Labels.Options<Housing>()">
+                    <option value="">Choose…</option>
+                </select>
+                <span asp-validation-for="Input.Housing" class="error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.YearsAtResidence"></label>
+                <input asp-for="Input.YearsAtResidence" type="number" inputmode="numeric">
+                <span class="hint">Cannot exceed age</span>
+                <span asp-validation-for="Input.YearsAtResidence" class="error"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="card section">
+        <div class="section-intro">
+            <h2>Submission</h2>
+            <p>Recorded with the application for the audit trail.</p>
+        </div>
+        <div class="fields">
+            <div class="field">
+                <label asp-for="Input.SubmittedBy"></label>
+                <input asp-for="Input.SubmittedBy" autocomplete="name" maxlength="@BusinessLimits.SubmittedByMaxLength">
+                <span asp-validation-for="Input.SubmittedBy" class="error"></span>
+            </div>
+        </div>
+    </section>
+
+    <div class="actions">
+        <span class="muted">The result is a recommendation, not a decision.</span>
+        <button type="submit" class="button button-primary">Score application</button>
+    </div>
+</form>

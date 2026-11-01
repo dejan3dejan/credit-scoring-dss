@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Domain;
@@ -165,5 +166,26 @@ public class CreateApplicationRequestTests
         Assert.Equal(
             [nameof(CreateApplicationRequest.Purpose)],
             Errors(Valid() with { Purpose = (LoanPurpose)99 }));
+    }
+
+    [Theory]
+    [MemberData(nameof(PropertyNames))]
+    public void Every_field_has_a_display_name(string property)
+    {
+        var display = typeof(CreateApplicationRequest).GetProperty(property)!.GetCustomAttribute<DisplayAttribute>();
+
+        Assert.False(string.IsNullOrWhiteSpace(display?.Name));
+    }
+
+    [Fact]
+    public void Messages_use_display_names()
+    {
+        var request = Valid() with { CreditAmount = 1, Age = 30, YearsAtResidence = 31 };
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true);
+
+        Assert.Equal(
+            ["The field Credit amount (DM) must be between 250 and 16000.", "Years at current residence cannot exceed Age."],
+            results.Select(r => r.ErrorMessage));
     }
 }
