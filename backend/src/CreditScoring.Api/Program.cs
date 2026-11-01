@@ -3,6 +3,9 @@ using CreditScoring.Api.Data;
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Ml;
 using CreditScoring.Api.Ui;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -37,11 +40,10 @@ builder.Services.AddControllers(options =>
 builder.Services.AddOpenApi();
 
 builder.Services.AddOptions<UiOptions>()
-    .Bind(builder.Configuration.GetSection(UiOptions.SectionName))
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
+    .Bind(builder.Configuration.GetSection(UiOptions.SectionName));
 builder.Services.AddHttpClient<ApplicationsApi>((services, client) =>
-    client.BaseAddress = services.GetRequiredService<IOptions<UiOptions>>().Value.ApiBaseUrl);
+    client.BaseAddress = services.GetRequiredService<IOptions<UiOptions>>().Value.ApiBaseUrl
+        ?? SelfAddress.Choose(services.GetRequiredService<IServer>().Features.GetRequiredFeature<IServerAddressesFeature>().Addresses));
 builder.Services.AddRazorPages();
 
 var app = builder.Build();

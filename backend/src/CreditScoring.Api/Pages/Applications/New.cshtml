@@ -37,12 +37,12 @@
                 </div>
                 <div class="field">
                     <label asp-for="Input.Age"></label>
-                    <div class="affix"><input asp-for="Input.Age" type="number" inputmode="numeric" placeholder="@BusinessLimits.MinAge–@BusinessLimits.MaxAge"><span>years</span></div>
+                    <div class="affix"><input asp-for="Input.Age" type="text" inputmode="numeric" placeholder="@BusinessLimits.MinAge–@BusinessLimits.MaxAge"><span>years</span></div>
                     <span asp-validation-for="Input.Age" class="error"></span>
                 </div>
                 <div class="field">
                     <label asp-for="Input.Dependants"></label>
-                    <input asp-for="Input.Dependants" type="number" inputmode="numeric" placeholder="0">
+                    <input asp-for="Input.Dependants" type="text" inputmode="numeric" placeholder="0">
                     <span class="hint">People the applicant provides maintenance for</span>
                     <span asp-validation-for="Input.Dependants" class="error"></span>
                 </div>
@@ -81,12 +81,12 @@
             <div class="grid">
                 <div class="field">
                     <label asp-for="Input.CreditAmount"></label>
-                    <div class="affix"><input asp-for="Input.CreditAmount" type="number" inputmode="numeric" placeholder="@BusinessLimits.MinCreditAmount.ToString("N0")–@BusinessLimits.MaxCreditAmount.ToString("N0")"><span>DM</span></div>
+                    <div class="affix"><input asp-for="Input.CreditAmount" type="text" inputmode="numeric" placeholder="@BusinessLimits.MinCreditAmount.ToString("N0")–@BusinessLimits.MaxCreditAmount.ToString("N0")"><span>DM</span></div>
                     <span asp-validation-for="Input.CreditAmount" class="error"></span>
                 </div>
                 <div class="field">
                     <label asp-for="Input.DurationMonths"></label>
-                    <div class="affix"><input asp-for="Input.DurationMonths" type="number" inputmode="numeric" placeholder="@BusinessLimits.MinDurationMonths–@BusinessLimits.MaxDurationMonths"><span>months</span></div>
+                    <div class="affix"><input asp-for="Input.DurationMonths" type="text" inputmode="numeric" placeholder="@BusinessLimits.MinDurationMonths–@BusinessLimits.MaxDurationMonths"><span>months</span></div>
                     <span asp-validation-for="Input.DurationMonths" class="error"></span>
                 </div>
                 <div class="field">
@@ -96,7 +96,7 @@
                 </div>
                 <div class="field">
                     <label asp-for="Input.InstallmentSharePercent"></label>
-                    <div class="affix"><input asp-for="Input.InstallmentSharePercent" type="number" inputmode="decimal" step="0.1" placeholder="0–100"><span>%</span></div>
+                    <div class="affix"><input asp-for="Input.InstallmentSharePercent" type="text" inputmode="decimal" step="0.1" placeholder="0–100"><span>%</span></div>
                     <span class="hint">Monthly installment as a share of disposable income</span>
                     <span asp-validation-for="Input.InstallmentSharePercent" class="error"></span>
                 </div>
@@ -134,7 +134,7 @@
                 </div>
                 <div class="field">
                     <label asp-for="Input.CreditsAtBank"></label>
-                    <input asp-for="Input.CreditsAtBank" type="number" inputmode="numeric" placeholder="1">
+                    <input asp-for="Input.CreditsAtBank" type="text" inputmode="numeric" placeholder="1">
                     <span class="hint">Including this one</span>
                     <span asp-validation-for="Input.CreditsAtBank" class="error"></span>
                 </div>
@@ -176,7 +176,7 @@
                 </div>
                 <div class="field">
                     <label asp-for="Input.YearsAtResidence"></label>
-                    <div class="affix"><input asp-for="Input.YearsAtResidence" type="number" inputmode="numeric" placeholder="0"><span>years</span></div>
+                    <div class="affix"><input asp-for="Input.YearsAtResidence" type="text" inputmode="numeric" placeholder="0"><span>years</span></div>
                     <span asp-validation-for="Input.YearsAtResidence" class="error"></span>
                 </div>
             </div>
