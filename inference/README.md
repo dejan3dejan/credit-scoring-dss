@@ -1,7 +1,7 @@
 # credit-scoring-inference
 
-FastAPI service that scores one applicant and returns P(bad). It implements
-`docs/api-contract.md` (v1) and nothing else: no decision, no business rules.
+FastAPI service that scores one applicant and returns P(bad). It serves the
+`/v1` and `/v2` scoring endpoints and nothing else: no decision, no business rules.
 
 It loads the model with `load_artifact` from `../ml/src`, so `../ml` must be
 on `PYTHONPATH` (pytest sets this through `pytest.ini`).

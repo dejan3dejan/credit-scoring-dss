@@ -20,9 +20,9 @@ from src.models.pipelines import logistic_regression_pipeline, random_forest_pip
 
 MODELS = {
     "rf": ("credit_rf_isotonic_v1", "RandomForest", random_forest_pipeline,
-           "experiments/experiment_log.md, Experiment 04, final test-set result"),
+           "final test-set result on the 20% holdout"),
     "lr": ("credit_lr_isotonic_v1", "LogisticRegression", logistic_regression_pipeline,
-           "experiments/experiment_log.md, Experiment 07, cross-validated only; no test-set result for this artifact"),
+           "cross-validated only; no test-set result for this artifact"),
 }
 OUT_DIR = Path(__file__).resolve().parents[1] / "models"
 
