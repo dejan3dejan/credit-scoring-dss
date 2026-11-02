@@ -81,8 +81,12 @@ public class CreditDecisionService(
                 return CreditDecision.Unavailable(DecisionErrorCodes.ModelMismatch, now);
 
             case MlScore score:
+                var factors = score.Factors
+                    .Select((f, i) => ScoreFactor.Of(i + 1, LendingClubMapper.InputOf(f.Feature)
+                        ?? throw new InvalidOperationException($"no application input for model feature {f.Feature}"), f.Contribution))
+                    .ToList();
                 return CreditDecision.Scored(
-                    score.PBad, score.ModelId, model.Threshold, model.RecommendationFor(score.PBad), now, model.ReviewFrom);
+                    score.PBad, score.ModelId, model.Threshold, model.RecommendationFor(score.PBad), now, model.ReviewFrom, factors);
 
             default:
                 throw new InvalidOperationException($"unhandled ML result type {result.GetType().Name}");

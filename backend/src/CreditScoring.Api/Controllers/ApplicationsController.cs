@@ -126,7 +126,7 @@ public class ApplicationsController(
     private static IQueryable<CreditApplication> WithDetails(IQueryable<CreditApplication> applications) =>
         applications
             .Include(a => a.Client)
-            .Include(a => a.Decision)
+            .Include(a => a.Decision!).ThenInclude(d => d.Factors)
             .Include(a => a.OfficerDecision)
             .Include(a => a.ScoringFailures);
 

@@ -12,7 +12,8 @@ public sealed record DecisionResponse(
     double? ThresholdUsed,
     double? ReviewFromUsed,
     Recommendation? Recommendation,
-    string? ErrorCode)
+    string? ErrorCode,
+    IReadOnlyList<ScoreFactorResponse> Factors)
 {
     public static DecisionResponse From(CreditDecision decision) => new(
         decision.Status,
@@ -22,8 +23,11 @@ public sealed record DecisionResponse(
         decision.ThresholdUsed,
         decision.ReviewFromUsed,
         decision.Recommendation,
-        decision.ErrorCode);
+        decision.ErrorCode,
+        decision.Factors.OrderBy(f => f.Rank).Select(f => new ScoreFactorResponse(f.Input, f.Contribution)).ToList());
 }
+
+public sealed record ScoreFactorResponse(string Input, double Contribution);
 
 public sealed record OfficerDecisionResponse(
     FinalDecision Outcome,

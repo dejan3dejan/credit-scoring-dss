@@ -58,6 +58,19 @@ public class CreditDecisionServiceTests
     }
 
     [Fact]
+    public async Task Factors_of_the_active_model_are_kept_under_the_application_input_names()
+    {
+        var decision = await Evaluate(new MlScore(0.25, ModelId)
+        {
+            Factors = [new MlFactor("purpose", 0.32), new MlFactor("fico", 0.30), new MlFactor("delinq_2yrs", -0.1)],
+        });
+
+        Assert.Equal(
+            [(1, "Purpose", 0.32), (2, "CreditScore", 0.30), (3, "DelinquenciesLast2Years", -0.1)],
+            decision.Factors.Select(f => (f.Rank, f.Input, f.Contribution)));
+    }
+
+    [Fact]
     public async Task Threshold_comes_from_the_active_model()
     {
         var (service, _) = Create(new MlScore(0.4, ModelId));

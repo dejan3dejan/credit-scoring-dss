@@ -1,4 +1,6 @@
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
@@ -137,6 +139,21 @@ public class LendingClubMapperTests
         Assert.Throws<ArgumentOutOfRangeException>(() => LendingClubMapper.ToCode(default(LoanPurpose)));
         Assert.Throws<ArgumentOutOfRangeException>(() => LendingClubMapper.ToCode((HomeOwnership)9));
         Assert.Throws<ArgumentOutOfRangeException>(() => LendingClubMapper.EmploymentYears((EmploymentLength)99));
+    }
+
+    [Fact]
+    public void Every_contract_field_names_one_application_input()
+    {
+        var fields = typeof(MlPredictRequest).GetProperties()
+            .Select(p => p.GetCustomAttribute<JsonPropertyNameAttribute>()!.Name)
+            .ToList();
+        var inputs = fields.Select(LendingClubMapper.InputOf).ToList();
+
+        Assert.All(inputs, i => Assert.NotNull(typeof(CreditApplication).GetProperty(i!)));
+        Assert.Equal(inputs.Count, inputs.Distinct().Count());
+        Assert.Equal(nameof(CreditApplication.CreditScore), LendingClubMapper.InputOf("fico"));
+        Assert.Equal(nameof(CreditApplication.EarliestCreditLine), LendingClubMapper.InputOf("credit_history_years"));
+        Assert.Null(LendingClubMapper.InputOf("int_rate"));
     }
 
     [Fact]

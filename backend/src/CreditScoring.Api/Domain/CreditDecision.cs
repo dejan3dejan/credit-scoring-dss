@@ -30,13 +30,16 @@ public class CreditDecision
 
     public string? ErrorCode { get; private set; }
 
+    public List<ScoreFactor> Factors { get; private set; } = [];
+
     public static CreditDecision Scored(
         double pBad,
         string modelId,
         double thresholdUsed,
         Recommendation recommendation,
         DateTimeOffset evaluatedAt,
-        double? reviewFromUsed = null)
+        double? reviewFromUsed = null,
+        IReadOnlyList<ScoreFactor>? factors = null)
     {
         if (!double.IsFinite(pBad) || pBad < 0 || pBad > 1)
             throw new ArgumentOutOfRangeException(nameof(pBad), pBad, "must be a probability in [0, 1]");
@@ -49,6 +52,9 @@ public class CreditDecision
             throw new ArgumentOutOfRangeException(nameof(recommendation), recommendation, "unknown recommendation");
         if (recommendation == Domain.Recommendation.Review && reviewFromUsed is null)
             throw new ArgumentException("a review recommendation needs the review band it came from", nameof(reviewFromUsed));
+        var ranked = (factors ?? []).OrderBy(f => f.Rank).ToList();
+        if (!ranked.Select(f => f.Rank).SequenceEqual(Enumerable.Range(1, ranked.Count)))
+            throw new ArgumentException("factor ranks must count from 1 without gaps", nameof(factors));
 
         return new CreditDecision
         {
@@ -59,6 +65,7 @@ public class CreditDecision
             ThresholdUsed = thresholdUsed,
             ReviewFromUsed = reviewFromUsed,
             Recommendation = recommendation,
+            Factors = ranked,
         };
     }
 

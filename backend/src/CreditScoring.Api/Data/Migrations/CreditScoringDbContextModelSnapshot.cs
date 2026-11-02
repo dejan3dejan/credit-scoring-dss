@@ -371,6 +371,42 @@ namespace CreditScoring.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.ScoreFactor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<double>("Contribution")
+                        .HasColumnType("double precision")
+                        .HasColumnName("contribution");
+
+                    b.Property<Guid>("CreditDecisionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_decision_id");
+
+                    b.Property<string>("Input")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("input");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer")
+                        .HasColumnName("rank");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditDecisionId", "Rank")
+                        .IsUnique();
+
+                    b.ToTable("score_factors", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_score_factors_rank", "rank >= 1");
+                        });
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.ScoringFailure", b =>
                 {
                     b.Property<Guid>("Id")
@@ -621,6 +657,15 @@ namespace CreditScoring.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.ScoreFactor", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditDecision", null)
+                        .WithMany("Factors")
+                        .HasForeignKey("CreditDecisionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.ScoringFailure", b =>
                 {
                     b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
@@ -662,6 +707,11 @@ namespace CreditScoring.Api.Data.Migrations
                     b.Navigation("ScoringFailures");
 
                     b.Navigation("ShadowScores");
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.CreditDecision", b =>
+                {
+                    b.Navigation("Factors");
                 });
 #pragma warning restore 612, 618
         }

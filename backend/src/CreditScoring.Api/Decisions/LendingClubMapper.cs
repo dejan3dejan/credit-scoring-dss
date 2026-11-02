@@ -7,6 +7,30 @@ public static class LendingClubMapper
 {
     private const double DaysPerYear = 365.25;
 
+    private static readonly Dictionary<string, string> Inputs = new()
+    {
+        ["loan_amnt"] = nameof(CreditApplication.LoanAmount),
+        ["purpose"] = nameof(CreditApplication.Purpose),
+        ["emp_length_years"] = nameof(CreditApplication.EmploymentLength),
+        ["home_ownership"] = nameof(CreditApplication.HomeOwnership),
+        ["annual_inc"] = nameof(CreditApplication.AnnualIncome),
+        ["verification_status"] = nameof(CreditApplication.IncomeVerification),
+        ["dti"] = nameof(CreditApplication.DebtToIncomePercent),
+        ["fico"] = nameof(CreditApplication.CreditScore),
+        ["credit_history_years"] = nameof(CreditApplication.EarliestCreditLine),
+        ["inq_last_6mths"] = nameof(CreditApplication.InquiriesLast6Months),
+        ["delinq_2yrs"] = nameof(CreditApplication.DelinquenciesLast2Years),
+        ["pub_rec"] = nameof(CreditApplication.PublicRecords),
+        ["pub_rec_bankruptcies"] = nameof(CreditApplication.Bankruptcies),
+        ["revol_bal"] = nameof(CreditApplication.RevolvingBalance),
+        ["revol_util"] = nameof(CreditApplication.RevolvingUtilizationPercent),
+        ["open_acc"] = nameof(CreditApplication.OpenAccounts),
+        ["total_acc"] = nameof(CreditApplication.TotalAccounts),
+        ["mort_acc"] = nameof(CreditApplication.MortgageAccounts),
+    };
+
+    public static string? InputOf(string feature) => Inputs.GetValueOrDefault(feature);
+
     public static MlPredictRequest ToMlRequest(CreditApplication application) => new()
     {
         LoanAmnt = application.LoanAmount,

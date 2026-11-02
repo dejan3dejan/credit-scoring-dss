@@ -135,6 +135,28 @@
     </div>
 </section>
 
+@if (d?.Factors is { Count: > 0 } factors)
+{
+    var largest = factors.Max(f => Math.Abs(f.Contribution));
+    <h2 class="section-title">What moved the score</h2>
+    <section class="panel">
+        <ol class="factors">
+            @foreach (var f in factors)
+            {
+                var (label, value) = ApplicationInputs.Describe(a, f.Input);
+                var raises = f.Contribution > 0;
+                <li class="factor">
+                    <span class="factor-name">@label</span>
+                    <span class="factor-value">@value</span>
+                    <span class="factor-bar" aria-hidden="true"><span class="factor-fill factor-@(raises ? "up" : "down")" style="width: @N(Math.Abs(f.Contribution) / largest * 100)%"></span></span>
+                    <span class="factor-effect factor-effect-@(raises ? "up" : "down")">@(raises ? "↑ Raises risk" : "↓ Lowers risk")</span>
+                </li>
+            }
+        </ol>
+        <div class="panel-foot">The answers that moved this score most, measured with TreeSHAP on the model's score before calibration. The bars compare the answers with each other; they are not percentage points of the probability.</div>
+    </section>
+}
+
 <div class="note">
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm.75 10.5h-1.5v-4.5h1.5v4.5ZM8 5.75a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>
     <div>
@@ -180,6 +202,20 @@
             }
             <form method="post" novalidate class="decision-form">
                 <div asp-validation-summary="ModelOnly" class="alert"></div>
+                @if (recommended == Recommendation.Review && ApplicationInputs.Checklist(d!.Factors) is { Count: > 0 } checklist)
+                {
+                    <div class="checklist">
+                        <div class="checklist-title">Before you decide</div>
+                        <p>The model is least sure about this application. These answers raised its estimate most:</p>
+                        <ul>
+                            @foreach (var item in checklist)
+                            {
+                                var (label, value) = ApplicationInputs.Describe(a, item.Input);
+                                <li><strong>@label: @value.</strong> @item.Prompt</li>
+                            }
+                        </ul>
+                    </div>
+                }
                 <div class="field">
                     <span class="field-label" id="outcome-label">@Html.DisplayNameFor(m => m.Review.Outcome)</span>
                     <div class="segmented segmented-lg" role="radiogroup" aria-labelledby="outcome-label">

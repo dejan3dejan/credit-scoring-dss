@@ -2,7 +2,12 @@ namespace CreditScoring.Api.Ml;
 
 public abstract record MlScoreResult;
 
-public sealed record MlScore(double PBad, string ModelId) : MlScoreResult;
+public sealed record MlScore(double PBad, string ModelId) : MlScoreResult
+{
+    public IReadOnlyList<MlFactor> Factors { get; init; } = [];
+}
+
+public sealed record MlFactor(string Feature, double Contribution);
 
 public sealed record MlFailure(
     string ErrorCode,

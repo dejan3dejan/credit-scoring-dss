@@ -16,6 +16,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
     public DbSet<ModelEvent> ModelEvents => Set<ModelEvent>();
     public DbSet<ShadowScore> ShadowScores => Set<ShadowScore>();
     public DbSet<ScoringFailure> ScoringFailures => Set<ScoringFailure>();
+    public DbSet<ScoreFactor> ScoreFactors => Set<ScoreFactor>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -144,6 +145,18 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             decision.Property(d => d.ModelId).HasMaxLength(100);
             decision.Property(d => d.ErrorCode).HasMaxLength(64);
             decision.HasIndex(d => new { d.Status, d.Recommendation });
+            decision.HasMany(d => d.Factors)
+                .WithOne()
+                .HasForeignKey(f => f.CreditDecisionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ScoreFactor>(factor =>
+        {
+            factor.ToTable("score_factors", table =>
+                table.HasCheckConstraint("ck_score_factors_rank", "rank >= 1"));
+            factor.Property(f => f.Input).HasMaxLength(64);
+            factor.HasIndex(f => new { f.CreditDecisionId, f.Rank }).IsUnique();
         });
 
         modelBuilder.Entity<User>(user =>

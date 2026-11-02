@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CreditScoring.Api.Ml;
 
@@ -91,15 +93,36 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
         return new MlCatalog(parsed);
     }
 
+    private static readonly HashSet<string> ContractFields = typeof(MlPredictRequest).GetProperties()
+        .Select(p => p.GetCustomAttribute<JsonPropertyNameAttribute>()!.Name)
+        .ToHashSet();
+
     private static MlScoreResult ParseScore(string body)
     {
         var parsed = TryDeserialize<PredictResponseBody>(body);
         if (parsed?.PBad is not { } pBad || !double.IsFinite(pBad) || pBad < 0 || pBad > 1
-            || string.IsNullOrWhiteSpace(parsed.ModelId))
+            || string.IsNullOrWhiteSpace(parsed.ModelId)
+            || ParseFactors(parsed.TopFactors) is not { } factors)
         {
             return Failure(MlErrorCodes.InvalidResponse, 200, $"unusable 200 body: {Truncate(body)}");
         }
-        return new MlScore(pBad, parsed.ModelId);
+        return new MlScore(pBad, parsed.ModelId) { Factors = factors };
+    }
+
+    private static List<MlFactor>? ParseFactors(List<FactorBody>? factors)
+    {
+        var parsed = new List<MlFactor>();
+        foreach (var f in factors ?? [])
+        {
+            if (f.Feature is not { } feature || !ContractFields.Contains(feature)
+                || f.Contribution is not { } contribution || !double.IsFinite(contribution)
+                || parsed.Any(p => p.Feature == feature))
+            {
+                return null;
+            }
+            parsed.Add(new MlFactor(feature, contribution));
+        }
+        return parsed;
     }
 
     private static MlFailure ParseError(int status, string body)
@@ -135,6 +158,13 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
     {
         public string? ModelId { get; init; }
         public double? PBad { get; init; }
+        public List<FactorBody>? TopFactors { get; init; }
+    }
+
+    private sealed class FactorBody
+    {
+        public string? Feature { get; init; }
+        public double? Contribution { get; init; }
     }
 
     private sealed class CatalogBody

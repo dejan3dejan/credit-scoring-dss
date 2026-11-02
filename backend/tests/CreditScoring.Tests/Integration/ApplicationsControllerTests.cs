@@ -361,6 +361,35 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     }
 
     [Fact]
+    public async Task Factors_are_saved_with_the_decision_and_returned_in_rank_order()
+    {
+        var created = await Submit("Mira Kovac", new MlScore(0.25, TestData.ModelId)
+        {
+            Factors = [new MlFactor("purpose", 0.32), new MlFactor("fico", 0.30), new MlFactor("emp_length_years", -0.1)],
+        });
+
+        var fetched = (await WithController(c => c.Get(created.Id, CancellationToken.None))).Value!;
+
+        Assert.Equal(
+            [new ScoreFactorResponse("Purpose", 0.32), new ScoreFactorResponse("CreditScore", 0.30), new ScoreFactorResponse("EmploymentLength", -0.1)],
+            fetched.Decision!.Factors);
+        await using var db = database.CreateContext();
+        Assert.Equal(3, await db.ScoreFactors.CountAsync());
+    }
+
+    [Fact]
+    public async Task Scoring_again_stores_the_factors_of_the_new_score()
+    {
+        var created = await Submit("Unscored", new MlFailure(MlErrorCodes.Timeout, null, "x", []));
+        ml.Result = new MlScore(0.1, TestData.ModelId) { Factors = [new MlFactor("dti", -0.2)] };
+
+        var body = Assert.IsType<ApplicationResponse>(Assert.IsType<OkObjectResult>((await Rescore(created.Id)).Result).Value);
+
+        Assert.Equal([new ScoreFactorResponse("DebtToIncomePercent", -0.2)], body.Decision!.Factors);
+        Assert.Equal(body.Decision.Factors, (await WithController(c => c.Get(created.Id, CancellationToken.None))).Value!.Decision!.Factors);
+    }
+
+    [Fact]
     public async Task Submitting_stores_the_shadow_scores_beside_the_active_decision()
     {
         const string challenger = "credit_lr_isotonic_v1";

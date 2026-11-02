@@ -149,7 +149,49 @@ public class MlClientTests
 
         var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
-        Assert.Equal(new MlScore(0.2731, "credit_lc_xgb_isotonic_v1"), result);
+        var score = Assert.IsType<MlScore>(result);
+        Assert.Equal((0.2731, "credit_lc_xgb_isotonic_v1"), (score.PBad, score.ModelId));
+        Assert.Empty(score.Factors);
+    }
+
+    [Fact]
+    public async Task Top_factors_are_read_in_order()
+    {
+        var (client, _) = Respond(HttpStatusCode.OK, """
+            {"model_id":"m","p_bad":0.237,"top_factors":[
+              {"feature":"purpose","value":"small_business","contribution":0.317},
+              {"feature":"emp_length_years","value":null,"contribution":-0.096}]}
+            """);
+
+        var score = Assert.IsType<MlScore>(await client.PredictAsync("m", TestData.ContractRequest, CancellationToken.None));
+
+        Assert.Equal([new MlFactor("purpose", 0.317), new MlFactor("emp_length_years", -0.096)], score.Factors);
+    }
+
+    [Theory]
+    [InlineData("""{"model_id":"m","p_bad":0.2,"top_factors":null}""")]
+    [InlineData("""{"model_id":"m","p_bad":0.2}""")]
+    public async Task A_score_without_factors_has_none(string body)
+    {
+        var (client, _) = Respond(HttpStatusCode.OK, body);
+
+        var score = Assert.IsType<MlScore>(await client.PredictAsync("m", TestData.ContractRequest, CancellationToken.None));
+
+        Assert.Empty(score.Factors);
+    }
+
+    [Theory]
+    [InlineData("""{"model_id":"m","p_bad":0.2,"top_factors":[{"feature":"int_rate","value":11.5,"contribution":0.3}]}""")]
+    [InlineData("""{"model_id":"m","p_bad":0.2,"top_factors":[{"feature":"fico","value":697}]}""")]
+    [InlineData("""{"model_id":"m","p_bad":0.2,"top_factors":[{"value":697,"contribution":0.1}]}""")]
+    [InlineData("""{"model_id":"m","p_bad":0.2,"top_factors":[{"feature":"fico","contribution":0.1},{"feature":"fico","contribution":0.05}]}""")]
+    public async Task Unusable_factors_make_the_whole_answer_invalid(string body)
+    {
+        var (client, _) = Respond(HttpStatusCode.OK, body);
+
+        var result = await client.PredictAsync("m", TestData.ContractRequest, CancellationToken.None);
+
+        Assert.Equal(MlErrorCodes.InvalidResponse, Assert.IsType<MlFailure>(result).ErrorCode);
     }
 
     [Theory]

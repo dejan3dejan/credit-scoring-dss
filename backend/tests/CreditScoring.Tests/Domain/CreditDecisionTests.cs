@@ -48,6 +48,38 @@ public class CreditDecisionTests
             () => CreditDecision.Scored(0.25, "m", 0.3286, Recommendation.Review, At));
     }
 
+    [Fact]
+    public void Scored_keeps_its_factors_in_rank_order()
+    {
+        var decision = CreditDecision.Scored(0.25, "m", 0.3286, Recommendation.Review, At, 0.2,
+            [ScoreFactor.Of(1, "Purpose", 0.3), ScoreFactor.Of(2, "CreditScore", -0.1)]);
+
+        Assert.Equal([("Purpose", 1, 0.3), ("CreditScore", 2, -0.1)], decision.Factors.Select(f => (f.Input, f.Rank, f.Contribution)));
+    }
+
+    [Fact]
+    public void Unavailable_has_no_factors()
+    {
+        Assert.Empty(CreditDecision.Unavailable("timeout", At).Factors);
+    }
+
+    [Theory]
+    [InlineData(0, "Purpose", 0.1)]
+    [InlineData(1, " ", 0.1)]
+    [InlineData(1, "Purpose", double.NaN)]
+    [InlineData(1, "Purpose", double.PositiveInfinity)]
+    public void Impossible_factor_throws(int rank, string input, double contribution)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => ScoreFactor.Of(rank, input, contribution));
+    }
+
+    [Fact]
+    public void Factor_ranks_must_count_from_one_without_gaps()
+    {
+        Assert.Throws<ArgumentException>(() => CreditDecision.Scored(0.1, "m", 0.3286, Recommendation.Approve, At, 0.2,
+            [ScoreFactor.Of(2, "Purpose", 0.3)]));
+    }
+
     [Theory]
     [InlineData(0.0)]
     [InlineData(1.0)]
