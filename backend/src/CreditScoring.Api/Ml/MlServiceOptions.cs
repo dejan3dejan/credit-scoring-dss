@@ -11,4 +11,7 @@ public class MlServiceOptions
 
     [Range(1, 60)]
     public int TimeoutSeconds { get; set; }
+
+    [Range(1, 60)]
+    public int ShadowTimeoutSeconds { get; set; }
 }

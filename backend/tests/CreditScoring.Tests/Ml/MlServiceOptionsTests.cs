@@ -12,6 +12,7 @@ public class MlServiceOptionsTests
     {
         BaseUrl = new Uri("http://localhost:8000/"),
         TimeoutSeconds = 5,
+        ShadowTimeoutSeconds = 2,
     };
 
     [Fact]
@@ -36,6 +37,17 @@ public class MlServiceOptionsTests
     {
         var options = Valid();
         options.TimeoutSeconds = seconds;
+
+        Assert.False(IsValid(options));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(61)]
+    public void Shadow_timeout_outside_range_is_invalid(int seconds)
+    {
+        var options = Valid();
+        options.ShadowTimeoutSeconds = seconds;
 
         Assert.False(IsValid(options));
     }

@@ -1,13 +1,17 @@
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
+using Microsoft.Extensions.Options;
 
 namespace CreditScoring.Api.Decisions;
 
 public class CreditDecisionService(
     IMlClient ml,
     TimeProvider time,
+    IOptions<MlServiceOptions> options,
     ILogger<CreditDecisionService> logger) : ICreditDecisionService
 {
+    private readonly TimeSpan shadowTimeout = TimeSpan.FromSeconds(options.Value.ShadowTimeoutSeconds);
+
     public async Task<Evaluation> EvaluateAsync(
         CreditApplication application,
         IReadOnlyCollection<ScoringModel> models,
@@ -21,8 +25,10 @@ public class CreditDecisionService(
         }
 
         var shadows = models.Where(m => m.Role == ModelRole.Shadow).ToList();
+        using var budget = new CancellationTokenSource(shadowTimeout, time);
+        using var shadowToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, budget.Token);
         var decision = ScoreAsync(active, request, cancellationToken);
-        var shadowScores = shadows.Select(m => ScoreAsync(m, request, cancellationToken)).ToList();
+        var shadowScores = shadows.Select(m => ScoreShadowAsync(m, request, shadowToken.Token, cancellationToken)).ToList();
 
         var results = await Task.WhenAll(shadowScores.Prepend(decision));
         return new Evaluation(results[0], shadows.Select((m, i) => ShadowScore.Of(m, results[i + 1])).ToList());
@@ -38,6 +44,24 @@ public class CreditDecisionService(
 
         var evaluation = await EvaluateAsync(application, models, cancellationToken);
         return new Rescored(evaluation, application.Decision is { } previous ? ScoringFailure.Of(previous) : null);
+    }
+
+    private async Task<CreditDecision> ScoreShadowAsync(
+        ScoringModel model,
+        MlPredictRequest request,
+        CancellationToken shadowToken,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ScoreAsync(model, request, shadowToken);
+        }
+        catch (OperationCanceledException) when (shadowToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning("Shadow model {ModelId} gave no score within {Seconds} s; recording a timeout",
+                model.ModelId, shadowTimeout.TotalSeconds);
+            return CreditDecision.Unavailable(MlErrorCodes.Timeout, time.GetUtcNow());
+        }
     }
 
     private async Task<CreditDecision> ScoreAsync(ScoringModel model, MlPredictRequest request, CancellationToken cancellationToken)

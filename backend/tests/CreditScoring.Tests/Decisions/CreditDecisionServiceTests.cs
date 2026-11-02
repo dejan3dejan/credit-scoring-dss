@@ -150,6 +150,33 @@ public class CreditDecisionServiceTests
     }
 
     [Fact]
+    public async Task Slow_shadow_times_out_at_its_own_limit_without_holding_up_the_decision()
+    {
+        var (service, ml) = Create(new MlScore(0.3, ModelId));
+        ml.Hanging.Add(Challenger);
+        var started = System.Diagnostics.Stopwatch.StartNew();
+
+        var evaluation = await service.EvaluateAsync(
+            TestData.ContractApplication(), [TestData.ActiveModel(), TestData.ShadowModel(Challenger)], CancellationToken.None);
+
+        Assert.InRange(started.Elapsed, TimeSpan.FromSeconds(0.9), TimeSpan.FromSeconds(4));
+        Assert.Equal((DecisionStatus.Scored, Recommendation.Reject), (evaluation.Decision.Status, evaluation.Decision.Recommendation));
+        var shadow = Assert.Single(evaluation.ShadowScores);
+        Assert.Equal((Challenger, DecisionStatus.ScoringUnavailable, MlErrorCodes.Timeout), (shadow.ModelId, shadow.Status, shadow.ErrorCode));
+    }
+
+    [Fact]
+    public async Task Cancelling_the_request_while_a_shadow_is_scoring_propagates_instead_of_recording_a_timeout()
+    {
+        var (service, ml) = Create(new MlScore(0.3, ModelId));
+        ml.Hanging.Add(Challenger);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.EvaluateAsync(
+            TestData.ContractApplication(), [TestData.ActiveModel(), TestData.ShadowModel(Challenger)], cts.Token));
+    }
+
+    [Fact]
     public async Task Retired_models_are_not_scored()
     {
         var (service, ml) = Create(new MlScore(0.1, ModelId));
