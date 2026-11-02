@@ -42,3 +42,31 @@ def test_load_refuses_other_sklearn_version(fitted, tmp_path):
     meta_path.write_text(json.dumps(tampered))
     with pytest.raises(RuntimeError, match="refusing to load"):
         load_artifact(model_path)
+
+
+def lc_metadata(**overrides):
+    X = pd.DataFrame({"amount": [1.0, 2.0], "kind": ["a", "b"]})
+    return build_metadata(
+        model_id="lc_model", model_name="XGBoost", calibration="isotonic", threshold=0.3286,
+        cost_fn=2.0431, cost_fp=1, seed=42, X_train=X, y_train=pd.Series([0, 1]), data_sha256="0" * 64,
+        created_at="2026-01-01T00:00:00+00:00", library_versions={"scikit-learn": sklearn.__version__},
+        evaluation_ref="none", **overrides,
+    )
+
+
+def test_metadata_names_its_dataset_with_german_credit_as_the_default(fitted):
+    _, meta, _ = fitted
+    assert meta["dataset"] == "statlog_german_credit"
+    assert lc_metadata(dataset="lending_club")["dataset"] == "lending_club"
+
+
+def test_metadata_carries_a_review_band_only_when_given(fitted):
+    _, meta, _ = fitted
+    assert "recommended_review_band" not in meta
+    band = lc_metadata(review_from=0.2)["recommended_review_band"]
+    assert band["from"] == 0.2 and band["to"] == pytest.approx(0.3286)
+
+
+def test_review_band_must_start_below_the_threshold():
+    with pytest.raises(ValueError, match="below the threshold"):
+        lc_metadata(review_from=0.4)

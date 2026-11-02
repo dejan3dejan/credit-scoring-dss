@@ -73,3 +73,17 @@ def test_band_of_zero_width_matches_single_threshold():
     out = review_band_policy(y, p, low=0.2, high=0.2)
     assert out["share_review"] == 0
     assert out["cost_per_auto_decision"] == pytest.approx((5 * 1 + 1 * 1) / 5)
+
+
+def test_review_band_uses_the_given_costs():
+    y = np.array([0, 1, 0, 1, 0])
+    p = np.array([0.1, 0.1, 0.3, 0.5, 0.05])
+    out = review_band_policy(y, p, low=0.2, high=0.2, cost_fn=2.0, cost_fp=1.0)
+    assert out["cost_per_auto_decision"] == pytest.approx((2 * 1 + 1 * 1) / 5)
+
+
+def test_review_band_reports_the_share_of_bad_loans_it_stops():
+    y = np.array([0, 1, 1, 1, 0])
+    p = np.array([0.1, 0.1, 0.25, 0.5, 0.05])
+    out = review_band_policy(y, p, low=0.2, high=0.4)
+    assert out["share_of_bad_flagged"] == pytest.approx(2 / 3)

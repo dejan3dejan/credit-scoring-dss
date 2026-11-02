@@ -61,14 +61,14 @@ def acceptance_rate_policy(y_true, p_bad, acceptance_rate):
     }
 
 
-def review_band_policy(y_true, p_bad, low, high):
+def review_band_policy(y_true, p_bad, low, high, cost_fn=COST_FN, cost_fp=COST_FP):
     y_true = np.asarray(y_true)
     p_bad = np.asarray(p_bad)
     approve = p_bad < low
     reject = p_bad >= high
     review = ~approve & ~reject
     auto = approve | reject
-    auto_cost = COST_FN * (approve & (y_true == 1)).sum() + COST_FP * (reject & (y_true == 0)).sum()
+    auto_cost = cost_fn * (approve & (y_true == 1)).sum() + cost_fp * (reject & (y_true == 0)).sum()
     return {
         "low": low,
         "high": high,
@@ -77,12 +77,13 @@ def review_band_policy(y_true, p_bad, low, high):
         "share_review": float(review.mean()),
         "bad_rate_review": float(y_true[review].mean()) if review.any() else float("nan"),
         "bad_rate_approved": float(y_true[approve].mean()) if approve.any() else float("nan"),
+        "share_of_bad_flagged": float((~approve & (y_true == 1)).sum() / (y_true == 1).sum()),
         "cost_per_auto_decision": float(auto_cost / auto.sum()) if auto.any() else float("nan"),
     }
 
 
-def review_band_table(y_true, p_bad, bands):
-    return pd.DataFrame([review_band_policy(y_true, p_bad, low, high) for low, high in bands])
+def review_band_table(y_true, p_bad, bands, cost_fn=COST_FN, cost_fp=COST_FP):
+    return pd.DataFrame([review_band_policy(y_true, p_bad, low, high, cost_fn, cost_fp) for low, high in bands])
 
 
 def acceptance_table(y_true, oof_by_model, rates=(0.6, 0.7, 0.8)):

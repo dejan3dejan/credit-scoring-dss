@@ -9,11 +9,14 @@ FEATURE_ORDER_NOTE = "raw German Credit columns, names as in src/data/load.py"
 
 def build_metadata(*, model_id, model_name, calibration, threshold, cost_fn, cost_fp,
                    seed, X_train, y_train, data_sha256, created_at, library_versions,
-                   evaluation_ref):
+                   evaluation_ref, dataset="statlog_german_credit", review_from=None):
+    if review_from is not None and not 0 < review_from < threshold:
+        raise ValueError(f"review band must start above 0 and below the threshold {threshold}, got {review_from}")
     categorical = X_train.select_dtypes(exclude="number").columns
-    return {
+    metadata = {
         "model_id": model_id,
         "model_name": model_name,
+        "dataset": dataset,
         "calibration": calibration,
         "output": "P(bad), probability of default, class 1",
         "recommended_threshold": {
@@ -40,6 +43,14 @@ def build_metadata(*, model_id, model_name, calibration, threshold, cost_fn, cos
         "evaluation_ref": evaluation_ref,
         "created_at": created_at,
     }
+    if review_from is not None:
+        metadata["recommended_review_band"] = {
+            "from": review_from,
+            "to": threshold,
+            "rule": "review closely iff from <= P(bad) < to",
+            "applied_by": "backend ICreditDecisionService, not the inference service",
+        }
+    return metadata
 
 
 def save_artifact(model, metadata, out_dir):
