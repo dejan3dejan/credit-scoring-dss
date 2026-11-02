@@ -60,7 +60,7 @@ public sealed class StatsControllerTests(DatabaseFixture database) : IAsyncLifet
     {
         await using (var db = database.CreateContext())
         {
-            var (model, registered) = ModelRegistry.Register(Challenger, "LogisticRegression", TestData.Dataset, TestData.Threshold, database.Officer.AsActor(), TestData.Now);
+            var (model, registered) = ModelRegistry.Register(Challenger, "LogisticRegression", TestData.Dataset, TestData.Threshold, TestData.ReviewFrom, database.Officer.AsActor(), TestData.Now);
             db.ScoringModels.Add(model);
             db.ModelEvents.Add(registered);
             await db.SaveChangesAsync();
@@ -69,24 +69,28 @@ public sealed class StatsControllerTests(DatabaseFixture database) : IAsyncLifet
         var agreed = await Submit(new MlScore(0.05, TestData.ModelId), new MlScore(0.08, Challenger), TestData.Now);
         var overridden = await Submit(new MlScore(0.45, TestData.ModelId), new MlScore(0.10, Challenger), TestData.Now.AddHours(1));
         await Submit(new MlFailure(MlErrorCodes.Timeout, null, "x", []), new MlScore(0.2, Challenger), TestData.Now.AddHours(2));
+        var review = await Submit(new MlScore(0.25, TestData.ModelId), new MlScore(0.26, Challenger), TestData.Now.AddHours(3));
         await Submit(new MlScore(0.9, TestData.ModelId), new MlScore(0.9, Challenger), TestData.Now.AddDays(-10));
         await Decide(agreed, FinalDecision.Approve);
         await Decide(overridden, FinalDecision.Approve, "guarantor added");
+        await Decide(review, FinalDecision.Reject, "income could not be verified");
 
         var stats = await Stats(new StatsQuery { From = TestData.Now.AddDays(-1), To = TestData.Now.AddDays(1) });
 
-        Assert.Equal((3, 2, 1, 2, 1), (stats.Applications, stats.Scored, stats.Unavailable, stats.Decided, stats.Pending));
+        Assert.Equal((4, 3, 1, 3, 1), (stats.Applications, stats.Scored, stats.Unavailable, stats.Decided, stats.Pending));
         Assert.Equal(new MatrixRow(1, 0, 0), stats.Matrix.Approve);
+        Assert.Equal(new MatrixRow(0, 1, 0), stats.Matrix.Review);
         Assert.Equal(new MatrixRow(1, 0, 0), stats.Matrix.Reject);
         Assert.Equal(new MatrixRow(0, 0, 1), stats.Matrix.Unavailable);
         Assert.Equal(0.5, stats.OverrideRate);
         Assert.Equal(1.0, stats.LowSideOverrideRate);
-        Assert.Equal(1.0 / 3.0, stats.UnavailableRate);
+        Assert.Equal(1.0 / 4.0, stats.UnavailableRate);
         Assert.Equal(1, stats.PBadHistogram[0].Count);
+        Assert.Equal(1, stats.PBadHistogram[2].Count);
         Assert.Equal(1, stats.PBadHistogram[4].Count);
         Assert.Equal(0, stats.PBadHistogram[9].Count);
-        Assert.Equal([new OfficerStats(database.Officer.DisplayName, 2, 1, 0.5)], stats.Officers);
-        Assert.Equal([new ModelAgreement(Challenger, 2, 1, 0.5)], stats.ShadowAgreement);
+        Assert.Equal([new OfficerStats(database.Officer.DisplayName, 3, 1, 0.5)], stats.Officers);
+        Assert.Equal([new ModelAgreement(Challenger, 3, 2, 2.0 / 3.0)], stats.ShadowAgreement);
     }
 
     [Fact]

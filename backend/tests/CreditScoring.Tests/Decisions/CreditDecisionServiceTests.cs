@@ -21,8 +21,8 @@ public class CreditDecisionServiceTests
 
     [Theory]
     [InlineData(0.0)]
-    [InlineData(0.1666)]
-    public async Task Below_threshold_recommends_approve(double pBad)
+    [InlineData(0.1999)]
+    public async Task Below_the_review_band_recommends_approve(double pBad)
     {
         var decision = await Evaluate(new MlScore(pBad, ModelId));
 
@@ -31,11 +31,23 @@ public class CreditDecisionServiceTests
         Assert.Equal(pBad, decision.PBad);
         Assert.Equal(ModelId, decision.ModelId);
         Assert.Equal(Threshold, decision.ThresholdUsed);
+        Assert.Equal(TestData.ReviewFrom, decision.ReviewFromUsed);
     }
 
     [Theory]
-    [InlineData(1.0 / 6.0)]
-    [InlineData(0.1667)]
+    [InlineData(0.2)]
+    [InlineData(0.3285)]
+    public async Task Inside_the_review_band_recommends_a_closer_review(double pBad)
+    {
+        var decision = await Evaluate(new MlScore(pBad, ModelId));
+
+        Assert.Equal(DecisionStatus.Scored, decision.Status);
+        Assert.Equal(Recommendation.Review, decision.Recommendation);
+    }
+
+    [Theory]
+    [InlineData(0.3287)]
+    [InlineData(0.5)]
     [InlineData(1.0)]
     public async Task At_or_above_threshold_recommends_reject(double pBad)
     {
@@ -48,13 +60,13 @@ public class CreditDecisionServiceTests
     [Fact]
     public async Task Threshold_comes_from_the_active_model()
     {
-        var (service, _) = Create(new MlScore(0.3, ModelId));
+        var (service, _) = Create(new MlScore(0.4, ModelId));
 
         var evaluation = await service.EvaluateAsync(
-            TestData.ContractApplication(), [TestData.ActiveModel(threshold: 0.5)], CancellationToken.None);
+            TestData.ContractApplication(), [TestData.ActiveModel(threshold: 0.5, reviewFrom: 0.45)], CancellationToken.None);
 
         Assert.Equal(Recommendation.Approve, evaluation.Decision.Recommendation);
-        Assert.Equal(0.5, evaluation.Decision.ThresholdUsed);
+        Assert.Equal((0.5, 0.45), (evaluation.Decision.ThresholdUsed, evaluation.Decision.ReviewFromUsed));
     }
 
     [Theory]
@@ -119,7 +131,7 @@ public class CreditDecisionServiceTests
 
         var evaluation = await service.EvaluateAsync(
             TestData.ContractApplication(),
-            [TestData.ShadowModel(Challenger, threshold: 0.2), TestData.ActiveModel()],
+            [TestData.ShadowModel(Challenger, threshold: 0.2, reviewFrom: null), TestData.ActiveModel()],
             CancellationToken.None);
 
         Assert.Equal(Recommendation.Approve, evaluation.Decision.Recommendation);
@@ -129,6 +141,7 @@ public class CreditDecisionServiceTests
         Assert.Equal(DecisionStatus.Scored, shadow.Status);
         Assert.Equal(0.25, shadow.PBad);
         Assert.Equal(0.2, shadow.ThresholdUsed);
+        Assert.Null(shadow.ReviewFromUsed);
         Assert.Equal(Recommendation.Reject, shadow.Recommendation);
         Assert.Equal(TestData.Now, shadow.ScoredAt);
     }
@@ -136,7 +149,7 @@ public class CreditDecisionServiceTests
     [Fact]
     public async Task Shadow_failure_is_kept_and_does_not_change_the_decision()
     {
-        var (service, ml) = Create(new MlScore(0.3, ModelId));
+        var (service, ml) = Create(new MlScore(0.4, ModelId));
         ml.ResultsByModel[Challenger] = new MlFailure(MlErrorCodes.Timeout, null, "slow", []);
 
         var evaluation = await service.EvaluateAsync(
@@ -152,7 +165,7 @@ public class CreditDecisionServiceTests
     [Fact]
     public async Task Slow_shadow_times_out_at_its_own_limit_without_holding_up_the_decision()
     {
-        var (service, ml) = Create(new MlScore(0.3, ModelId));
+        var (service, ml) = Create(new MlScore(0.4, ModelId));
         ml.Hanging.Add(Challenger);
         var started = System.Diagnostics.Stopwatch.StartNew();
 
@@ -168,7 +181,7 @@ public class CreditDecisionServiceTests
     [Fact]
     public async Task Cancelling_the_request_while_a_shadow_is_scoring_propagates_instead_of_recording_a_timeout()
     {
-        var (service, ml) = Create(new MlScore(0.3, ModelId));
+        var (service, ml) = Create(new MlScore(0.4, ModelId));
         ml.Hanging.Add(Challenger);
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
 
@@ -232,7 +245,7 @@ public class CreditDecisionServiceTests
     [Fact]
     public async Task Scoring_again_scores_an_unscored_application_and_keeps_the_failed_attempt()
     {
-        var (service, _) = Create(new MlScore(0.3, ModelId));
+        var (service, _) = Create(new MlScore(0.4, ModelId));
 
         var result = await service.RescoreAsync(Unscored(), [TestData.ActiveModel()], CancellationToken.None);
 
@@ -269,7 +282,7 @@ public class CreditDecisionServiceTests
     {
         var (service, ml) = Create(new MlScore(0.1, ModelId));
         var application = TestData.ContractApplication();
-        application.Decision = CreditDecision.Scored(0.1, ModelId, Threshold, Recommendation.Approve, TestData.Now);
+        application.Decision = CreditDecision.Scored(0.1, ModelId, Threshold, Recommendation.Approve, TestData.Now, TestData.ReviewFrom);
 
         var result = await service.RescoreAsync(application, [TestData.ActiveModel()], CancellationToken.None);
 

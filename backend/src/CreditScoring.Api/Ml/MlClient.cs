@@ -25,7 +25,7 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
 
     public async Task<MlCatalogResult> ListModelsAsync(CancellationToken cancellationToken)
     {
-        var (failure, status, body) = await SendAsync(() => http.GetAsync("v2/models", cancellationToken), cancellationToken);
+        var (failure, status, body) = await SendAsync(() => http.GetAsync("v3/models", cancellationToken), cancellationToken);
         failure ??= status == HttpStatusCode.OK ? null : ParseError((int)status, body);
         if (failure is null && ParseCatalog(body) is { } catalog)
             return catalog;
@@ -38,7 +38,7 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
 
     private async Task<MlScoreResult> SendAsync(string modelId, MlPredictRequest request, CancellationToken cancellationToken)
     {
-        var path = $"v2/models/{Uri.EscapeDataString(modelId)}/predict";
+        var path = $"v3/models/{Uri.EscapeDataString(modelId)}/predict";
         var (failure, status, body) = await SendAsync(() => http.PostAsJsonAsync(path, request, Json, cancellationToken), cancellationToken);
         if (failure is not null)
             return failure;
@@ -79,7 +79,14 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
             {
                 return null;
             }
-            parsed.Add(new MlModelInfo(m.ModelId, m.ModelName, m.Dataset, threshold, createdAt));
+            double? reviewFrom = null;
+            if (m.RecommendedReviewBand is { } band)
+            {
+                if (band.From is not { } from || !double.IsFinite(from) || from <= 0 || from >= threshold)
+                    return null;
+                reviewFrom = from;
+            }
+            parsed.Add(new MlModelInfo(m.ModelId, m.ModelName, m.Dataset, threshold, reviewFrom, createdAt));
         }
         return new MlCatalog(parsed);
     }
@@ -141,12 +148,18 @@ public class MlClient(HttpClient http, ILogger<MlClient> logger) : IMlClient
         public string? ModelName { get; init; }
         public string? Dataset { get; init; }
         public ThresholdBody? RecommendedThreshold { get; init; }
+        public ReviewBandBody? RecommendedReviewBand { get; init; }
         public DateTimeOffset? CreatedAt { get; init; }
     }
 
     private sealed class ThresholdBody
     {
         public double? Value { get; init; }
+    }
+
+    private sealed class ReviewBandBody
+    {
+        public double? From { get; init; }
     }
 
     private sealed class ErrorEnvelope

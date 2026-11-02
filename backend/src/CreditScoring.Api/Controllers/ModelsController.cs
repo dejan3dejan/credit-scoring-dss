@@ -61,7 +61,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
             return Refused("modelId", "The inference service does not serve a model with this id.");
 
         var (model, registered) = ModelRegistry.Register(
-            info.ModelId, info.ModelName, info.Dataset, info.RecommendedThreshold, Credentials.ActorOf(User), time.GetUtcNow());
+            info.ModelId, info.ModelName, info.Dataset, info.RecommendedThreshold, info.ReviewFrom, Credentials.ActorOf(User), time.GetUtcNow());
         db.ScoringModels.Add(model);
         db.ModelEvents.Add(registered);
         try

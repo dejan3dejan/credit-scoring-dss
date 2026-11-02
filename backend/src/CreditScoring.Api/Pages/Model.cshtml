@@ -5,7 +5,9 @@
     ViewData["Title"] = "Model";
     var active = Model.Active;
     var threshold = active?.Threshold ?? 0;
-    var isCostRatioThreshold = Math.Abs(threshold - 1.0 / 6.0) < 1e-9;
+    const double LendingClubCostRatio = 2.0431;
+    var isCostRatioThreshold = Math.Abs(threshold - 1 / (1 + LendingClubCostRatio)) < 5e-5;
+    var reviewFrom = active?.ReviewFrom;
 }
 
 @section Band {
@@ -28,6 +30,10 @@ else
                 <div><dt>Model</dt><dd class="mono">@active.ModelId</dd></div>
                 <div><dt>Type</dt><dd>@Labels.ModelName(active.DisplayName)</dd></div>
                 <div><dt>Output</dt><dd>P(bad), probability of default</dd></div>
+                @if (reviewFrom is { } from)
+                {
+                    <div><dt>Review closely</dt><dd>@from.ToString("P1") ≤ P(bad) &lt; @threshold.ToString("P1")</dd></div>
+                }
                 <div><dt>Reject rule</dt><dd>P(bad) ≥ @threshold.ToString("P1") <span class="muted mono">(@threshold.ToString("0.####", CultureInfo.InvariantCulture))</span></dd></div>
                 <div><dt>Recommendation only</dt><dd>The loan officer decides</dd></div>
             </dl>
@@ -38,9 +44,9 @@ else
             <div class="prose">
                 @if (isCostRatioThreshold)
                 {
-                    <p>Approving an applicant who later defaults is assumed to cost <strong>5 times</strong> as much as rejecting a good applicant.</p>
-                    <p>Rejecting is then cheaper on average once P(bad) reaches 1 / (1 + 5) = 1/6, about 16.7%. Below that, approving is cheaper.</p>
-                    <p class="muted">The 5 : 1 cost ratio is an assumption of this thesis, not a bank's figure.</p>
+                    <p>In the training loans, a loan that defaulted lost on average <strong>$4,203.69</strong>, and a loan paid back in full earned on average <strong>$2,057.47</strong>. A missed default therefore costs about <strong>2.04 times</strong> as much as turning away a good borrower.</p>
+                    <p>Rejecting is cheaper on average once P(bad) reaches 1 / (1 + 2.0431), about 32.9%. Below that, approving is cheaper.</p>
+                    <p class="muted">The amounts are what borrowers paid back minus what was lent, from Lending Club's records. They leave out funding cost and the time value of money.</p>
                 }
                 else
                 {
@@ -52,21 +58,21 @@ else
         <section class="panel">
             <div class="card-title">Training data</div>
             <dl class="kv">
-                <div><dt>Dataset</dt><dd>Statlog German Credit</dd></div>
+                <div><dt>Dataset</dt><dd>Lending Club accepted loans</dd></div>
                 <div><dt>Dataset id</dt><dd class="mono">@active.Dataset</dd></div>
-                <div><dt>Size</dt><dd>1,000 applications, 20 inputs</dd></div>
-                <div><dt>Period and currency</dt><dd>1970s, Deutsche Mark</dd></div>
-                <div><dt>Category meanings</dt><dd>Corrected table, Grömping (2019)</dd></div>
+                <div><dt>Training loans</dt><dd>306,462 36-month loans issued 2012 to 2014, 13.3% not repaid</dd></div>
+                <div><dt>Tested once on</dt><dd>283,026 loans issued in 2015</dd></div>
+                <div><dt>Currency</dt><dd>US dollars</dd></div>
             </dl>
         </section>
 
         <section class="panel">
             <div class="card-title">Accepted inputs</div>
             <dl class="kv">
-                <div><dt>Credit amount</dt><dd>@BusinessLimits.MinCreditAmount.ToString("N0") – @BusinessLimits.MaxCreditAmount.ToString("N0") DM</dd></div>
-                <div><dt>Loan term</dt><dd>@BusinessLimits.MinDurationMonths – @BusinessLimits.MaxDurationMonths months</dd></div>
-                <div><dt>Age</dt><dd>@BusinessLimits.MinAge – @BusinessLimits.MaxAge years</dd></div>
-                <div><dt>Why these ranges</dt><dd>They follow the training data</dd></div>
+                <div><dt>Loan amount</dt><dd>@BusinessLimits.MinLoanAmount.ToString("N0") – @BusinessLimits.MaxLoanAmount.ToString("N0") USD</dd></div>
+                <div><dt>Loan term</dt><dd>@BusinessLimits.TermMonths months only</dd></div>
+                <div><dt>Credit score</dt><dd>@BusinessLimits.MinCreditScore – @BusinessLimits.MaxCreditScore</dd></div>
+                <div><dt>Why these ranges</dt><dd>They follow Lending Club's loans of that period; extreme values are capped inside the model</dd></div>
             </dl>
         </section>
     </div>
@@ -92,7 +98,7 @@ else
                             @Labels.ModelName(m.DisplayName)
                             <span class="status status-@tone">@Labels.Of(m.Role)</span>
                         </div>
-                        <div class="registry-meta"><span class="mono">@m.ModelId</span> · rejects at @m.Threshold.ToString("P1") · registered @m.RegisteredAt.ToLocalTime().ToString("d MMM yyyy")</div>
+                        <div class="registry-meta"><span class="mono">@m.ModelId</span>@(m.ReviewFrom is { } rf ? $" · review from {rf:P1}" : "") · rejects at @m.Threshold.ToString("P1") · registered @m.RegisteredAt.ToLocalTime().ToString("d MMM yyyy")</div>
                     </div>
                     @if (m.Role == ModelRole.Shadow)
                     {
@@ -139,7 +145,7 @@ else
                     <div class="registry-row">
                         <div class="registry-main">
                             <div class="registry-name">@Labels.ModelName(m.ModelName)</div>
-                            <div class="registry-meta"><span class="mono">@m.ModelId</span> · recommended threshold @m.RecommendedThreshold.ToString("P1") · trained @m.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</div>
+                            <div class="registry-meta"><span class="mono">@m.ModelId</span>@(m.ReviewFrom is { } rf ? $" · review from {rf:P1}" : "") · recommended threshold @m.RecommendedThreshold.ToString("P1") · trained @m.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</div>
                         </div>
                         <form method="post" asp-page-handler="Register">
                             <input type="hidden" name="ModelId" value="@m.ModelId">
@@ -149,7 +155,7 @@ else
                 }
             </div>
         }
-        <div class="panel-foot">A model starts as a shadow. Its threshold is the one it was trained with and cannot be changed afterwards.</div>
+        <div class="panel-foot">A model starts as a shadow. Its threshold and review band are the ones it was trained with and cannot be changed afterwards.</div>
     </section>
 
     <h2 class="section-title">Change log</h2>
@@ -183,10 +189,11 @@ else
 <section class="panel limits">
     <div class="card-title">Known limitations</div>
     <ul class="limit-list">
-        <li><strong>Old population.</strong> The data is German bank data from the 1970s. Its estimates describe that population, not today's applicants, and amounts must be entered in DM.</li>
-        <li><strong>Sensitive inputs.</strong> Personal status and sex, and foreign worker, are inputs because the original data has them, not as an endorsement. One category mixes "female non-single" with "male single", so sex cannot be read from it reliably.</li>
-        <li><strong>Two labels look odd.</strong> Under the corrected code table, "real estate" has the highest bad rate of the property groups, and the lowest installment burden has the highest bad rate. The code mapping is verified; which labels are right rests on Grömping (2019).</li>
-        <li><strong>A recommendation, not a decision.</strong> Every application needs the officer's decision, with a reason when it goes against the model or when no score was available.</li>
+        <li><strong>Approved loans only.</strong> The model learned from loans Lending Club granted. It never saw how the applicants it turned away would have repaid, so its estimates are least reliable for applicants unlike those it approved.</li>
+        <li><strong>One country and period.</strong> The loans are US loans issued from 2012 to 2014. Tested once on loans from 2015, it predicted somewhat fewer defaults than occurred.</li>
+        <li><strong>36-month loans only.</strong> Longer terms were left out, so the form offers no other term.</li>
+        <li><strong>The review band is not a safeguard by itself.</strong> It marks the applications where the model is least sure. It lowers losses only if the officer's closer look judges those cases better than the model does.</li>
+        <li><strong>A recommendation, not a decision.</strong> Every application needs the officer's decision, with a reason when it goes against the model, when the model asks for a closer review, or when no score was available.</li>
         <li><strong>Performance figures</strong> are kept in the experiment log and are not shown on this page.</li>
     </ul>
 </section>

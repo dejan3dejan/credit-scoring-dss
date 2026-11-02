@@ -26,14 +26,4 @@ public class Client
             CreatedByUserId = createdBy.UserId,
         };
     }
-
-    public int? AgeOn(DateOnly date) => AgeOn(DateOfBirth, date);
-
-    public static int? AgeOn(DateOnly? dateOfBirth, DateOnly date)
-    {
-        if (dateOfBirth is not { } birth)
-            return null;
-        var age = date.Year - birth.Year;
-        return birth.AddYears(age) > date ? age - 1 : age;
-    }
 }

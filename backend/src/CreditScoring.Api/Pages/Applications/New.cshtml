@@ -85,123 +85,25 @@ else
     <section class="panel">
         <div class="panel-body">
             <div class="panel-head">
-                <h2>Applicant</h2>
-                <p>About the client, as of today.</p>
-            </div>
-            <div class="grid">
-                <div class="field">
-                    <label asp-for="Input.Age"></label>
-                    <div class="affix"><input asp-for="Input.Age" type="text" inputmode="numeric" placeholder="@BusinessLimits.MinAge–@BusinessLimits.MaxAge"><span>years</span></div>
-                    <span asp-validation-for="Input.Age" class="error"></span>
-                </div>
-                <div class="field">
-                    <label asp-for="Input.Dependants"></label>
-                    <input asp-for="Input.Dependants" type="text" inputmode="numeric" placeholder="0">
-                    <span class="hint">People the applicant provides maintenance for</span>
-                    <span asp-validation-for="Input.Dependants" class="error"></span>
-                </div>
-                <div class="field span-2">
-                    <label asp-for="Input.PersonalStatusSex"></label>
-                    <select asp-for="Input.PersonalStatusSex" asp-items="Labels.Options<PersonalStatusSex>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.PersonalStatusSex" class="error"></span>
-                </div>
-                <div class="field">
-                    <span class="field-label" id="tel-label">@Html.DisplayNameFor(m => m.Input.HasRegisteredTelephone)</span>
-                    <div class="segmented" role="radiogroup" aria-labelledby="tel-label">
-                        <input type="radio" asp-for="Input.HasRegisteredTelephone" value="true" id="tel-yes"><label for="tel-yes">Yes</label>
-                        <input type="radio" asp-for="Input.HasRegisteredTelephone" value="false" id="tel-no"><label for="tel-no">No</label>
-                    </div>
-                    <span asp-validation-for="Input.HasRegisteredTelephone" class="error"></span>
-                </div>
-                <div class="field">
-                    <span class="field-label" id="fw-label">@Html.DisplayNameFor(m => m.Input.IsForeignWorker)</span>
-                    <div class="segmented" role="radiogroup" aria-labelledby="fw-label">
-                        <input type="radio" asp-for="Input.IsForeignWorker" value="true" id="fw-yes"><label for="fw-yes">Yes</label>
-                        <input type="radio" asp-for="Input.IsForeignWorker" value="false" id="fw-no"><label for="fw-no">No</label>
-                    </div>
-                    <span asp-validation-for="Input.IsForeignWorker" class="error"></span>
-                </div>
-            </div>
-        </div>
-        <div class="panel-foot">Personal status and foreign worker are inputs of the original dataset. Their use is a stated limitation of the model.</div>
-    </section>
-
-    <section class="panel">
-        <div class="panel-body">
-            <div class="panel-head">
                 <h2>Loan</h2>
                 <p>What is being requested.</p>
             </div>
             <div class="grid">
                 <div class="field">
-                    <label asp-for="Input.CreditAmount"></label>
-                    <div class="affix"><input asp-for="Input.CreditAmount" type="text" inputmode="numeric" placeholder="@BusinessLimits.MinCreditAmount.ToString("N0")–@BusinessLimits.MaxCreditAmount.ToString("N0")"><span>DM</span></div>
-                    <span asp-validation-for="Input.CreditAmount" class="error"></span>
+                    <label asp-for="Input.LoanAmount"></label>
+                    <div class="affix"><input asp-for="Input.LoanAmount" type="text" inputmode="numeric" placeholder="@BusinessLimits.MinLoanAmount.ToString("N0")–@BusinessLimits.MaxLoanAmount.ToString("N0")"><span>USD</span></div>
+                    <span asp-validation-for="Input.LoanAmount" class="error"></span>
                 </div>
                 <div class="field">
-                    <label asp-for="Input.DurationMonths"></label>
-                    <div class="affix"><input asp-for="Input.DurationMonths" type="text" inputmode="numeric" placeholder="@BusinessLimits.MinDurationMonths–@BusinessLimits.MaxDurationMonths"><span>months</span></div>
-                    <span asp-validation-for="Input.DurationMonths" class="error"></span>
+                    <span class="field-label">Term</span>
+                    <div class="fixed-value">@BusinessLimits.TermMonths months</div>
+                    <span class="hint">The model was trained on 36-month loans only</span>
                 </div>
-                <div class="field">
+                <div class="field span-2">
                     <label asp-for="Input.Purpose"></label>
                     <select asp-for="Input.Purpose" asp-items="Labels.Options<LoanPurpose>()" required><option value="">Select…</option></select>
                     <span asp-validation-for="Input.Purpose" class="error"></span>
                 </div>
-                <div class="field">
-                    <label asp-for="Input.InstallmentSharePercent"></label>
-                    <div class="affix"><input asp-for="Input.InstallmentSharePercent" type="text" inputmode="decimal" step="0.1" placeholder="0–100"><span>%</span></div>
-                    <span class="hint">Monthly installment as a share of disposable income</span>
-                    <span asp-validation-for="Input.InstallmentSharePercent" class="error"></span>
-                </div>
-                <div class="field span-2">
-                    <label asp-for="Input.OtherDebtors"></label>
-                    <select asp-for="Input.OtherDebtors" asp-items="Labels.Options<OtherDebtors>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.OtherDebtors" class="error"></span>
-                </div>
-            </div>
-        </div>
-        <div class="panel-foot">Amounts are in 1970s Deutsche Mark. The model was trained on loans of @BusinessLimits.MinCreditAmount.ToString("N0") to @BusinessLimits.MaxCreditAmount.ToString("N0") DM.</div>
-    </section>
-
-    <section class="panel">
-        <div class="panel-body">
-            <div class="panel-head">
-                <h2>Finances</h2>
-                <p>Accounts, savings and credit record.</p>
-            </div>
-            <div class="grid">
-                <div class="field span-2">
-                    <label asp-for="Input.CheckingAccountStatus"></label>
-                    <select asp-for="Input.CheckingAccountStatus" asp-items="Labels.Options<CheckingAccountStatus>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.CheckingAccountStatus" class="error"></span>
-                </div>
-                <div class="field span-2">
-                    <label asp-for="Input.CreditHistory"></label>
-                    <select asp-for="Input.CreditHistory" asp-items="Labels.Options<CreditHistory>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.CreditHistory" class="error"></span>
-                </div>
-                <div class="field">
-                    <label asp-for="Input.SavingsAccount"></label>
-                    <select asp-for="Input.SavingsAccount" asp-items="Labels.Options<SavingsAccount>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.SavingsAccount" class="error"></span>
-                </div>
-                <div class="field">
-                    <label asp-for="Input.CreditsAtBank"></label>
-                    <input asp-for="Input.CreditsAtBank" type="text" inputmode="numeric" placeholder="1">
-                    <span class="hint">Including this one</span>
-                    <span asp-validation-for="Input.CreditsAtBank" class="error"></span>
-                </div>
-                <div class="field">
-                    <label asp-for="Input.OtherInstallmentPlans"></label>
-                    <select asp-for="Input.OtherInstallmentPlans" asp-items="Labels.Options<OtherInstallmentPlans>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.OtherInstallmentPlans" class="error"></span>
-                </div>
-                <div class="field">
-                    <label asp-for="Input.Property"></label>
-                    <select asp-for="Input.Property" asp-items="Labels.Options<PropertyType>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.Property" class="error"></span>
-                </div>
             </div>
         </div>
     </section>
@@ -209,32 +111,129 @@ else
     <section class="panel">
         <div class="panel-body">
             <div class="panel-head">
-                <h2>Work and housing</h2>
-                <p>Employment and where the applicant lives.</p>
+                <h2>Income and housing</h2>
+                <p>What the applicant earns and already pays.</p>
             </div>
             <div class="grid">
                 <div class="field">
-                    <label asp-for="Input.EmploymentDuration"></label>
-                    <select asp-for="Input.EmploymentDuration" asp-items="Labels.Options<EmploymentDuration>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.EmploymentDuration" class="error"></span>
+                    <label asp-for="Input.AnnualIncome"></label>
+                    <div class="affix"><input asp-for="Input.AnnualIncome" type="text" inputmode="decimal" placeholder="58000"><span>USD</span></div>
+                    <span class="hint">Before tax, as stated by the applicant</span>
+                    <span asp-validation-for="Input.AnnualIncome" class="error"></span>
                 </div>
                 <div class="field">
-                    <label asp-for="Input.Job"></label>
-                    <select asp-for="Input.Job" asp-items="Labels.Options<JobType>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.Job" class="error"></span>
+                    <span class="field-label" id="verification-label">@Html.DisplayNameFor(m => m.Input.IncomeVerification)</span>
+                    <div class="segmented" role="radiogroup" aria-labelledby="verification-label">
+                        @foreach (var option in Enum.GetValues<IncomeVerification>())
+                        {
+                            <input type="radio" asp-for="Input.IncomeVerification" value="@option" id="verification-@option"><label for="verification-@option">@Labels.Of(option)</label>
+                        }
+                    </div>
+                    <span class="hint">Source verified: the income source was confirmed, not the amount</span>
+                    <span asp-validation-for="Input.IncomeVerification" class="error"></span>
                 </div>
                 <div class="field">
-                    <label asp-for="Input.Housing"></label>
-                    <select asp-for="Input.Housing" asp-items="Labels.Options<Housing>()" required><option value="">Select…</option></select>
-                    <span asp-validation-for="Input.Housing" class="error"></span>
+                    <label asp-for="Input.DebtToIncomePercent"></label>
+                    <div class="affix"><input asp-for="Input.DebtToIncomePercent" type="text" inputmode="decimal" placeholder="0–@BusinessLimits.MaxDebtToIncomePercent"><span>%</span></div>
+                    <span class="hint">Monthly debt payments as a share of monthly income, without this loan and the mortgage</span>
+                    <span asp-validation-for="Input.DebtToIncomePercent" class="error"></span>
                 </div>
                 <div class="field">
-                    <label asp-for="Input.YearsAtResidence"></label>
-                    <div class="affix"><input asp-for="Input.YearsAtResidence" type="text" inputmode="numeric" placeholder="0"><span>years</span></div>
-                    <span asp-validation-for="Input.YearsAtResidence" class="error"></span>
+                    <label asp-for="Input.EmploymentLength"></label>
+                    <select asp-for="Input.EmploymentLength" asp-items="Labels.Options<EmploymentLength>()" required><option value="">Select…</option></select>
+                    <span asp-validation-for="Input.EmploymentLength" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.HomeOwnership"></label>
+                    <select asp-for="Input.HomeOwnership" asp-items="Labels.Options<HomeOwnership>()" required><option value="">Select…</option></select>
+                    <span asp-validation-for="Input.HomeOwnership" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.MortgageAccounts"></label>
+                    <input asp-for="Input.MortgageAccounts" type="text" inputmode="numeric" placeholder="0">
+                    <span asp-validation-for="Input.MortgageAccounts" class="error"></span>
                 </div>
             </div>
         </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-body">
+            <div class="panel-head">
+                <h2>Credit report</h2>
+                <p>From the applicant's credit bureau report.</p>
+            </div>
+            <div class="grid">
+                <div class="field">
+                    <label asp-for="Input.CreditScore"></label>
+                    <input asp-for="Input.CreditScore" type="text" inputmode="numeric" placeholder="@BusinessLimits.MinCreditScore–@BusinessLimits.MaxCreditScore">
+                    <span class="hint">FICO score</span>
+                    <span asp-validation-for="Input.CreditScore" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.EarliestCreditLine"></label>
+                    <input asp-for="Input.EarliestCreditLine" type="month" asp-format="{0:yyyy-MM}" placeholder="YYYY-MM">
+                    <span class="hint">Month and year; the model uses the length of the credit history</span>
+                    <span asp-validation-for="Input.EarliestCreditLine" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.InquiriesLast6Months"></label>
+                    <input asp-for="Input.InquiriesLast6Months" type="text" inputmode="numeric" placeholder="0">
+                    <span asp-validation-for="Input.InquiriesLast6Months" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.DelinquenciesLast2Years"></label>
+                    <input asp-for="Input.DelinquenciesLast2Years" type="text" inputmode="numeric" placeholder="0">
+                    <span class="hint">Payments 30 or more days late</span>
+                    <span asp-validation-for="Input.DelinquenciesLast2Years" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.PublicRecords"></label>
+                    <input asp-for="Input.PublicRecords" type="text" inputmode="numeric" placeholder="0">
+                    <span asp-validation-for="Input.PublicRecords" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Bankruptcies"></label>
+                    <input asp-for="Input.Bankruptcies" type="text" inputmode="numeric" placeholder="0">
+                    <span asp-validation-for="Input.Bankruptcies" class="error"></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-body">
+            <div class="panel-head">
+                <h2>Credit accounts</h2>
+                <p>Cards and credit lines the applicant has now and has had.</p>
+            </div>
+            <div class="grid">
+                <div class="field">
+                    <label asp-for="Input.RevolvingBalance"></label>
+                    <div class="affix"><input asp-for="Input.RevolvingBalance" type="text" inputmode="decimal" placeholder="0"><span>USD</span></div>
+                    <span class="hint">Owed on credit cards and other revolving credit</span>
+                    <span asp-validation-for="Input.RevolvingBalance" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.RevolvingUtilizationPercent"></label>
+                    <div class="affix"><input asp-for="Input.RevolvingUtilizationPercent" type="text" inputmode="decimal" placeholder="0–@BusinessLimits.MaxRevolvingUtilizationPercent"><span>%</span></div>
+                    <span class="hint">Balance as a share of the credit limit; 0 if there is no revolving credit</span>
+                    <span asp-validation-for="Input.RevolvingUtilizationPercent" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.OpenAccounts"></label>
+                    <input asp-for="Input.OpenAccounts" type="text" inputmode="numeric" placeholder="0">
+                    <span asp-validation-for="Input.OpenAccounts" class="error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.TotalAccounts"></label>
+                    <input asp-for="Input.TotalAccounts" type="text" inputmode="numeric" placeholder="0">
+                    <span class="hint">Open and closed</span>
+                    <span asp-validation-for="Input.TotalAccounts" class="error"></span>
+                </div>
+            </div>
+        </div>
+        <div class="panel-foot">Amounts are in US dollars. The model learned from Lending Club loans issued 2012 to 2014; values far outside what it saw are capped by the model.</div>
     </section>
 
     <div class="action-bar">

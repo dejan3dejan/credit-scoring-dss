@@ -17,7 +17,7 @@ public class CreditDecisionService(
         IReadOnlyCollection<ScoringModel> models,
         CancellationToken cancellationToken)
     {
-        var request = StatlogMapper.ToMlRequest(application);
+        var request = LendingClubMapper.ToMlRequest(application);
         if (models.SingleOrDefault(m => m.Role == ModelRole.Active) is not { } active)
         {
             logger.LogError("No active scoring model is registered; recording the application as unscored");
@@ -81,8 +81,8 @@ public class CreditDecisionService(
                 return CreditDecision.Unavailable(DecisionErrorCodes.ModelMismatch, now);
 
             case MlScore score:
-                var recommendation = score.PBad >= model.Threshold ? Recommendation.Reject : Recommendation.Approve;
-                return CreditDecision.Scored(score.PBad, score.ModelId, model.Threshold, recommendation, now);
+                return CreditDecision.Scored(
+                    score.PBad, score.ModelId, model.Threshold, model.RecommendationFor(score.PBad), now, model.ReviewFrom);
 
             default:
                 throw new InvalidOperationException($"unhandled ML result type {result.GetType().Name}");
@@ -99,12 +99,14 @@ public class CreditDecisionService(
             return new AlreadyDecided();
 
         var recommendation = application.Decision?.Recommendation;
-        if (string.IsNullOrWhiteSpace(reason))
+        if (string.IsNullOrWhiteSpace(reason) && OfficerDecision.NeedsReason(recommendation, outcome))
         {
-            if (recommendation is null)
-                return new DecisionRefused("reason", "Give a reason: no recommendation was made for this application.");
-            if (!OfficerDecision.Agrees(recommendation.Value, outcome))
-                return new DecisionRefused("reason", "Give a reason: your decision differs from the recommendation.");
+            return new DecisionRefused("reason", recommendation switch
+            {
+                null => "Give a reason: no recommendation was made for this application.",
+                Recommendation.Review => "Give a reason: the model asked for a closer review of this application.",
+                _ => "Give a reason: your decision differs from the recommendation.",
+            });
         }
 
         return new DecisionRecorded(OfficerDecision.Record(recommendation, outcome, reason, decidedBy, time.GetUtcNow()));

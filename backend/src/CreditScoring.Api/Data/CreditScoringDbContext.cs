@@ -45,7 +45,10 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             application.ToTable("credit_applications");
             application.Property(a => a.ApplicantName).HasMaxLength(BusinessLimits.ApplicantNameMaxLength);
             application.Property(a => a.SubmittedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
-            application.Property(a => a.InstallmentSharePercent).HasPrecision(5, 2);
+            application.Property(a => a.AnnualIncome).HasPrecision(12, 2);
+            application.Property(a => a.DebtToIncomePercent).HasPrecision(5, 2);
+            application.Property(a => a.RevolvingBalance).HasPrecision(12, 2);
+            application.Property(a => a.RevolvingUtilizationPercent).HasPrecision(5, 2);
             application.HasIndex(a => a.SubmittedAt);
             application.HasIndex(a => a.ApplicantName);
             application.HasOne<User>().WithMany().HasForeignKey(a => a.SubmittedByUserId).OnDelete(DeleteBehavior.Restrict);
@@ -78,7 +81,10 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
         modelBuilder.Entity<ScoringModel>(model =>
         {
             model.ToTable("scoring_models", table =>
-                table.HasCheckConstraint("ck_scoring_models_threshold_range", "threshold > 0 AND threshold < 1"));
+            {
+                table.HasCheckConstraint("ck_scoring_models_threshold_range", "threshold > 0 AND threshold < 1");
+                table.HasCheckConstraint("ck_scoring_models_review_from_range", "review_from IS NULL OR (review_from > 0 AND review_from < threshold)");
+            });
             model.HasKey(m => m.ModelId);
             model.Property(m => m.ModelId).HasMaxLength(BusinessLimits.ModelIdMaxLength);
             model.Property(m => m.DisplayName).HasMaxLength(BusinessLimits.ModelIdMaxLength);
@@ -106,6 +112,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
                     "(status = 'Scored' AND p_bad IS NOT NULL AND threshold_used IS NOT NULL AND recommendation IS NOT NULL AND error_code IS NULL)"
                     + " OR (status = 'ScoringUnavailable' AND error_code IS NOT NULL AND p_bad IS NULL AND threshold_used IS NULL AND recommendation IS NULL)");
                 table.HasCheckConstraint("ck_shadow_scores_p_bad_range", "p_bad >= 0 AND p_bad <= 1");
+                table.HasCheckConstraint("ck_shadow_scores_review_band", ReviewBandCheck);
             });
             shadow.Property(s => s.ModelId).HasMaxLength(BusinessLimits.ModelIdMaxLength);
             shadow.Property(s => s.ErrorCode).HasMaxLength(64);
@@ -132,6 +139,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
                     "(status = 'Scored' AND p_bad IS NOT NULL AND model_id IS NOT NULL AND threshold_used IS NOT NULL AND recommendation IS NOT NULL AND error_code IS NULL)"
                     + " OR (status = 'ScoringUnavailable' AND error_code IS NOT NULL AND p_bad IS NULL AND model_id IS NULL AND threshold_used IS NULL AND recommendation IS NULL)");
                 table.HasCheckConstraint("ck_credit_decisions_p_bad_range", "p_bad >= 0 AND p_bad <= 1");
+                table.HasCheckConstraint("ck_credit_decisions_review_band", ReviewBandCheck);
             });
             decision.Property(d => d.ModelId).HasMaxLength(100);
             decision.Property(d => d.ErrorCode).HasMaxLength(64);
@@ -155,9 +163,14 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
         }
     }
 
+    private const string ReviewBandCheck =
+        "(review_from_used IS NULL OR (status = 'Scored' AND review_from_used > 0 AND review_from_used < threshold_used))"
+        + " AND (recommendation IS DISTINCT FROM 'Review' OR review_from_used IS NOT NULL)";
+
     private static string ToSnakeCase(string name)
     {
         var split = Regex.Replace(name, "([A-Z]+)([A-Z][a-z])", "$1_$2");
-        return Regex.Replace(split, "([a-z0-9])([A-Z])", "$1_$2").ToLowerInvariant();
+        split = Regex.Replace(split, "([a-z0-9])([A-Z])", "$1_$2");
+        return Regex.Replace(split, "([a-z])([0-9])", "$1_$2").ToLowerInvariant();
     }
 }

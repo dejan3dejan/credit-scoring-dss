@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Domain;
 
 namespace CreditScoring.Api.Contracts;
@@ -9,6 +10,7 @@ public sealed record DecisionResponse(
     double? PBad,
     string? ModelId,
     double? ThresholdUsed,
+    double? ReviewFromUsed,
     Recommendation? Recommendation,
     string? ErrorCode)
 {
@@ -18,6 +20,7 @@ public sealed record DecisionResponse(
         decision.PBad,
         decision.ModelId,
         decision.ThresholdUsed,
+        decision.ReviewFromUsed,
         decision.Recommendation,
         decision.ErrorCode);
 }
@@ -51,27 +54,26 @@ public sealed record ApplicationResponse
     public required string SubmittedBy { get; init; }
     public required DateTimeOffset SubmittedAt { get; init; }
 
-    public required int DurationMonths { get; init; }
-    public required int CreditAmount { get; init; }
-    public required int Age { get; init; }
-    public required decimal InstallmentSharePercent { get; init; }
-    public required int YearsAtResidence { get; init; }
-    public required int CreditsAtBank { get; init; }
-    public required int Dependants { get; init; }
-
-    public required CheckingAccountStatus CheckingAccountStatus { get; init; }
-    public required CreditHistory CreditHistory { get; init; }
+    public required int TermMonths { get; init; }
+    public required int LoanAmount { get; init; }
     public required LoanPurpose Purpose { get; init; }
-    public required SavingsAccount SavingsAccount { get; init; }
-    public required EmploymentDuration EmploymentDuration { get; init; }
-    public required PersonalStatusSex PersonalStatusSex { get; init; }
-    public required OtherDebtors OtherDebtors { get; init; }
-    public required PropertyType Property { get; init; }
-    public required OtherInstallmentPlans OtherInstallmentPlans { get; init; }
-    public required Housing Housing { get; init; }
-    public required JobType Job { get; init; }
-    public required bool HasRegisteredTelephone { get; init; }
-    public required bool IsForeignWorker { get; init; }
+    public required EmploymentLength EmploymentLength { get; init; }
+    public required HomeOwnership HomeOwnership { get; init; }
+    public required decimal AnnualIncome { get; init; }
+    public required IncomeVerification IncomeVerification { get; init; }
+    public required decimal DebtToIncomePercent { get; init; }
+    public required int CreditScore { get; init; }
+    public required DateOnly EarliestCreditLine { get; init; }
+    public required double CreditHistoryYears { get; init; }
+    public required int InquiriesLast6Months { get; init; }
+    public required int DelinquenciesLast2Years { get; init; }
+    public required int PublicRecords { get; init; }
+    public required int Bankruptcies { get; init; }
+    public required decimal RevolvingBalance { get; init; }
+    public required decimal RevolvingUtilizationPercent { get; init; }
+    public required int OpenAccounts { get; init; }
+    public required int TotalAccounts { get; init; }
+    public required int MortgageAccounts { get; init; }
 
     public required DecisionResponse? Decision { get; init; }
     public required OfficerDecisionResponse? OfficerDecision { get; init; }
@@ -86,26 +88,26 @@ public sealed record ApplicationResponse
         ApplicantName = application.ApplicantName,
         SubmittedBy = application.SubmittedBy,
         SubmittedAt = application.SubmittedAt,
-        DurationMonths = application.DurationMonths,
-        CreditAmount = application.CreditAmount,
-        Age = application.Age,
-        InstallmentSharePercent = application.InstallmentSharePercent,
-        YearsAtResidence = application.YearsAtResidence,
-        CreditsAtBank = application.CreditsAtBank,
-        Dependants = application.Dependants,
-        CheckingAccountStatus = application.CheckingAccountStatus,
-        CreditHistory = application.CreditHistory,
+        TermMonths = BusinessLimits.TermMonths,
+        LoanAmount = application.LoanAmount,
         Purpose = application.Purpose,
-        SavingsAccount = application.SavingsAccount,
-        EmploymentDuration = application.EmploymentDuration,
-        PersonalStatusSex = application.PersonalStatusSex,
-        OtherDebtors = application.OtherDebtors,
-        Property = application.Property,
-        OtherInstallmentPlans = application.OtherInstallmentPlans,
-        Housing = application.Housing,
-        Job = application.Job,
-        HasRegisteredTelephone = application.HasRegisteredTelephone,
-        IsForeignWorker = application.IsForeignWorker,
+        EmploymentLength = application.EmploymentLength,
+        HomeOwnership = application.HomeOwnership,
+        AnnualIncome = application.AnnualIncome,
+        IncomeVerification = application.IncomeVerification,
+        DebtToIncomePercent = application.DebtToIncomePercent,
+        CreditScore = application.CreditScore,
+        EarliestCreditLine = application.EarliestCreditLine,
+        CreditHistoryYears = LendingClubMapper.CreditHistoryYears(application.EarliestCreditLine, application.SubmittedAt),
+        InquiriesLast6Months = application.InquiriesLast6Months,
+        DelinquenciesLast2Years = application.DelinquenciesLast2Years,
+        PublicRecords = application.PublicRecords,
+        Bankruptcies = application.Bankruptcies,
+        RevolvingBalance = application.RevolvingBalance,
+        RevolvingUtilizationPercent = application.RevolvingUtilizationPercent,
+        OpenAccounts = application.OpenAccounts,
+        TotalAccounts = application.TotalAccounts,
+        MortgageAccounts = application.MortgageAccounts,
         Decision = application.Decision is null ? null : DecisionResponse.From(application.Decision),
         OfficerDecision = application.OfficerDecision is null ? null : OfficerDecisionResponse.From(application.OfficerDecision),
         ScoringFailures = application.ScoringFailures.OrderBy(f => f.AttemptedAt).Select(ScoringFailureResponse.From).ToList(),
@@ -118,8 +120,8 @@ public sealed record ApplicationSummary(
     string ApplicantName,
     string SubmittedBy,
     DateTimeOffset SubmittedAt,
-    int CreditAmount,
-    int DurationMonths,
+    int LoanAmount,
+    LoanPurpose Purpose,
     DecisionStatus? Status,
     Recommendation? Recommendation,
     double? PBad,
@@ -132,8 +134,8 @@ public sealed record ApplicationSummary(
         a.ApplicantName,
         a.SubmittedBy,
         a.SubmittedAt,
-        a.CreditAmount,
-        a.DurationMonths,
+        a.LoanAmount,
+        a.Purpose,
         a.Decision == null ? null : a.Decision.Status,
         a.Decision == null ? null : a.Decision.Recommendation,
         a.Decision == null ? null : a.Decision.PBad,

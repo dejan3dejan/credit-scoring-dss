@@ -10,27 +10,24 @@ public class CreditApplication
     public Guid? SubmittedByUserId { get; init; }
     public required DateTimeOffset SubmittedAt { get; init; }
 
-    public required int DurationMonths { get; init; }
-    public required int CreditAmount { get; init; }
-    public required int Age { get; init; }
-    public required decimal InstallmentSharePercent { get; init; }
-    public required int YearsAtResidence { get; init; }
-    public required int CreditsAtBank { get; init; }
-    public required int Dependants { get; init; }
-
-    public required CheckingAccountStatus CheckingAccountStatus { get; init; }
-    public required CreditHistory CreditHistory { get; init; }
+    public required int LoanAmount { get; init; }
     public required LoanPurpose Purpose { get; init; }
-    public required SavingsAccount SavingsAccount { get; init; }
-    public required EmploymentDuration EmploymentDuration { get; init; }
-    public required PersonalStatusSex PersonalStatusSex { get; init; }
-    public required OtherDebtors OtherDebtors { get; init; }
-    public required PropertyType Property { get; init; }
-    public required OtherInstallmentPlans OtherInstallmentPlans { get; init; }
-    public required Housing Housing { get; init; }
-    public required JobType Job { get; init; }
-    public required bool HasRegisteredTelephone { get; init; }
-    public required bool IsForeignWorker { get; init; }
+    public required EmploymentLength EmploymentLength { get; init; }
+    public required HomeOwnership HomeOwnership { get; init; }
+    public required decimal AnnualIncome { get; init; }
+    public required IncomeVerification IncomeVerification { get; init; }
+    public required decimal DebtToIncomePercent { get; init; }
+    public required int CreditScore { get; init; }
+    public required DateOnly EarliestCreditLine { get; init; }
+    public required int InquiriesLast6Months { get; init; }
+    public required int DelinquenciesLast2Years { get; init; }
+    public required int PublicRecords { get; init; }
+    public required int Bankruptcies { get; init; }
+    public required decimal RevolvingBalance { get; init; }
+    public required decimal RevolvingUtilizationPercent { get; init; }
+    public required int OpenAccounts { get; init; }
+    public required int TotalAccounts { get; init; }
+    public required int MortgageAccounts { get; init; }
 
     public CreditDecision? Decision { get; set; }
     public OfficerDecision? OfficerDecision { get; set; }

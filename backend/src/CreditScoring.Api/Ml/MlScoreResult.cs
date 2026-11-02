@@ -25,6 +25,7 @@ public sealed record MlModelInfo(
     string ModelName,
     string Dataset,
     double RecommendedThreshold,
+    double? ReviewFrom,
     DateTimeOffset CreatedAt);
 
 public abstract record MlCatalogResult;

@@ -35,6 +35,7 @@ public class HistoryFilterTests
 
     [Theory]
     [InlineData(HistoryOutcome.Approve, null, Recommendation.Approve)]
+    [InlineData(HistoryOutcome.Review, null, Recommendation.Review)]
     [InlineData(HistoryOutcome.Reject, null, Recommendation.Reject)]
     [InlineData(HistoryOutcome.ScoringUnavailable, DecisionStatus.ScoringUnavailable, null)]
     public void Outcome_maps_to_status_or_recommendation(

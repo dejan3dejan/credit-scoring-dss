@@ -34,15 +34,15 @@ public class LabelsTests
     [Fact]
     public void Undefined_value_has_no_label()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => Labels.Of((Housing)99));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Labels.Of((HomeOwnership)99));
     }
 
     [Fact]
     public void Options_keep_declaration_order()
     {
         Assert.Equal(
-            [nameof(Housing.ForFree), nameof(Housing.Rent), nameof(Housing.Own)],
-            Labels.Options<Housing>().Select(o => o.Value));
+            [nameof(HomeOwnership.Rent), nameof(HomeOwnership.Own), nameof(HomeOwnership.Mortgage), nameof(HomeOwnership.Other)],
+            Labels.Options<HomeOwnership>().Select(o => o.Value));
     }
 
     [Theory]

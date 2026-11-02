@@ -21,10 +21,11 @@ public class ApiJsonTests
     [Fact]
     public void Enum_names_and_integers_are_read()
     {
-        var request = Read("""{"purpose":"UsedCar","durationMonths":24}""")!;
+        var request = Read("""{"purpose":"SmallBusiness","loanAmount":12000,"earliestCreditLine":"2015-05-01"}""")!;
 
-        Assert.Equal(LoanPurpose.UsedCar, request.Purpose);
-        Assert.Equal(24, request.DurationMonths);
+        Assert.Equal(LoanPurpose.SmallBusiness, request.Purpose);
+        Assert.Equal(12_000, request.LoanAmount);
+        Assert.Equal(new DateOnly(2015, 5, 1), request.EarliestCreditLine);
     }
 
     [Fact]
@@ -37,9 +38,9 @@ public class ApiJsonTests
 
     [Theory]
     [InlineData("""{"purpose":3}""")]
-    [InlineData("""{"purpose":"Car"}""")]
-    [InlineData("""{"durationMonths":"24"}""")]
-    [InlineData("""{"durationMonths":24.5}""")]
+    [InlineData("""{"purpose":"small_business"}""")]
+    [InlineData("""{"loanAmount":"12000"}""")]
+    [InlineData("""{"loanAmount":12000.5}""")]
     [InlineData("""{"unknownField":1}""")]
     [InlineData("""{"submittedBy":"someone else"}""")]
     public void Loose_input_is_rejected(string json)

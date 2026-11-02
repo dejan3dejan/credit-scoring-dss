@@ -6,8 +6,9 @@ namespace CreditScoring.Api.Ui;
 public enum HistoryOutcome
 {
     Approve = 1,
-    Reject = 2,
-    ScoringUnavailable = 3,
+    Review = 2,
+    Reject = 3,
+    ScoringUnavailable = 4,
 }
 
 public sealed record HistoryFilter
@@ -28,6 +29,7 @@ public sealed record HistoryFilter
         Recommendation = Outcome switch
         {
             HistoryOutcome.Approve => Domain.Recommendation.Approve,
+            HistoryOutcome.Review => Domain.Recommendation.Review,
             HistoryOutcome.Reject => Domain.Recommendation.Reject,
             _ => null,
         },

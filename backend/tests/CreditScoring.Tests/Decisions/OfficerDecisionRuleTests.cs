@@ -11,8 +11,14 @@ public class OfficerDecisionRuleTests
     private static CreditApplication Scored(Recommendation recommendation)
     {
         var application = TestData.ContractApplication();
-        var pBad = recommendation == Recommendation.Approve ? 0.1 : 0.3;
-        application.Decision = CreditDecision.Scored(pBad, TestData.ModelId, TestData.Threshold, recommendation, TestData.Now);
+        var pBad = recommendation switch
+        {
+            Recommendation.Approve => 0.1,
+            Recommendation.Review => 0.25,
+            _ => 0.4,
+        };
+        application.Decision = CreditDecision.Scored(
+            pBad, TestData.ModelId, TestData.Threshold, recommendation, TestData.Now, TestData.ReviewFrom);
         return application;
     }
 
@@ -49,6 +55,19 @@ public class OfficerDecisionRuleTests
         var result = Service().RecordOfficerDecision(Scored(Recommendation.Reject), FinalDecision.Approve, "guarantor added", TestData.Officer);
 
         Assert.True(Assert.IsType<DecisionRecorded>(result).Decision.IsOverride);
+    }
+
+    [Fact]
+    public void Review_case_needs_a_reason_but_is_not_an_override()
+    {
+        var refused = Assert.IsType<DecisionRefused>(
+            Service().RecordOfficerDecision(Scored(Recommendation.Review), FinalDecision.Approve, null, TestData.Officer));
+        Assert.Equal("reason", refused.Field);
+        Assert.Contains("closer review", refused.Message);
+
+        var recorded = Assert.IsType<DecisionRecorded>(
+            Service().RecordOfficerDecision(Scored(Recommendation.Review), FinalDecision.Reject, "two recent delinquencies", TestData.Officer));
+        Assert.False(recorded.Decision.IsOverride);
     }
 
     [Fact]

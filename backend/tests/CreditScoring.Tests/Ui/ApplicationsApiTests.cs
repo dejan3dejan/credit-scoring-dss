@@ -47,8 +47,9 @@ public class ApplicationsApiTests
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
         Assert.Equal("http://app.test/api/applications", handler.LastRequest.RequestUri!.ToString());
         using var body = JsonDocument.Parse(handler.LastBody!);
-        Assert.Equal("FurnitureOrEquipment", body.RootElement.GetProperty("purpose").GetString());
-        Assert.Equal(3500, body.RootElement.GetProperty("creditAmount").GetInt32());
+        Assert.Equal("DebtConsolidation", body.RootElement.GetProperty("purpose").GetString());
+        Assert.Equal(12_000, body.RootElement.GetProperty("loanAmount").GetInt32());
+        Assert.Equal("2015-05-01", body.RootElement.GetProperty("earliestCreditLine").GetString());
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public class ApplicationsApiTests
         var submitted = Assert.IsType<Submitted>(result);
         Assert.Equal(Recommendation.Approve, submitted.Application.Decision!.Recommendation);
         Assert.Equal(0.1, submitted.Application.Decision.PBad);
-        Assert.Equal(Housing.Rent, submitted.Application.Housing);
+        Assert.Equal(HomeOwnership.Rent, submitted.Application.HomeOwnership);
     }
 
     [Fact]

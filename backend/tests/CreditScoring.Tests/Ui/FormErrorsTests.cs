@@ -27,37 +27,45 @@ public class FormErrorsTests
     [Fact]
     public void Unreadable_numbers_get_a_message_by_type_and_keep_what_was_typed()
     {
-        var bound = Bound(("Input.CreditAmount", "3.500"), ("Input.InstallmentSharePercent", "22,5"));
+        var bound = Bound(("Input.LoanAmount", "3.500"), ("Input.DebtToIncomePercent", "22,5"));
 
         var format = FormErrors.FormatErrors<CreateApplicationRequest>(bound, "Input");
 
         Assert.Equal(2, format.Count);
-        Assert.Contains("whole number", format.Single(f => f.Key == "Input.CreditAmount").Message);
-        Assert.Equal("3.500", format.Single(f => f.Key == "Input.CreditAmount").Attempted);
-        Assert.Contains("dot", format.Single(f => f.Key == "Input.InstallmentSharePercent").Message);
+        Assert.Contains("whole number", format.Single(f => f.Key == "Input.LoanAmount").Message);
+        Assert.Equal("3.500", format.Single(f => f.Key == "Input.LoanAmount").Attempted);
+        Assert.Contains("dot", format.Single(f => f.Key == "Input.DebtToIncomePercent").Message);
+    }
+
+    [Fact]
+    public void Unreadable_month_asks_for_month_and_year()
+    {
+        var format = FormErrors.FormatErrors<CreateApplicationRequest>(Bound(("Input.EarliestCreditLine", "May 2015")), "Input");
+
+        Assert.Contains("month and year", Assert.Single(format).Message);
     }
 
     [Fact]
     public void Empty_fields_are_left_to_the_backend()
     {
-        Assert.Empty(FormErrors.FormatErrors<CreateApplicationRequest>(Bound(("Input.Age", "")), "Input"));
+        Assert.Empty(FormErrors.FormatErrors<CreateApplicationRequest>(Bound(("Input.CreditScore", "")), "Input"));
     }
 
     [Fact]
     public void Format_error_replaces_the_backend_required_message_for_that_field_only()
     {
-        var format = FormErrors.FormatErrors<CreateApplicationRequest>(Bound(("Input.CreditAmount", "3.500")), "Input");
+        var format = FormErrors.FormatErrors<CreateApplicationRequest>(Bound(("Input.LoanAmount", "3.500")), "Input");
         var state = new ModelStateDictionary();
 
         FormErrors.Apply<CreateApplicationRequest>(state, "Input", new Dictionary<string, string[]>
         {
-            ["creditAmount"] = ["The Credit amount (DM) field is required."],
-            ["age"] = ["The Age field is required."],
+            ["loanAmount"] = ["The Loan amount (USD) field is required."],
+            ["creditScore"] = ["The Credit score field is required."],
         }, format);
 
-        Assert.Equal([format[0].Message], state["Input.CreditAmount"]!.Errors.Select(e => e.ErrorMessage));
-        Assert.Equal("3.500", state["Input.CreditAmount"]!.AttemptedValue);
-        Assert.Equal(["The Age field is required."], state["Input.Age"]!.Errors.Select(e => e.ErrorMessage));
+        Assert.Equal([format[0].Message], state["Input.LoanAmount"]!.Errors.Select(e => e.ErrorMessage));
+        Assert.Equal("3.500", state["Input.LoanAmount"]!.AttemptedValue);
+        Assert.Equal(["The Credit score field is required."], state["Input.CreditScore"]!.Errors.Select(e => e.ErrorMessage));
     }
 
     [Fact]
@@ -67,7 +75,7 @@ public class FormErrorsTests
         FormErrors.Apply<RecordDecisionRequest>(state, "Review", new Dictionary<string, string[]>
         {
             ["reason"] = ["needed"],
-            ["creditAmount"] = ["not on this form"],
+            ["loanAmount"] = ["not on this form"],
         });
 
         Assert.Equal(["needed"], state["Review.Reason"]!.Errors.Select(e => e.ErrorMessage));
@@ -79,12 +87,12 @@ public class FormErrorsTests
     {
         var state = Apply(new()
         {
-            ["creditAmount"] = ["too high"],
-            ["yearsAtResidence"] = ["too long", "other"],
+            ["loanAmount"] = ["too high"],
+            ["openAccounts"] = ["too long", "other"],
         });
 
-        Assert.Equal(["too high"], state["Input.CreditAmount"]!.Errors.Select(e => e.ErrorMessage));
-        Assert.Equal(["too long", "other"], state["Input.YearsAtResidence"]!.Errors.Select(e => e.ErrorMessage));
+        Assert.Equal(["too high"], state["Input.LoanAmount"]!.Errors.Select(e => e.ErrorMessage));
+        Assert.Equal(["too long", "other"], state["Input.OpenAccounts"]!.Errors.Select(e => e.ErrorMessage));
     }
 
     [Fact]

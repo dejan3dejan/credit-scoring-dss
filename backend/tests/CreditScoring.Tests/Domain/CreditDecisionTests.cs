@@ -21,6 +21,33 @@ public class CreditDecisionTests
         Assert.Null(decision.ErrorCode);
     }
 
+    [Fact]
+    public void Scored_keeps_the_review_band_start_it_used()
+    {
+        var decision = CreditDecision.Scored(0.25, "m", 0.3286, Recommendation.Review, At, reviewFromUsed: 0.2);
+
+        Assert.Equal(0.2, decision.ReviewFromUsed);
+        Assert.Equal(Recommendation.Review, decision.Recommendation);
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(0.3286)]
+    [InlineData(0.4)]
+    [InlineData(double.NaN)]
+    public void Scored_rejects_a_review_band_that_does_not_start_below_the_threshold(double reviewFrom)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => CreditDecision.Scored(0.1, "m", 0.3286, Recommendation.Approve, At, reviewFromUsed: reviewFrom));
+    }
+
+    [Fact]
+    public void Review_recommendation_needs_a_review_band()
+    {
+        Assert.Throws<ArgumentException>(
+            () => CreditDecision.Scored(0.25, "m", 0.3286, Recommendation.Review, At));
+    }
+
     [Theory]
     [InlineData(0.0)]
     [InlineData(1.0)]
@@ -79,6 +106,7 @@ public class CreditDecisionTests
         Assert.Null(decision.PBad);
         Assert.Null(decision.ModelId);
         Assert.Null(decision.ThresholdUsed);
+        Assert.Null(decision.ReviewFromUsed);
         Assert.Null(decision.Recommendation);
     }
 

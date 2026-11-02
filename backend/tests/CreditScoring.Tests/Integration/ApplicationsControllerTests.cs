@@ -89,7 +89,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     [Fact]
     public async Task Scored_application_is_saved_with_its_decision()
     {
-        var created = await Submit("Ana Petrovic", new MlScore(0.3, TestData.ModelId));
+        var created = await Submit("Ana Petrovic", new MlScore(0.4, TestData.ModelId));
 
         await using var db = database.CreateContext();
         var saved = await db.Applications.Include(a => a.Decision).SingleAsync(a => a.Id == created.Id);
@@ -98,11 +98,62 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         Assert.Equal("Olga Officer", saved.SubmittedBy);
         Assert.Equal(database.Officer.Id, saved.SubmittedByUserId);
         Assert.Equal(DecisionStatus.Scored, saved.Decision!.Status);
-        Assert.Equal(0.3, saved.Decision.PBad);
+        Assert.Equal(0.4, saved.Decision.PBad);
         Assert.Equal(TestData.ModelId, saved.Decision.ModelId);
         Assert.Equal(TestData.Threshold, saved.Decision.ThresholdUsed);
+        Assert.Equal(TestData.ReviewFrom, saved.Decision.ReviewFromUsed);
         Assert.Equal(Recommendation.Reject, saved.Decision.Recommendation);
         Assert.Null(saved.Decision.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Score_inside_the_review_band_is_saved_as_a_review_recommendation()
+    {
+        var created = await Submit("Mira Kovac", new MlScore(0.25, TestData.ModelId));
+
+        Assert.Equal(Recommendation.Review, created.Decision!.Recommendation);
+        Assert.Equal(TestData.ReviewFrom, created.Decision.ReviewFromUsed);
+        await using var db = database.CreateContext();
+        Assert.Equal(Recommendation.Review, (await db.Decisions.SingleAsync(d => d.CreditApplicationId == created.Id)).Recommendation);
+    }
+
+    [Fact]
+    public async Task Application_is_saved_with_every_answer()
+    {
+        var created = await Submit("Ana Petrovic", new MlScore(0.1, TestData.ModelId));
+
+        await using var db = database.CreateContext();
+        var saved = await db.Applications.Include(a => a.Client).SingleAsync(a => a.Id == created.Id);
+        Assert.Equal(TestData.ValidRequest() with { ClientId = saved.ClientId }, CreateApplicationRequest.From(ApplicationResponse.From(saved)));
+    }
+
+    [Theory]
+    [InlineData(2026, 12, 1)]
+    [InlineData(1900, 1, 1)]
+    public async Task First_credit_line_outside_a_possible_range_is_a_validation_problem(int year, int month, int day)
+    {
+        var clientId = await ClientNamed("Future Credit");
+
+        var response = await WithController(c => c.Create(
+            TestData.ValidRequest() with { ClientId = clientId, EarliestCreditLine = new DateOnly(year, month, day) },
+            CancellationToken.None));
+
+        var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
+        Assert.Equal(["earliestCreditLine"], problem.Errors.Keys);
+        Assert.Empty(ml.ScoredModels);
+    }
+
+    [Fact]
+    public async Task First_credit_line_in_the_submission_month_is_accepted()
+    {
+        var clientId = await ClientNamed("New Credit");
+
+        var response = await WithController(c => c.Create(
+            TestData.ValidRequest() with { ClientId = clientId, EarliestCreditLine = new DateOnly(2026, 11, 30) },
+            CancellationToken.None));
+
+        Assert.IsType<CreatedAtActionResult>(response.Result);
+        Assert.Equal(0, ml.LastRequest!.CreditHistoryYears);
     }
 
     [Fact]
@@ -179,12 +230,14 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     [Fact]
     public async Task Status_and_recommendation_filters()
     {
-        await Submit("rejected", new MlScore(0.3, TestData.ModelId));
+        await Submit("rejected", new MlScore(0.4, TestData.ModelId));
         await Submit("approved", new MlScore(0.1, TestData.ModelId));
+        await Submit("review", new MlScore(0.25, TestData.ModelId));
         await Submit("unavailable", new MlFailure(MlErrorCodes.Timeout, null, "x", []));
 
         Assert.Equal(["unavailable"], await NamesFor(new HistoryQuery { Status = DecisionStatus.ScoringUnavailable }));
         Assert.Equal(["approved"], await NamesFor(new HistoryQuery { Recommendation = Recommendation.Approve }));
+        Assert.Equal(["review"], await NamesFor(new HistoryQuery { Recommendation = Recommendation.Review }));
         Assert.Equal(["rejected"], await NamesFor(new HistoryQuery { Recommendation = Recommendation.Reject }));
     }
 
@@ -264,12 +317,25 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     }
 
     [Fact]
+    public async Task Review_case_without_reason_is_a_validation_problem_and_with_one_is_not_an_override()
+    {
+        var created = await Submit("Mira Kovac", new MlScore(0.25, TestData.ModelId));
+
+        var refused = Assert.IsType<BadRequestObjectResult>((await Decide(created.Id, FinalDecision.Approve)).Result);
+        Assert.Equal(["reason"], Assert.IsType<ValidationProblemDetails>(refused.Value).Errors.Keys);
+
+        var response = await Decide(created.Id, FinalDecision.Approve, "pay slips confirm the stated income");
+        var body = Assert.IsType<ApplicationResponse>(Assert.IsType<CreatedAtActionResult>(response.Result).Value);
+        Assert.False(body.OfficerDecision!.IsOverride);
+    }
+
+    [Fact]
     public async Task Review_filter_finds_pending_decided_and_overridden()
     {
         await Submit("pending", new MlScore(0.1, TestData.ModelId), TestData.Now);
         var approved = await Submit("approved", new MlScore(0.1, TestData.ModelId), TestData.Now.AddMinutes(1));
-        var rejected = await Submit("rejected", new MlScore(0.3, TestData.ModelId), TestData.Now.AddMinutes(2));
-        var overridden = await Submit("overridden", new MlScore(0.3, TestData.ModelId), TestData.Now.AddMinutes(3));
+        var rejected = await Submit("rejected", new MlScore(0.4, TestData.ModelId), TestData.Now.AddMinutes(2));
+        var overridden = await Submit("overridden", new MlScore(0.4, TestData.ModelId), TestData.Now.AddMinutes(3));
         await Decide(approved.Id, FinalDecision.Approve);
         await Decide(rejected.Id, FinalDecision.Reject);
         await Decide(overridden.Id, FinalDecision.Approve, "guarantor added");
@@ -288,7 +354,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     private async Task RegisterShadow(string modelId)
     {
         await using var db = database.CreateContext();
-        var (model, registered) = ModelRegistry.Register(modelId, "LogisticRegression", TestData.Dataset, TestData.Threshold, database.Officer.AsActor(), TestData.Now);
+        var (model, registered) = ModelRegistry.Register(modelId, "LogisticRegression", TestData.Dataset, TestData.Threshold, TestData.ReviewFrom, database.Officer.AsActor(), TestData.Now);
         db.ScoringModels.Add(model);
         db.ModelEvents.Add(registered);
         await db.SaveChangesAsync();
@@ -299,14 +365,14 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     {
         const string challenger = "credit_lr_isotonic_v1";
         await RegisterShadow(challenger);
-        ml.ResultsByModel[challenger] = new MlScore(0.3, challenger);
+        ml.ResultsByModel[challenger] = new MlScore(0.4, challenger);
 
         var created = await Submit("Shadowed", new MlScore(0.1, TestData.ModelId));
 
         Assert.Equal(Recommendation.Approve, created.Decision!.Recommendation);
         var shadows = Assert.IsType<OkObjectResult>((await WithController(c => c.ShadowScores(created.Id, CancellationToken.None))).Result);
         var shadow = Assert.Single(Assert.IsAssignableFrom<IEnumerable<ShadowScoreResponse>>(shadows.Value));
-        Assert.Equal((challenger, 0.3, Recommendation.Reject), (shadow.ModelId, shadow.PBad, shadow.Recommendation));
+        Assert.Equal((challenger, 0.4, Recommendation.Reject), (shadow.ModelId, shadow.PBad, shadow.Recommendation));
     }
 
     [Fact]
@@ -324,7 +390,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     {
         const string challenger = "credit_lr_isotonic_v1";
         await RegisterShadow(challenger);
-        ml.ResultsByModel[challenger] = new MlScore(0.3, challenger);
+        ml.ResultsByModel[challenger] = new MlScore(0.4, challenger);
         var created = await Submit("Unscored", new MlFailure(MlErrorCodes.Timeout, null, "x", []));
         ml.Result = new MlScore(0.1, TestData.ModelId);
         ml.ResultsByModel[challenger] = new MlScore(0.05, challenger);

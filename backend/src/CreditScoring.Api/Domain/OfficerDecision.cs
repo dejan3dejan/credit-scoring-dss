@@ -19,9 +19,12 @@ public class OfficerDecision
     public DateTimeOffset DecidedAt { get; private set; }
     public bool IsOverride { get; private set; }
 
-    public static bool Agrees(Recommendation recommendation, FinalDecision outcome) =>
-        (recommendation, outcome) is (Recommendation.Approve, FinalDecision.Approve)
-            or (Recommendation.Reject, FinalDecision.Reject);
+    public static bool IsOverrideOf(Recommendation recommendation, FinalDecision outcome) =>
+        (recommendation, outcome) is (Recommendation.Approve, FinalDecision.Reject)
+            or (Recommendation.Reject, FinalDecision.Approve);
+
+    public static bool NeedsReason(Recommendation? recommendation, FinalDecision outcome) =>
+        recommendation is null or Recommendation.Review || IsOverrideOf(recommendation.Value, outcome);
 
     public static OfficerDecision Record(
         Recommendation? recommendation,
@@ -36,10 +39,10 @@ public class OfficerDecision
         if (decidedBy.UserId == Guid.Empty)
             throw new ArgumentException("a decision needs a signed-in user", nameof(decidedBy));
 
-        var isOverride = recommendation is { } r && !Agrees(r, outcome);
+        var isOverride = recommendation is { } r && IsOverrideOf(r, outcome);
         var trimmedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
-        if (trimmedReason is null && (isOverride || recommendation is null))
-            throw new ArgumentException("an override or a decision without a recommendation needs a reason", nameof(reason));
+        if (trimmedReason is null && NeedsReason(recommendation, outcome))
+            throw new ArgumentException("an override, a review case or a decision without a recommendation needs a reason", nameof(reason));
 
         return new OfficerDecision
         {

@@ -25,6 +25,13 @@ public class ApplicationsController(
         CreateApplicationRequest request,
         CancellationToken cancellationToken)
     {
+        var now = time.GetUtcNow();
+        if (CreditLineProblem(request.EarliestCreditLine!.Value, now) is { } problem)
+        {
+            ModelState.AddModelError("earliestCreditLine", problem);
+            return BadRequest(new ValidationProblemDetails(ModelState) { Status = StatusCodes.Status400BadRequest });
+        }
+
         var client = await db.Clients.FirstOrDefaultAsync(c => c.Id == request.ClientId, cancellationToken);
         if (client is null)
         {
@@ -32,7 +39,7 @@ public class ApplicationsController(
             return BadRequest(new ValidationProblemDetails(ModelState) { Status = StatusCodes.Status400BadRequest });
         }
 
-        var application = request.ToDomain(time.GetUtcNow(), Credentials.ActorOf(User), client);
+        var application = request.ToDomain(now, Credentials.ActorOf(User), client);
         var models = await db.ScoringModels.AsNoTracking().ToListAsync(cancellationToken);
         var evaluation = await decisions.EvaluateAsync(application, models, cancellationToken);
         application.Decision = evaluation.Decision;
@@ -42,6 +49,18 @@ public class ApplicationsController(
         await db.SaveChangesAsync(CancellationToken.None);
 
         return CreatedAtAction(nameof(Get), new { id = application.Id }, ApplicationResponse.From(application));
+    }
+
+    private static string? CreditLineProblem(DateOnly earliestCreditLine, DateTimeOffset now)
+    {
+        var today = DateOnly.FromDateTime(now.UtcDateTime);
+        var thisMonth = new DateOnly(today.Year, today.Month, 1);
+        var line = new DateOnly(earliestCreditLine.Year, earliestCreditLine.Month, 1);
+        if (line > thisMonth)
+            return "The first credit line cannot be opened after this month.";
+        if (line < thisMonth.AddYears(-BusinessLimits.MaxCreditHistoryYears))
+            return $"The first credit line cannot be more than {BusinessLimits.MaxCreditHistoryYears} years ago.";
+        return null;
     }
 
     [HttpGet("{id:guid}")]

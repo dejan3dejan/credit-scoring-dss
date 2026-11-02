@@ -17,11 +17,12 @@ public class ModelRegistryTests
     public void Registered_model_starts_as_a_shadow_with_its_threshold_and_an_event()
     {
         var (model, registered) = ModelRegistry.Register(
-            Challenger, "LogisticRegression", TestData.Dataset, 0.2, TestData.Officer, TestData.Now);
+            Challenger, "LogisticRegression", TestData.Dataset, 0.3, 0.15, TestData.Officer, TestData.Now);
 
         Assert.Equal(Challenger, model.ModelId);
         Assert.Equal(ModelRole.Shadow, model.Role);
-        Assert.Equal(0.2, model.Threshold);
+        Assert.Equal(0.3, model.Threshold);
+        Assert.Equal(0.15, model.ReviewFrom);
         Assert.Equal(TestData.Officer.UserId, model.RegisteredByUserId);
         Assert.Null(registered.FromRole);
         Assert.Equal(ModelRole.Shadow, registered.ToRole);
@@ -36,7 +37,39 @@ public class ModelRegistryTests
     public void Threshold_outside_the_open_unit_interval_cannot_be_registered(double threshold)
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => ModelRegistry.Register(
-            Challenger, "LogisticRegression", TestData.Dataset, threshold, TestData.Officer, TestData.Now));
+            Challenger, "LogisticRegression", TestData.Dataset, threshold, null, TestData.Officer, TestData.Now));
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(0.3)]
+    [InlineData(0.5)]
+    [InlineData(double.NaN)]
+    public void Review_band_must_start_above_zero_and_below_the_threshold(double reviewFrom)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => ModelRegistry.Register(
+            Challenger, "LogisticRegression", TestData.Dataset, 0.3, reviewFrom, TestData.Officer, TestData.Now));
+    }
+
+    [Theory]
+    [InlineData(0.0, Recommendation.Approve)]
+    [InlineData(0.1999, Recommendation.Approve)]
+    [InlineData(0.2, Recommendation.Review)]
+    [InlineData(0.3285, Recommendation.Review)]
+    [InlineData(0.3287, Recommendation.Reject)]
+    [InlineData(1.0, Recommendation.Reject)]
+    public void Recommendation_approves_below_the_band_reviews_inside_it_and_rejects_from_the_threshold(
+        double pBad, Recommendation expected)
+    {
+        Assert.Equal(expected, TestData.ActiveModel().RecommendationFor(pBad));
+    }
+
+    [Theory]
+    [InlineData(0.3285, Recommendation.Approve)]
+    [InlineData(0.3287, Recommendation.Reject)]
+    public void Model_without_a_review_band_only_approves_or_rejects(double pBad, Recommendation expected)
+    {
+        Assert.Equal(expected, TestData.ActiveModel(reviewFrom: null).RecommendationFor(pBad));
     }
 
     [Fact]

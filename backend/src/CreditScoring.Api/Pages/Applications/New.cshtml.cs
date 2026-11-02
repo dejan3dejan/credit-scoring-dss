@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace CreditScoring.Api.Pages.Applications;
 
-public class NewModel(ApplicationsApi api, TimeProvider time) : PageModel
+public class NewModel(ApplicationsApi api) : PageModel
 {
     [BindProperty]
     public CreateApplicationRequest Input { get; set; } = new();
@@ -47,8 +47,7 @@ public class NewModel(ApplicationsApi api, TimeProvider time) : PageModel
         }
         else
         {
-            var today = DateOnly.FromDateTime(time.GetLocalNow().DateTime);
-            Input = new CreateApplicationRequest { ClientId = clientId, Age = Domain.Client.AgeOn(Client.DateOfBirth, today) };
+            Input = new CreateApplicationRequest { ClientId = clientId };
         }
         return Page();
     }

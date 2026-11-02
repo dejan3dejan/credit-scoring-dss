@@ -76,9 +76,10 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<int>("Age")
-                        .HasColumnType("integer")
-                        .HasColumnName("age");
+                    b.Property<decimal>("AnnualIncome")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("annual_income");
 
                     b.Property<string>("ApplicantName")
                         .IsRequired()
@@ -86,92 +87,68 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("applicant_name");
 
-                    b.Property<string>("CheckingAccountStatus")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("checking_account_status");
+                    b.Property<int>("Bankruptcies")
+                        .HasColumnType("integer")
+                        .HasColumnName("bankruptcies");
 
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uuid")
                         .HasColumnName("client_id");
 
-                    b.Property<int>("CreditAmount")
+                    b.Property<int>("CreditScore")
                         .HasColumnType("integer")
-                        .HasColumnName("credit_amount");
+                        .HasColumnName("credit_score");
 
-                    b.Property<string>("CreditHistory")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("credit_history");
-
-                    b.Property<int>("CreditsAtBank")
-                        .HasColumnType("integer")
-                        .HasColumnName("credits_at_bank");
-
-                    b.Property<int>("Dependants")
-                        .HasColumnType("integer")
-                        .HasColumnName("dependants");
-
-                    b.Property<int>("DurationMonths")
-                        .HasColumnType("integer")
-                        .HasColumnName("duration_months");
-
-                    b.Property<string>("EmploymentDuration")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("employment_duration");
-
-                    b.Property<bool>("HasRegisteredTelephone")
-                        .HasColumnType("boolean")
-                        .HasColumnName("has_registered_telephone");
-
-                    b.Property<string>("Housing")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("housing");
-
-                    b.Property<decimal>("InstallmentSharePercent")
+                    b.Property<decimal>("DebtToIncomePercent")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)")
-                        .HasColumnName("installment_share_percent");
+                        .HasColumnName("debt_to_income_percent");
 
-                    b.Property<bool>("IsForeignWorker")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_foreign_worker");
+                    b.Property<int>("DelinquenciesLast2Years")
+                        .HasColumnType("integer")
+                        .HasColumnName("delinquencies_last_2_years");
 
-                    b.Property<string>("Job")
+                    b.Property<DateOnly>("EarliestCreditLine")
+                        .HasColumnType("date")
+                        .HasColumnName("earliest_credit_line");
+
+                    b.Property<string>("EmploymentLength")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
-                        .HasColumnName("job");
+                        .HasColumnName("employment_length");
 
-                    b.Property<string>("OtherDebtors")
+                    b.Property<string>("HomeOwnership")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
-                        .HasColumnName("other_debtors");
+                        .HasColumnName("home_ownership");
 
-                    b.Property<string>("OtherInstallmentPlans")
+                    b.Property<string>("IncomeVerification")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
-                        .HasColumnName("other_installment_plans");
+                        .HasColumnName("income_verification");
 
-                    b.Property<string>("PersonalStatusSex")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("personal_status_sex");
+                    b.Property<int>("InquiriesLast6Months")
+                        .HasColumnType("integer")
+                        .HasColumnName("inquiries_last_6_months");
 
-                    b.Property<string>("Property")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("property");
+                    b.Property<int>("LoanAmount")
+                        .HasColumnType("integer")
+                        .HasColumnName("loan_amount");
+
+                    b.Property<int>("MortgageAccounts")
+                        .HasColumnType("integer")
+                        .HasColumnName("mortgage_accounts");
+
+                    b.Property<int>("OpenAccounts")
+                        .HasColumnType("integer")
+                        .HasColumnName("open_accounts");
+
+                    b.Property<int>("PublicRecords")
+                        .HasColumnType("integer")
+                        .HasColumnName("public_records");
 
                     b.Property<string>("Purpose")
                         .IsRequired()
@@ -179,11 +156,15 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("purpose");
 
-                    b.Property<string>("SavingsAccount")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("savings_account");
+                    b.Property<decimal>("RevolvingBalance")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("revolving_balance");
+
+                    b.Property<decimal>("RevolvingUtilizationPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("revolving_utilization_percent");
 
                     b.Property<DateTimeOffset>("SubmittedAt")
                         .HasColumnType("timestamp with time zone")
@@ -199,9 +180,9 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("submitted_by_user_id");
 
-                    b.Property<int>("YearsAtResidence")
+                    b.Property<int>("TotalAccounts")
                         .HasColumnType("integer")
-                        .HasColumnName("years_at_residence");
+                        .HasColumnName("total_accounts");
 
                     b.HasKey("Id");
 
@@ -250,6 +231,10 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("recommendation");
 
+                    b.Property<double?>("ReviewFromUsed")
+                        .HasColumnType("double precision")
+                        .HasColumnName("review_from_used");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -270,6 +255,8 @@ namespace CreditScoring.Api.Data.Migrations
                     b.ToTable("credit_decisions", null, t =>
                         {
                             t.HasCheckConstraint("ck_credit_decisions_p_bad_range", "p_bad >= 0 AND p_bad <= 1");
+
+                            t.HasCheckConstraint("ck_credit_decisions_review_band", "(review_from_used IS NULL OR (status = 'Scored' AND review_from_used > 0 AND review_from_used < threshold_used)) AND (recommendation IS DISTINCT FROM 'Review' OR review_from_used IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_credit_decisions_status_fields", "(status = 'Scored' AND p_bad IS NOT NULL AND model_id IS NOT NULL AND threshold_used IS NOT NULL AND recommendation IS NOT NULL AND error_code IS NULL) OR (status = 'ScoringUnavailable' AND error_code IS NOT NULL AND p_bad IS NULL AND model_id IS NULL AND threshold_used IS NULL AND recommendation IS NULL)");
                         });
@@ -439,6 +426,10 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("registered_by_user_id");
 
+                    b.Property<double?>("ReviewFrom")
+                        .HasColumnType("double precision")
+                        .HasColumnName("review_from");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -455,6 +446,8 @@ namespace CreditScoring.Api.Data.Migrations
 
                     b.ToTable("scoring_models", null, t =>
                         {
+                            t.HasCheckConstraint("ck_scoring_models_review_from_range", "review_from IS NULL OR (review_from > 0 AND review_from < threshold)");
+
                             t.HasCheckConstraint("ck_scoring_models_threshold_range", "threshold > 0 AND threshold < 1");
                         });
                 });
@@ -490,6 +483,10 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("recommendation");
 
+                    b.Property<double?>("ReviewFromUsed")
+                        .HasColumnType("double precision")
+                        .HasColumnName("review_from_used");
+
                     b.Property<DateTimeOffset>("ScoredAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("scored_at");
@@ -514,6 +511,8 @@ namespace CreditScoring.Api.Data.Migrations
                     b.ToTable("shadow_scores", null, t =>
                         {
                             t.HasCheckConstraint("ck_shadow_scores_p_bad_range", "p_bad >= 0 AND p_bad <= 1");
+
+                            t.HasCheckConstraint("ck_shadow_scores_review_band", "(review_from_used IS NULL OR (status = 'Scored' AND review_from_used > 0 AND review_from_used < threshold_used)) AND (recommendation IS DISTINCT FROM 'Review' OR review_from_used IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_shadow_scores_status_fields", "(status = 'Scored' AND p_bad IS NOT NULL AND threshold_used IS NOT NULL AND recommendation IS NOT NULL AND error_code IS NULL) OR (status = 'ScoringUnavailable' AND error_code IS NOT NULL AND p_bad IS NULL AND threshold_used IS NULL AND recommendation IS NULL)");
                         });

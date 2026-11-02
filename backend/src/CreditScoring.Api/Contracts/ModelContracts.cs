@@ -21,11 +21,12 @@ public sealed record ScoringModelResponse(
     string DisplayName,
     string Dataset,
     double Threshold,
+    double? ReviewFrom,
     ModelRole Role,
     DateTimeOffset RegisteredAt)
 {
     public static ScoringModelResponse From(ScoringModel m) =>
-        new(m.ModelId, m.DisplayName, m.Dataset, m.Threshold, m.Role, m.RegisteredAt);
+        new(m.ModelId, m.DisplayName, m.Dataset, m.Threshold, m.ReviewFrom, m.Role, m.RegisteredAt);
 }
 
 public sealed record AvailableModelResponse(
@@ -33,10 +34,11 @@ public sealed record AvailableModelResponse(
     string ModelName,
     string Dataset,
     double RecommendedThreshold,
+    double? ReviewFrom,
     DateTimeOffset CreatedAt)
 {
     public static AvailableModelResponse From(MlModelInfo m) =>
-        new(m.ModelId, m.ModelName, m.Dataset, m.RecommendedThreshold, m.CreatedAt);
+        new(m.ModelId, m.ModelName, m.Dataset, m.RecommendedThreshold, m.ReviewFrom, m.CreatedAt);
 }
 
 public sealed record ModelEventResponse(
@@ -57,10 +59,11 @@ public sealed record ShadowScoreResponse(
     DecisionStatus Status,
     double? PBad,
     double? ThresholdUsed,
+    double? ReviewFromUsed,
     Recommendation? Recommendation,
     string? ErrorCode,
     DateTimeOffset ScoredAt)
 {
     public static ShadowScoreResponse From(ShadowScore s) =>
-        new(s.ModelId, s.Status, s.PBad, s.ThresholdUsed, s.Recommendation, s.ErrorCode, s.ScoredAt);
+        new(s.ModelId, s.Status, s.PBad, s.ThresholdUsed, s.ReviewFromUsed, s.Recommendation, s.ErrorCode, s.ScoredAt);
 }

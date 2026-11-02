@@ -27,7 +27,7 @@ public class CreateApplicationRequestTests
     }
 
     [Fact]
-    public void ToDomain_maps_every_field_and_trims_names()
+    public void ToDomain_maps_every_field()
     {
         var application = Valid().ToDomain(TestData.Now, TestData.Officer, TestData.Client);
 
@@ -36,11 +36,9 @@ public class CreateApplicationRequestTests
         Assert.Equal("Tester", application.SubmittedBy);
         Assert.Equal(TestData.Officer.UserId, application.SubmittedByUserId);
         Assert.Equal(TestData.Now, application.SubmittedAt);
-        Assert.Equal(TestData.ContractRequest, StatlogMapper.ToMlRequest(application));
-        Assert.Equal(22m, application.InstallmentSharePercent);
-        Assert.Equal(2, application.YearsAtResidence);
-        Assert.Equal(1, application.CreditsAtBank);
-        Assert.Equal(0, application.Dependants);
+        Assert.Equal(TestData.ContractRequest, LendingClubMapper.ToMlRequest(application));
+        Assert.Equal(new DateOnly(2015, 5, 1), application.EarliestCreditLine);
+        Assert.Equal(EmploymentLength.FourYears, application.EmploymentLength);
     }
 
     [Theory]
@@ -54,33 +52,23 @@ public class CreateApplicationRequestTests
     }
 
     [Theory]
-    [InlineData(3, false)]
-    [InlineData(4, true)]
-    [InlineData(60, true)]
-    [InlineData(61, false)]
-    public void Duration_limits(int months, bool valid)
+    [InlineData(999, false)]
+    [InlineData(1_000, true)]
+    [InlineData(35_000, true)]
+    [InlineData(35_001, false)]
+    public void Loan_amount_limits(int amount, bool valid)
     {
-        Assert.Equal(valid, Errors(Valid() with { DurationMonths = months }).Count == 0);
+        Assert.Equal(valid, Errors(Valid() with { LoanAmount = amount }).Count == 0);
     }
 
     [Theory]
-    [InlineData(249, false)]
-    [InlineData(250, true)]
-    [InlineData(16_000, true)]
-    [InlineData(16_001, false)]
-    public void Credit_amount_limits(int amount, bool valid)
+    [InlineData(299, false)]
+    [InlineData(300, true)]
+    [InlineData(850, true)]
+    [InlineData(851, false)]
+    public void Credit_score_limits(int score, bool valid)
     {
-        Assert.Equal(valid, Errors(Valid() with { CreditAmount = amount }).Count == 0);
-    }
-
-    [Theory]
-    [InlineData(17, false)]
-    [InlineData(18, true)]
-    [InlineData(75, true)]
-    [InlineData(76, false)]
-    public void Age_limits(int age, bool valid)
-    {
-        Assert.Equal(valid, Errors(Valid() with { Age = age }).Count == 0);
+        Assert.Equal(valid, Errors(Valid() with { CreditScore = score }).Count == 0);
     }
 
     [Theory]
@@ -88,54 +76,62 @@ public class CreateApplicationRequestTests
     [InlineData(0.0, true)]
     [InlineData(100.0, true)]
     [InlineData(100.01, false)]
-    public void Installment_share_limits(double share, bool valid)
+    public void Debt_to_income_limits(double dti, bool valid)
     {
-        Assert.Equal(valid, Errors(Valid() with { InstallmentSharePercent = (decimal)share }).Count == 0);
+        Assert.Equal(valid, Errors(Valid() with { DebtToIncomePercent = (decimal)dti }).Count == 0);
     }
 
     [Theory]
-    [InlineData(0, false)]
-    [InlineData(1, true)]
-    [InlineData(20, true)]
-    [InlineData(21, false)]
-    public void Credits_at_bank_limits(int credits, bool valid)
+    [InlineData(-0.01, false)]
+    [InlineData(0.0, true)]
+    [InlineData(200.0, true)]
+    [InlineData(200.01, false)]
+    public void Revolving_utilisation_may_exceed_100_up_to_a_limit(double utilisation, bool valid)
     {
-        Assert.Equal(valid, Errors(Valid() with { CreditsAtBank = credits }).Count == 0);
+        Assert.Equal(valid, Errors(Valid() with { RevolvingUtilizationPercent = (decimal)utilisation }).Count == 0);
     }
 
     [Theory]
-    [InlineData(-1, false)]
-    [InlineData(0, true)]
-    [InlineData(20, true)]
-    [InlineData(21, false)]
-    public void Dependants_limits(int dependants, bool valid)
+    [InlineData(nameof(CreateApplicationRequest.AnnualIncome))]
+    [InlineData(nameof(CreateApplicationRequest.RevolvingBalance))]
+    public void Money_amounts_may_not_be_negative(string property)
     {
-        Assert.Equal(valid, Errors(Valid() with { Dependants = dependants }).Count == 0);
+        var request = Valid();
+        typeof(CreateApplicationRequest).GetProperty(property)!.SetValue(request, -1m);
+
+        Assert.Equal([property], Errors(request));
     }
 
     [Theory]
-    [InlineData(-1, false)]
-    [InlineData(0, true)]
-    [InlineData(35, true)]
-    public void Years_at_residence_limits(int years, bool valid)
+    [InlineData(nameof(CreateApplicationRequest.InquiriesLast6Months))]
+    [InlineData(nameof(CreateApplicationRequest.DelinquenciesLast2Years))]
+    [InlineData(nameof(CreateApplicationRequest.PublicRecords))]
+    [InlineData(nameof(CreateApplicationRequest.Bankruptcies))]
+    [InlineData(nameof(CreateApplicationRequest.OpenAccounts))]
+    [InlineData(nameof(CreateApplicationRequest.MortgageAccounts))]
+    public void Counts_may_not_be_negative(string property)
     {
-        Assert.Equal(valid, Errors(Valid() with { YearsAtResidence = years }).Count == 0);
+        var request = Valid();
+        typeof(CreateApplicationRequest).GetProperty(property)!.SetValue(request, -1);
+
+        Assert.Equal([property], Errors(request));
     }
 
     [Fact]
-    public void Years_at_residence_cannot_exceed_age()
+    public void Negative_total_accounts_is_invalid_and_also_below_the_open_accounts()
     {
         Assert.Equal(
-            [nameof(CreateApplicationRequest.YearsAtResidence)],
-            Errors(Valid() with { Age = 30, YearsAtResidence = 31 }));
+            [nameof(CreateApplicationRequest.OpenAccounts), nameof(CreateApplicationRequest.TotalAccounts)],
+            Errors(Valid() with { TotalAccounts = -1 }).Order().ToList());
     }
 
     [Fact]
-    public void Cross_field_rule_is_reported_together_with_field_limits()
+    public void Open_accounts_cannot_exceed_total_accounts()
     {
         Assert.Equal(
-            [nameof(CreateApplicationRequest.Age), nameof(CreateApplicationRequest.YearsAtResidence)],
-            Errors(Valid() with { Age = 17, YearsAtResidence = 40 }));
+            [nameof(CreateApplicationRequest.OpenAccounts)],
+            Errors(Valid() with { OpenAccounts = 22, TotalAccounts = 21 }));
+        Assert.Empty(Errors(Valid() with { OpenAccounts = 21, TotalAccounts = 21 }));
     }
 
     [Fact]
@@ -172,12 +168,12 @@ public class CreateApplicationRequestTests
     [Fact]
     public void Messages_use_display_names()
     {
-        var request = Valid() with { CreditAmount = 1, Age = 30, YearsAtResidence = 31 };
+        var request = Valid() with { LoanAmount = 1, OpenAccounts = 30, TotalAccounts = 21 };
         var results = new List<ValidationResult>();
         Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true);
 
         Assert.Equal(
-            ["The field Credit amount (DM) must be between 250 and 16000.", "Years at current residence cannot exceed Age."],
+            ["The field Loan amount (USD) must be between 1000 and 35000.", "Open credit lines cannot exceed Credit lines ever opened."],
             results.Select(r => r.ErrorMessage));
     }
 }

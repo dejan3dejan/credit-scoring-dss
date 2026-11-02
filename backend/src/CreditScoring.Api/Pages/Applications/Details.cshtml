@@ -5,11 +5,22 @@
     var a = Model.Application;
     var d = a.Decision;
     ViewData["Title"] = a.ApplicantName;
-    string YesNo(bool value) => value ? "Yes" : "No";
+    string Usd(decimal value) => value.ToString("N0", CultureInfo.InvariantCulture) + " USD";
+    string Tone(Recommendation r) => r switch
+    {
+        Recommendation.Approve => "approve",
+        Recommendation.Review => "review",
+        _ => "reject",
+    };
     string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
     const double Radius = 90;
     var canRescore = Model.CanDecide && a.OfficerDecision is null && d?.Status != DecisionStatus.Scored;
     var circumference = 2 * Math.PI * Radius;
+    void Tick(double at, string css)
+    {
+        var angle = at * 2 * Math.PI;
+        <line class="@css" x1="@N(100 + 76 * Math.Cos(angle))" y1="@N(100 + 76 * Math.Sin(angle))" x2="@N(100 + 104 * Math.Cos(angle))" y2="@N(100 + 104 * Math.Sin(angle))"/>
+    }
 }
 
 @section Band {
@@ -21,7 +32,7 @@
                 History
             </a>
             <h1><a class="title-link" asp-page="/Clients/Details" asp-route-id="@a.ClientId">@a.ApplicantName</a></h1>
-            <p><span class="mono">@a.ClientNumber</span> · @a.CreditAmount.ToString("N0") DM over @a.DurationMonths months · @Labels.Of(a.Purpose) · submitted by @a.SubmittedBy</p>
+            <p><span class="mono">@a.ClientNumber</span> · @a.LoanAmount.ToString("N0") USD over @a.TermMonths months · @Labels.Of(a.Purpose) · submitted by @a.SubmittedBy</p>
         </div>
     </div>
     @if (Model.CanDecide)
@@ -33,17 +44,27 @@
 <section class="panel">
     @if (d is not null && d.Status == DecisionStatus.Scored && d.PBad is { } pBad && d.ThresholdUsed is { } threshold && d.Recommendation is { } recommendation)
     {
-        var tone = recommendation == Recommendation.Approve ? "approve" : "reject";
-        var angle = threshold * 2 * Math.PI;
+        var tone = Tone(recommendation);
+        var reviewFrom = d.ReviewFromUsed;
+        var ringLabel = reviewFrom is { } rf
+            ? $"Probability of default {pBad:P1}; review closely from {rf:P1}, reject from {threshold:P1}"
+            : $"Probability of default {pBad:P1}, reject threshold {threshold:P1}";
         <div class="result">
-            <div class="gauge" role="img" aria-label="Probability of default @pBad.ToString("P1"), reject threshold @threshold.ToString("P1")">
+            <div class="gauge" role="img" aria-label="@ringLabel">
                 <svg viewBox="0 0 200 200" aria-hidden="true">
                     <circle class="gauge-track" cx="100" cy="100" r="@N(Radius)"/>
+                    @if (reviewFrom is { } band)
+                    {
+                        <circle class="gauge-band" cx="100" cy="100" r="@N(Radius)"
+                                stroke-dasharray="0 @N(band * circumference) @N((threshold - band) * circumference) @N(circumference)"/>
+                    }
                     <circle class="gauge-value gauge-@tone" cx="100" cy="100" r="@N(Radius)"
                             stroke-dasharray="@N(Math.Max(pBad * circumference, 0.01)) @N(circumference)"/>
-                    <line class="gauge-tick"
-                          x1="@N(100 + 76 * Math.Cos(angle))" y1="@N(100 + 76 * Math.Sin(angle))"
-                          x2="@N(100 + 104 * Math.Cos(angle))" y2="@N(100 + 104 * Math.Sin(angle))"/>
+                    @if (reviewFrom is { } from)
+                    {
+                        Tick(from, "gauge-tick gauge-tick-soft");
+                    }
+                    @{ Tick(threshold, "gauge-tick"); }
                 </svg>
                 <div class="gauge-center">
                     <div class="gauge-number">@pBad.ToString("P1")</div>
@@ -54,12 +75,20 @@
                 <div class="eyebrow">Recommendation</div>
                 <div class="verdict verdict-@tone">@Labels.Of(recommendation)</div>
                 <p class="result-text">
-                    @(recommendation == Recommendation.Approve
-                        ? "The estimated probability of default is below the reject threshold, marked on the ring."
-                        : "The estimated probability of default is at or above the reject threshold, marked on the ring.")
+                    @(recommendation switch
+                    {
+                        Recommendation.Approve when reviewFrom is not null => "The estimated probability of default is below the review band, which starts at the first mark on the ring.",
+                        Recommendation.Approve => "The estimated probability of default is below the reject threshold, marked on the ring.",
+                        Recommendation.Review => "The estimated probability of default is inside the review band, between the two marks on the ring. The model is least sure here: check the application closely and give a reason for your decision.",
+                        _ => "The estimated probability of default is at or above the reject threshold, the last mark on the ring.",
+                    })
                 </p>
                 <dl class="facts">
                     <div><dt>P(bad)</dt><dd class="mono">@pBad.ToString("0.0000", CultureInfo.InvariantCulture)</dd></div>
+                    @if (reviewFrom is { } shown)
+                    {
+                        <div><dt>Review from</dt><dd class="mono">≥ @shown.ToString("0.0000", CultureInfo.InvariantCulture)</dd></div>
+                    }
                     <div><dt>Reject at</dt><dd class="mono">≥ @threshold.ToString("0.0000", CultureInfo.InvariantCulture)</dd></div>
                     <div><dt>Model</dt><dd class="mono">@d.ModelId</dd></div>
                     <div><dt>Scored</dt><dd>@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd></div>
@@ -110,8 +139,8 @@
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm.75 10.5h-1.5v-4.5h1.5v4.5ZM8 5.75a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>
     <div>
         <strong>Decision support, not a decision.</strong>
-        The model estimates risk from 20 answers and recommends an action; the loan officer makes and owns the credit decision.
-        It was trained on German credit data from the 1970s, so amounts are in Deutsche Mark and its estimates reflect that population.
+        The model estimates risk from 18 answers and recommends an action; the loan officer makes and owns the credit decision.
+        It learned from Lending Club loans issued in the United States from 2012 to 2014, so its estimates reflect those borrowers and that period.
     </div>
 </div>
 
@@ -163,9 +192,12 @@
                     <label asp-for="Review.Reason"></label>
                     <textarea asp-for="Review.Reason" rows="3" maxlength="@BusinessLimits.DecisionReasonMaxLength" placeholder="What you weighed, in a sentence or two"></textarea>
                     <span class="hint">
-                        @(recommended is { } rec
-                            ? $"Required if you decide against the recommendation ({Labels.Of(rec)})."
-                            : "Required: no recommendation was made for this application.")
+                        @(recommended switch
+                        {
+                            Recommendation.Review => "Required: the model asked for a closer review of this application.",
+                            { } rec => $"Required if you decide against the recommendation ({Labels.Of(rec)}).",
+                            null => "Required: no recommendation was made for this application.",
+                        })
                     </span>
                     <span asp-validation-for="Review.Reason" class="error"></span>
                 </div>
@@ -198,7 +230,12 @@
             else if (d.Status == DecisionStatus.Scored)
             {
                 <li class="done">
-                    <span class="timeline-what">Scored @d.PBad?.ToString("P1"), model recommends @(d.Recommendation is { } r ? Labels.Of(r) : "–")</span>
+                    <span class="timeline-what">Scored @d.PBad?.ToString("P1"), @(d.Recommendation switch
+                    {
+                        Recommendation.Review => "model asks for a closer review",
+                        { } r => $"model recommends {Labels.Of(r).ToLowerInvariant()}",
+                        null => "no recommendation",
+                    })</span>
                     <span class="timeline-when">@d.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm") · <span class="mono">@d.ModelId</span></span>
                 </li>
             }
@@ -249,7 +286,7 @@
                         @if (s.Status == DecisionStatus.Scored && s.Recommendation is { } shadowRecommendation)
                         {
                             <span class="num">@s.PBad?.ToString("P1")</span>
-                            <span class="status status-@(shadowRecommendation == Recommendation.Approve ? "approve" : "reject")">@Labels.Of(shadowRecommendation)</span>
+                            <span class="status status-@Tone(shadowRecommendation)">@Labels.Of(shadowRecommendation)</span>
                             <span class="tag @(agrees ? "tag-agree" : "tag-override")">@(agrees ? "Agrees" : "Differs")</span>
                         }
                         else
@@ -267,43 +304,42 @@
 <h2 class="section-title">Application as submitted</h2>
 <div class="cards">
     <section class="panel">
-        <div class="card-title">Applicant</div>
-        <dl class="kv">
-            <div><dt>Age</dt><dd>@a.Age years</dd></div>
-            <div><dt>Dependants</dt><dd>@a.Dependants</dd></div>
-            <div><dt>Personal status and sex</dt><dd>@Labels.Of(a.PersonalStatusSex)</dd></div>
-            <div><dt>Telephone in own name</dt><dd>@YesNo(a.HasRegisteredTelephone)</dd></div>
-            <div><dt>Foreign worker</dt><dd>@YesNo(a.IsForeignWorker)</dd></div>
-        </dl>
-    </section>
-    <section class="panel">
         <div class="card-title">Loan</div>
         <dl class="kv">
-            <div><dt>Credit amount</dt><dd class="num">@a.CreditAmount.ToString("N0") DM</dd></div>
-            <div><dt>Term</dt><dd>@a.DurationMonths months</dd></div>
+            <div><dt>Loan amount</dt><dd class="num">@a.LoanAmount.ToString("N0") USD</dd></div>
+            <div><dt>Term</dt><dd>@a.TermMonths months</dd></div>
             <div><dt>Purpose</dt><dd>@Labels.Of(a.Purpose)</dd></div>
-            <div><dt>Installment share</dt><dd class="num">@a.InstallmentSharePercent.ToString("0.##")%</dd></div>
-            <div><dt>Other debtors or guarantors</dt><dd>@Labels.Of(a.OtherDebtors)</dd></div>
         </dl>
     </section>
     <section class="panel">
-        <div class="card-title">Finances</div>
+        <div class="card-title">Income and housing</div>
         <dl class="kv">
-            <div><dt>Checking account</dt><dd>@Labels.Of(a.CheckingAccountStatus)</dd></div>
-            <div><dt>Savings</dt><dd>@Labels.Of(a.SavingsAccount)</dd></div>
-            <div><dt>Credit history</dt><dd>@Labels.Of(a.CreditHistory)</dd></div>
-            <div><dt>Credits at this bank</dt><dd>@a.CreditsAtBank</dd></div>
-            <div><dt>Other installment plans</dt><dd>@Labels.Of(a.OtherInstallmentPlans)</dd></div>
-            <div><dt>Most valuable property</dt><dd>@Labels.Of(a.Property)</dd></div>
+            <div><dt>Annual income</dt><dd class="num">@Usd(a.AnnualIncome)</dd></div>
+            <div><dt>Income verification</dt><dd>@Labels.Of(a.IncomeVerification)</dd></div>
+            <div><dt>Debt-to-income ratio</dt><dd class="num">@a.DebtToIncomePercent.ToString("0.##", CultureInfo.InvariantCulture)%</dd></div>
+            <div><dt>Years in current job</dt><dd>@Labels.Of(a.EmploymentLength)</dd></div>
+            <div><dt>Housing</dt><dd>@Labels.Of(a.HomeOwnership)</dd></div>
+            <div><dt>Mortgage accounts</dt><dd>@a.MortgageAccounts</dd></div>
         </dl>
     </section>
     <section class="panel">
-        <div class="card-title">Work and housing</div>
+        <div class="card-title">Credit report</div>
         <dl class="kv">
-            <div><dt>Current employment</dt><dd>@Labels.Of(a.EmploymentDuration)</dd></div>
-            <div><dt>Job</dt><dd>@Labels.Of(a.Job)</dd></div>
-            <div><dt>Housing</dt><dd>@Labels.Of(a.Housing)</dd></div>
-            <div><dt>Years at current residence</dt><dd>@a.YearsAtResidence</dd></div>
+            <div><dt>Credit score</dt><dd class="num">@a.CreditScore</dd></div>
+            <div><dt>First credit line</dt><dd>@a.EarliestCreditLine.ToString("MMM yyyy") <span class="muted">(@a.CreditHistoryYears.ToString("0.0", CultureInfo.InvariantCulture) years)</span></dd></div>
+            <div><dt>Inquiries, last 6 months</dt><dd>@a.InquiriesLast6Months</dd></div>
+            <div><dt>Delinquencies, last 2 years</dt><dd>@a.DelinquenciesLast2Years</dd></div>
+            <div><dt>Public records</dt><dd>@a.PublicRecords</dd></div>
+            <div><dt>Bankruptcies</dt><dd>@a.Bankruptcies</dd></div>
+        </dl>
+    </section>
+    <section class="panel">
+        <div class="card-title">Credit accounts</div>
+        <dl class="kv">
+            <div><dt>Revolving balance</dt><dd class="num">@Usd(a.RevolvingBalance)</dd></div>
+            <div><dt>Revolving utilisation</dt><dd class="num">@a.RevolvingUtilizationPercent.ToString("0.#", CultureInfo.InvariantCulture)%</dd></div>
+            <div><dt>Open credit lines</dt><dd>@a.OpenAccounts</dd></div>
+            <div><dt>Credit lines ever opened</dt><dd>@a.TotalAccounts</dd></div>
         </dl>
     </section>
 </div>

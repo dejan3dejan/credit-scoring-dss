@@ -4,6 +4,7 @@
     var tone = item.Recommendation switch
     {
         Recommendation.Approve => "approve",
+        Recommendation.Review => "review",
         Recommendation.Reject => "reject",
         _ => "unavailable",
     };
@@ -15,7 +16,7 @@
     <span class="chat-main">
         <span class="chat-name">@item.ApplicantName</span>
         <span class="chat-line">
-            <span class="model-dot model-dot-@tone" aria-hidden="true"></span>Model: @modelText · @item.CreditAmount.ToString("N0") DM · @item.DurationMonths months
+            <span class="model-dot model-dot-@tone" aria-hidden="true"></span>Model: @modelText · @item.LoanAmount.ToString("N0") USD · @Labels.Of(item.Purpose)
         </span>
     </span>
     <span class="chat-end">

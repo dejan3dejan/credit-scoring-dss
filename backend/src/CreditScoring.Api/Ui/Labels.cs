@@ -10,71 +10,47 @@ public static class Labels
 {
     private static readonly Dictionary<Enum, string> All = new()
     {
-        [CheckingAccountStatus.NoAccount] = "No checking account",
-        [CheckingAccountStatus.Negative] = "Overdrawn (below 0 DM)",
-        [CheckingAccountStatus.ZeroTo200] = "0 to 200 DM",
-        [CheckingAccountStatus.AtLeast200OrSalaryAssignment] = "200 DM or more, or salary paid in for at least a year",
-
-        [CreditHistory.PastPaymentDelays] = "Delays in paying off past credits",
-        [CreditHistory.CriticalAccount] = "Critical account, or credits at other banks",
-        [CreditHistory.NoCreditsOrAllPaidDuly] = "No credits taken, or all paid back on time",
-        [CreditHistory.ExistingPaidDulySoFar] = "Existing credits paid back on time so far",
-        [CreditHistory.AllAtThisBankPaidDuly] = "All credits at this bank paid back on time",
-
-        [LoanPurpose.Other] = "Other",
-        [LoanPurpose.NewCar] = "New car",
-        [LoanPurpose.UsedCar] = "Used car",
-        [LoanPurpose.FurnitureOrEquipment] = "Furniture or equipment",
-        [LoanPurpose.RadioOrTelevision] = "Radio or television",
-        [LoanPurpose.DomesticAppliances] = "Domestic appliances",
-        [LoanPurpose.Repairs] = "Repairs",
+        [LoanPurpose.DebtConsolidation] = "Debt consolidation",
+        [LoanPurpose.CreditCard] = "Paying off credit cards",
+        [LoanPurpose.HomeImprovement] = "Home improvement",
+        [LoanPurpose.MajorPurchase] = "Major purchase",
+        [LoanPurpose.Car] = "Car",
+        [LoanPurpose.Medical] = "Medical expenses",
+        [LoanPurpose.Moving] = "Moving",
+        [LoanPurpose.House] = "House",
         [LoanPurpose.Vacation] = "Vacation",
-        [LoanPurpose.Retraining] = "Retraining",
-        [LoanPurpose.Business] = "Business",
+        [LoanPurpose.Wedding] = "Wedding",
+        [LoanPurpose.SmallBusiness] = "Small business",
+        [LoanPurpose.RenewableEnergy] = "Renewable energy",
+        [LoanPurpose.Other] = "Other",
 
-        [SavingsAccount.UnknownOrNone] = "Unknown, or no savings account",
-        [SavingsAccount.Below100] = "Below 100 DM",
-        [SavingsAccount.From100To500] = "100 to 500 DM",
-        [SavingsAccount.From500To1000] = "500 to 1,000 DM",
-        [SavingsAccount.AtLeast1000] = "1,000 DM or more",
+        [EmploymentLength.NotStated] = "Not stated",
+        [EmploymentLength.LessThanOneYear] = "Less than 1 year",
+        [EmploymentLength.OneYear] = "1 year",
+        [EmploymentLength.TwoYears] = "2 years",
+        [EmploymentLength.ThreeYears] = "3 years",
+        [EmploymentLength.FourYears] = "4 years",
+        [EmploymentLength.FiveYears] = "5 years",
+        [EmploymentLength.SixYears] = "6 years",
+        [EmploymentLength.SevenYears] = "7 years",
+        [EmploymentLength.EightYears] = "8 years",
+        [EmploymentLength.NineYears] = "9 years",
+        [EmploymentLength.TenOrMoreYears] = "10 years or more",
 
-        [EmploymentDuration.Unemployed] = "Unemployed",
-        [EmploymentDuration.LessThan1Year] = "Less than 1 year",
-        [EmploymentDuration.From1To4Years] = "1 to 4 years",
-        [EmploymentDuration.From4To7Years] = "4 to 7 years",
-        [EmploymentDuration.AtLeast7Years] = "7 years or more",
+        [HomeOwnership.Rent] = "Rents",
+        [HomeOwnership.Own] = "Owns outright",
+        [HomeOwnership.Mortgage] = "Owns with a mortgage",
+        [HomeOwnership.Other] = "Other",
 
-        [PersonalStatusSex.MaleDivorcedOrSeparated] = "Male, divorced or separated",
-        [PersonalStatusSex.FemaleNonSingleOrMaleSingle] = "Female non-single, or male single",
-        [PersonalStatusSex.MaleMarriedOrWidowed] = "Male, married or widowed",
-        [PersonalStatusSex.FemaleSingle] = "Female, single",
-
-        [OtherDebtors.None] = "None",
-        [OtherDebtors.CoApplicant] = "Co-applicant",
-        [OtherDebtors.Guarantor] = "Guarantor",
-
-        [PropertyType.UnknownOrNone] = "Unknown, or no property",
-        [PropertyType.CarOrOther] = "Car or other",
-        [PropertyType.BuildingSocietySavingsOrLifeInsurance] = "Building society savings or life insurance",
-        [PropertyType.RealEstate] = "Real estate",
-
-        [OtherInstallmentPlans.Bank] = "At a bank",
-        [OtherInstallmentPlans.Stores] = "At stores",
-        [OtherInstallmentPlans.None] = "None",
-
-        [Housing.ForFree] = "Lives for free",
-        [Housing.Rent] = "Rents",
-        [Housing.Own] = "Owns",
-
-        [JobType.UnemployedOrUnskilledNonResident] = "Unemployed, or unskilled non-resident",
-        [JobType.UnskilledResident] = "Unskilled, resident",
-        [JobType.SkilledEmployeeOrOfficial] = "Skilled employee or official",
-        [JobType.ManagerSelfEmployedOrHighlyQualified] = "Manager, self-employed or highly qualified",
+        [IncomeVerification.NotVerified] = "Not verified",
+        [IncomeVerification.SourceVerified] = "Source verified",
+        [IncomeVerification.Verified] = "Verified",
 
         [DecisionStatus.Scored] = "Scored",
         [DecisionStatus.ScoringUnavailable] = "Scoring unavailable",
 
         [Recommendation.Approve] = "Approve",
+        [Recommendation.Review] = "Review closely",
         [Recommendation.Reject] = "Reject",
 
         [FinalDecision.Approve] = "Approved",
@@ -108,6 +84,7 @@ public static class Labels
     {
         ["RandomForest"] = "Random forest",
         ["LogisticRegression"] = "Logistic regression",
+        ["XGBoost"] = "XGBoost",
     };
 
     public static string ModelName(string name) => ModelNames.GetValueOrDefault(name, name);

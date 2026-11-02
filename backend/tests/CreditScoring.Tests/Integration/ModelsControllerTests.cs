@@ -17,7 +17,7 @@ public sealed class ModelsControllerTests(DatabaseFixture database) : IAsyncLife
     private const string Challenger = "credit_lr_isotonic_v1";
 
     private static readonly MlModelInfo ChallengerInfo = new(
-        Challenger, "LogisticRegression", TestData.Dataset, 0.2, new DateTimeOffset(2026, 11, 1, 19, 0, 0, TimeSpan.Zero));
+        Challenger, "LogisticRegression", TestData.Dataset, 0.3, 0.15, new DateTimeOffset(2026, 11, 1, 19, 0, 0, TimeSpan.Zero));
 
     private readonly FakeMlClient ml = new() { Catalog = new MlCatalog([ChallengerInfo]) };
     private readonly ManualTimeProvider clock = new(TestData.Now);
@@ -57,7 +57,7 @@ public sealed class ModelsControllerTests(DatabaseFixture database) : IAsyncLife
     public async Task Database_refuses_a_second_active_model()
     {
         await using var db = database.CreateContext();
-        var (model, _) = ModelRegistry.Register(Challenger, "LogisticRegression", TestData.Dataset, 0.2, database.Officer.AsActor(), TestData.Now);
+        var (model, _) = ModelRegistry.Register(Challenger, "LogisticRegression", TestData.Dataset, 0.3, 0.15, database.Officer.AsActor(), TestData.Now);
         ModelRegistry.Promote([model], Challenger, "second", database.Officer.AsActor(), TestData.Now);
         db.ScoringModels.Add(model);
 
@@ -72,7 +72,7 @@ public sealed class ModelsControllerTests(DatabaseFixture database) : IAsyncLife
         var created = Assert.IsType<CreatedAtActionResult>((await Register()).Result);
 
         var model = Assert.IsType<ScoringModelResponse>(created.Value);
-        Assert.Equal((Challenger, "LogisticRegression", ModelRole.Shadow, 0.2), (model.ModelId, model.DisplayName, model.Role, model.Threshold));
+        Assert.Equal((Challenger, "LogisticRegression", ModelRole.Shadow, 0.3, 0.15), (model.ModelId, model.DisplayName, model.Role, model.Threshold, model.ReviewFrom));
         await using var db = database.CreateContext();
         var logged = await db.ModelEvents.SingleAsync();
         Assert.Equal((Challenger, (ModelRole?)null, ModelRole.Shadow, database.Officer.Id),

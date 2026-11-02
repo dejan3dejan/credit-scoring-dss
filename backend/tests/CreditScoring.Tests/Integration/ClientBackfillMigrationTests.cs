@@ -37,7 +37,7 @@ public sealed class ClientBackfillMigrationTests
             + Insert("Ana Petrović", "2026-10-31 10:00:00+00")
             + Insert("Marko Ilić", "2026-10-29 09:00:00+00"));
 
-        await db.Database.MigrateAsync();
+        await db.GetService<IMigrator>().MigrateAsync("AddScoringFailures");
 
         var clients = await db.Clients.OrderBy(c => c.FullName).ToListAsync();
         Assert.Equal(["Ana Petrović", "Marko Ilić"], clients.Select(c => c.FullName));
@@ -45,8 +45,11 @@ public sealed class ClientBackfillMigrationTests
         Assert.Equal(new DateTimeOffset(2026, 10, 30, 10, 0, 0, TimeSpan.Zero), clients[0].CreatedAt);
         Assert.All(clients, c => Assert.Null(c.CreatedByUserId));
 
-        var applications = await db.Applications.ToListAsync();
-        Assert.All(applications, a => Assert.Equal(clients.Single(c => c.FullName == a.ApplicantName).Id, a.ClientId));
+        var linked = await db.Database.SqlQueryRaw<int>("""
+            SELECT count(*)::int AS "Value" FROM credit_applications a
+            JOIN clients c ON c.id = a.client_id AND c.full_name = a.applicant_name
+            """).SingleAsync();
+        Assert.Equal(3, linked);
 
         await db.Database.EnsureDeletedAsync();
     }

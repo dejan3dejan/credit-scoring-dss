@@ -6,9 +6,10 @@ namespace CreditScoring.Tests;
 
 internal static class TestData
 {
-    public const string ModelId = "credit_rf_isotonic_v1";
-    public const double Threshold = 1.0 / 6.0;
-    public const string Dataset = "statlog_german_credit";
+    public const string ModelId = "credit_lc_xgb_isotonic_v1";
+    public const double Threshold = 1 / (1 + 2.0431);
+    public const double ReviewFrom = 0.2;
+    public const string Dataset = "lending_club";
 
     public static readonly DateTimeOffset Now = new(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
 
@@ -16,12 +17,12 @@ internal static class TestData
 
     public static readonly Client Client = Client.Create("Test Applicant", null, Officer, Now);
 
-    public static ScoringModel ShadowModel(string modelId, double threshold = Threshold) =>
-        ModelRegistry.Register(modelId, "Test model", Dataset, threshold, Officer, Now).Model;
+    public static ScoringModel ShadowModel(string modelId, double threshold = Threshold, double? reviewFrom = ReviewFrom) =>
+        ModelRegistry.Register(modelId, "Test model", Dataset, threshold, reviewFrom, Officer, Now).Model;
 
-    public static ScoringModel ActiveModel(string modelId = ModelId, double threshold = Threshold)
+    public static ScoringModel ActiveModel(string modelId = ModelId, double threshold = Threshold, double? reviewFrom = ReviewFrom)
     {
-        var model = ShadowModel(modelId, threshold);
+        var model = ShadowModel(modelId, threshold, reviewFrom);
         ModelRegistry.Promote([model], modelId, "test", Officer, Now);
         return model;
     }
@@ -29,50 +30,46 @@ internal static class TestData
     public static CreateApplicationRequest ValidRequest() => new()
     {
         ClientId = Client.Id,
-        DurationMonths = 24,
-        CreditAmount = 3500,
-        Age = 35,
-        InstallmentSharePercent = 22m,
-        YearsAtResidence = 2,
-        CreditsAtBank = 1,
-        Dependants = 0,
-        CheckingAccountStatus = CheckingAccountStatus.Negative,
-        CreditHistory = CreditHistory.NoCreditsOrAllPaidDuly,
-        Purpose = LoanPurpose.FurnitureOrEquipment,
-        SavingsAccount = SavingsAccount.UnknownOrNone,
-        EmploymentDuration = EmploymentDuration.From1To4Years,
-        PersonalStatusSex = PersonalStatusSex.MaleMarriedOrWidowed,
-        OtherDebtors = OtherDebtors.None,
-        Property = PropertyType.BuildingSocietySavingsOrLifeInsurance,
-        OtherInstallmentPlans = OtherInstallmentPlans.None,
-        Housing = Housing.Rent,
-        Job = JobType.SkilledEmployeeOrOfficial,
-        HasRegisteredTelephone = false,
-        IsForeignWorker = false,
+        LoanAmount = 12_000,
+        Purpose = LoanPurpose.DebtConsolidation,
+        EmploymentLength = EmploymentLength.FourYears,
+        HomeOwnership = HomeOwnership.Rent,
+        AnnualIncome = 58_000m,
+        IncomeVerification = IncomeVerification.SourceVerified,
+        DebtToIncomePercent = 18.4m,
+        CreditScore = 697,
+        EarliestCreditLine = new DateOnly(2015, 5, 1),
+        InquiriesLast6Months = 1,
+        DelinquenciesLast2Years = 0,
+        PublicRecords = 0,
+        Bankruptcies = 0,
+        RevolvingBalance = 9_400m,
+        RevolvingUtilizationPercent = 52.3m,
+        OpenAccounts = 9,
+        TotalAccounts = 21,
+        MortgageAccounts = 0,
     };
 
     public static readonly MlPredictRequest ContractRequest = new()
     {
-        CheckingAccountStatus = "A12",
-        DurationMonths = 24,
-        CreditHistory = "A32",
-        Purpose = "A43",
-        CreditAmount = 3500,
-        SavingsAccount = "A61",
-        EmploymentDuration = "A73",
-        InstallmentRate = 3,
-        PersonalStatusSex = "A93",
-        OtherDebtorsGuarantors = "A101",
-        PresentResidenceSince = 2,
-        Property = "A123",
-        Age = 35,
-        OtherInstallmentPlans = "A143",
-        Housing = "A152",
-        ExistingCreditsCount = 1,
-        Job = "A173",
-        NumPeopleLiable = 1,
-        Telephone = "A191",
-        ForeignWorker = "A201",
+        LoanAmnt = 12_000,
+        Purpose = "debt_consolidation",
+        EmpLengthYears = 4,
+        HomeOwnership = "RENT",
+        AnnualInc = 58_000,
+        VerificationStatus = "Source Verified",
+        Dti = 18.4,
+        Fico = 697,
+        CreditHistoryYears = 4202 / 365.25,
+        InqLast6mths = 1,
+        Delinq2yrs = 0,
+        PubRec = 0,
+        PubRecBankruptcies = 0,
+        RevolBal = 9_400,
+        RevolUtil = 52.3,
+        OpenAcc = 9,
+        TotalAcc = 21,
+        MortAcc = 0,
     };
 
     public static CreditApplication ContractApplication() => new()
@@ -82,25 +79,23 @@ internal static class TestData
         Client = Client,
         SubmittedBy = "tester",
         SubmittedAt = Now,
-        DurationMonths = 24,
-        CreditAmount = 3500,
-        Age = 35,
-        InstallmentSharePercent = 22m,
-        YearsAtResidence = 2,
-        CreditsAtBank = 1,
-        Dependants = 0,
-        CheckingAccountStatus = CheckingAccountStatus.Negative,
-        CreditHistory = CreditHistory.NoCreditsOrAllPaidDuly,
-        Purpose = LoanPurpose.FurnitureOrEquipment,
-        SavingsAccount = SavingsAccount.UnknownOrNone,
-        EmploymentDuration = EmploymentDuration.From1To4Years,
-        PersonalStatusSex = PersonalStatusSex.MaleMarriedOrWidowed,
-        OtherDebtors = OtherDebtors.None,
-        Property = PropertyType.BuildingSocietySavingsOrLifeInsurance,
-        OtherInstallmentPlans = OtherInstallmentPlans.None,
-        Housing = Housing.Rent,
-        Job = JobType.SkilledEmployeeOrOfficial,
-        HasRegisteredTelephone = false,
-        IsForeignWorker = false,
+        LoanAmount = 12_000,
+        Purpose = LoanPurpose.DebtConsolidation,
+        EmploymentLength = EmploymentLength.FourYears,
+        HomeOwnership = HomeOwnership.Rent,
+        AnnualIncome = 58_000m,
+        IncomeVerification = IncomeVerification.SourceVerified,
+        DebtToIncomePercent = 18.4m,
+        CreditScore = 697,
+        EarliestCreditLine = new DateOnly(2015, 5, 1),
+        InquiriesLast6Months = 1,
+        DelinquenciesLast2Years = 0,
+        PublicRecords = 0,
+        Bankruptcies = 0,
+        RevolvingBalance = 9_400m,
+        RevolvingUtilizationPercent = 52.3m,
+        OpenAccounts = 9,
+        TotalAccounts = 21,
+        MortgageAccounts = 0,
     };
 }

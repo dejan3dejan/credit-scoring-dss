@@ -38,21 +38,27 @@ public class DashboardCalculatorTests
             Scored(0.40, Recommendation.Reject, FinalDecision.Reject, "Marko"),
             Scored(0.50, Recommendation.Reject, FinalDecision.Approve, "Marko"),
             Scored(0.60, Recommendation.Reject, FinalDecision.Reject, "Marko"),
+            Scored(0.22, Recommendation.Review, FinalDecision.Approve, "Ana"),
+            Scored(0.25, Recommendation.Review, FinalDecision.Reject, "Ana"),
+            Scored(0.30, Recommendation.Review),
             Unscored(FinalDecision.Approve, "Ana"),
             Unscored(),
         ], []);
 
         Assert.Equal(new MatrixRow(1, 1, 1), stats.Matrix.Approve);
+        Assert.Equal(new MatrixRow(1, 1, 1), stats.Matrix.Review);
         Assert.Equal(new MatrixRow(1, 2, 0), stats.Matrix.Reject);
         Assert.Equal(new MatrixRow(1, 0, 1), stats.Matrix.Unavailable);
-        Assert.Equal((8, 6, 2, 6, 2), (stats.Applications, stats.Scored, stats.Unavailable, stats.Decided, stats.Pending));
+        Assert.Equal((11, 9, 2, 8, 3), (stats.Applications, stats.Scored, stats.Unavailable, stats.Decided, stats.Pending));
     }
 
     [Fact]
-    public void Override_rates_use_decisions_that_had_a_recommendation()
+    public void Override_rates_use_decisions_that_had_an_approve_or_reject_recommendation()
     {
         var stats = DashboardCalculator.Compute(
         [
+            Scored(0.25, Recommendation.Review, FinalDecision.Approve, "Ana"),
+            Scored(0.25, Recommendation.Review, FinalDecision.Reject, "Ana"),
             Scored(0.05, Recommendation.Approve, FinalDecision.Approve, "Ana"),
             Scored(0.10, Recommendation.Approve, FinalDecision.Reject, "Ana"),
             Scored(0.40, Recommendation.Reject, FinalDecision.Reject, "Ana"),
@@ -64,7 +70,7 @@ public class DashboardCalculatorTests
         Assert.Equal(2.0 / 5.0, stats.OverrideRate);
         Assert.Equal(1.0 / 2.0, stats.HighSideOverrideRate);
         Assert.Equal(1.0 / 3.0, stats.LowSideOverrideRate);
-        Assert.Equal(1.0 / 6.0, stats.UnavailableRate);
+        Assert.Equal(1.0 / 8.0, stats.UnavailableRate);
     }
 
     [Theory]
@@ -91,12 +97,13 @@ public class DashboardCalculatorTests
             Scored(0.05, Recommendation.Approve, FinalDecision.Reject, "Ana"),
             Scored(0.05, Recommendation.Approve, FinalDecision.Approve, "Ana"),
             Unscored(FinalDecision.Reject, "Ana"),
+            Scored(0.25, Recommendation.Review, FinalDecision.Reject, "Ana"),
             Scored(0.05, Recommendation.Approve, FinalDecision.Approve, "Marko"),
             Scored(0.05, Recommendation.Approve),
         ], []);
 
         Assert.Equal(
-            [new OfficerStats("Ana", 3, 1, 0.5), new OfficerStats("Marko", 1, 0, 0.0)],
+            [new OfficerStats("Ana", 4, 1, 0.5), new OfficerStats("Marko", 1, 0, 0.0)],
             stats.Officers);
     }
 
@@ -108,13 +115,15 @@ public class DashboardCalculatorTests
             new ShadowRow("lr", Recommendation.Approve, Recommendation.Approve),
             new ShadowRow("lr", Recommendation.Reject, Recommendation.Approve),
             new ShadowRow("lr", Recommendation.Reject, Recommendation.Reject),
+            new ShadowRow("lr", Recommendation.Review, Recommendation.Review),
+            new ShadowRow("lr", Recommendation.Review, Recommendation.Reject),
             new ShadowRow("lr", null, Recommendation.Reject),
             new ShadowRow("lr", Recommendation.Reject, null),
             new ShadowRow("xgb", null, Recommendation.Approve),
         ]);
 
         Assert.Equal(
-            [new ModelAgreement("lr", 3, 2, 2.0 / 3.0), new ModelAgreement("xgb", 0, 0, null)],
+            [new ModelAgreement("lr", 5, 3, 3.0 / 5.0), new ModelAgreement("xgb", 0, 0, null)],
             stats.ShadowAgreement);
     }
 

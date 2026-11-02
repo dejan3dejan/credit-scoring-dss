@@ -10,26 +10,24 @@ public class MlClientTests
 {
     private const string ContractExampleJson = """
         {
-          "checking_account_status": "A12",
-          "duration_months": 24,
-          "credit_history": "A32",
-          "purpose": "A43",
-          "credit_amount": 3500,
-          "savings_account": "A61",
-          "employment_duration": "A73",
-          "installment_rate": 3,
-          "personal_status_sex": "A93",
-          "other_debtors_guarantors": "A101",
-          "present_residence_since": 2,
-          "property": "A123",
-          "age": 35,
-          "other_installment_plans": "A143",
-          "housing": "A152",
-          "existing_credits_count": 1,
-          "job": "A173",
-          "num_people_liable": 1,
-          "telephone": "A191",
-          "foreign_worker": "A201"
+          "loan_amnt": 12000,
+          "purpose": "debt_consolidation",
+          "emp_length_years": 4,
+          "home_ownership": "RENT",
+          "annual_inc": 58000,
+          "verification_status": "Source Verified",
+          "dti": 18.4,
+          "fico": 697,
+          "credit_history_years": 11.50444900752909,
+          "inq_last_6mths": 1,
+          "delinq_2yrs": 0,
+          "pub_rec": 0,
+          "pub_rec_bankruptcies": 0,
+          "revol_bal": 9400,
+          "revol_util": 52.3,
+          "open_acc": 9,
+          "total_acc": 21,
+          "mort_acc": 0
         }
         """;
 
@@ -53,14 +51,14 @@ public class MlClientTests
         }));
 
     [Fact]
-    public async Task Posts_the_contract_json_to_the_models_v2_predict_path()
+    public async Task Posts_the_contract_json_to_the_models_v3_predict_path()
     {
         var (client, handler) = Respond(HttpStatusCode.OK, """{"model_id":"m","p_bad":0.2}""");
 
         await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
-        Assert.Equal(new Uri("http://ml.test/v2/models/credit_rf_isotonic_v1/predict"), handler.LastRequest.RequestUri);
+        Assert.Equal(new Uri("http://ml.test/v3/models/credit_lc_xgb_isotonic_v1/predict"), handler.LastRequest.RequestUri);
         Assert.True(
             JsonNode.DeepEquals(JsonNode.Parse(ContractExampleJson), JsonNode.Parse(handler.LastBody!)),
             handler.LastBody);
@@ -73,7 +71,7 @@ public class MlClientTests
 
         await client.PredictAsync("a/b c", TestData.ContractRequest, CancellationToken.None);
 
-        Assert.Equal("/v2/models/a%2Fb%20c/predict", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Equal("/v3/models/a%2Fb%20c/predict", handler.LastRequest!.RequestUri!.AbsolutePath);
     }
 
     [Fact]
@@ -89,29 +87,40 @@ public class MlClientTests
     }
 
     [Fact]
-    public async Task Catalog_lists_the_loaded_models()
+    public async Task Catalog_lists_the_loaded_models_with_their_review_band()
     {
         var (client, handler) = Respond(HttpStatusCode.OK, """
-            {"models":[{"model_id":"credit_lr_isotonic_v1","model_name":"LogisticRegression","dataset":"statlog_german_credit",
-              "recommended_threshold":{"value":0.16666666666666666,"rule":"reject iff P(bad) >= value","derivation":"x"},
-              "created_at":"2026-11-01T19:23:42+00:00","library_versions":{"python":"3.13.8"}}]}
+            {"models":[
+              {"model_id":"credit_lc_xgb_isotonic_v1","model_name":"XGBoost","dataset":"lending_club",
+               "recommended_threshold":{"value":0.3286,"rule":"reject iff P(bad) >= value","derivation":"x"},
+               "recommended_review_band":{"from":0.2,"to":0.3286,"rule":"review closely iff from <= P(bad) < to"},
+               "created_at":"2026-11-02T12:55:25+00:00","library_versions":{"python":"3.13.8"}},
+              {"model_id":"credit_lc_lr_v1","model_name":"LogReg","dataset":"lending_club",
+               "recommended_threshold":{"value":0.3286},"recommended_review_band":null,
+               "created_at":"2026-11-02T13:00:00+00:00"}]}
             """);
 
         var result = await client.ListModelsAsync(CancellationToken.None);
 
-        Assert.Equal(new Uri("http://ml.test/v2/models"), handler.LastRequest!.RequestUri);
+        Assert.Equal(new Uri("http://ml.test/v3/models"), handler.LastRequest!.RequestUri);
         var catalog = Assert.IsType<MlCatalog>(result);
-        var model = Assert.Single(catalog.Models);
         Assert.Equal(
-            new MlModelInfo("credit_lr_isotonic_v1", "LogisticRegression", "statlog_german_credit", 1.0 / 6.0,
-                new DateTimeOffset(2026, 11, 1, 19, 23, 42, TimeSpan.Zero)),
-            model);
+            [
+                new MlModelInfo("credit_lc_xgb_isotonic_v1", "XGBoost", "lending_club", 0.3286, 0.2,
+                    new DateTimeOffset(2026, 11, 2, 12, 55, 25, TimeSpan.Zero)),
+                new MlModelInfo("credit_lc_lr_v1", "LogReg", "lending_club", 0.3286, null,
+                    new DateTimeOffset(2026, 11, 2, 13, 0, 0, TimeSpan.Zero)),
+            ],
+            catalog.Models);
     }
 
     [Theory]
     [InlineData("""{"models":[{"model_id":"m","model_name":"x","dataset":"d","created_at":"2026-11-01T00:00:00Z"}]}""")]
     [InlineData("""{"models":[{"model_id":"","model_name":"x","dataset":"d","recommended_threshold":{"value":0.2},"created_at":"2026-11-01T00:00:00Z"}]}""")]
     [InlineData("""{"models":[{"model_id":"m","model_name":"x","dataset":"d","recommended_threshold":{"value":1.5},"created_at":"2026-11-01T00:00:00Z"}]}""")]
+    [InlineData("""{"models":[{"model_id":"m","model_name":"x","dataset":"d","recommended_threshold":{"value":0.3},"recommended_review_band":{"from":0.3},"created_at":"2026-11-01T00:00:00Z"}]}""")]
+    [InlineData("""{"models":[{"model_id":"m","model_name":"x","dataset":"d","recommended_threshold":{"value":0.3},"recommended_review_band":{"from":0},"created_at":"2026-11-01T00:00:00Z"}]}""")]
+    [InlineData("""{"models":[{"model_id":"m","model_name":"x","dataset":"d","recommended_threshold":{"value":0.3},"recommended_review_band":{},"created_at":"2026-11-01T00:00:00Z"}]}""")]
     [InlineData("""{}""")]
     [InlineData("not json")]
     public async Task Catalog_with_an_unusable_entry_is_unavailable(string body)
@@ -136,11 +145,11 @@ public class MlClientTests
     [Fact]
     public async Task Ok_with_valid_body_returns_the_score()
     {
-        var (client, _) = Respond(HttpStatusCode.OK, """{"model_id":"credit_rf_isotonic_v1","p_bad":0.2731}""");
+        var (client, _) = Respond(HttpStatusCode.OK, """{"model_id":"credit_lc_xgb_isotonic_v1","p_bad":0.2731}""");
 
         var result = await client.PredictAsync(TestData.ModelId, TestData.ContractRequest, CancellationToken.None);
 
-        Assert.Equal(new MlScore(0.2731, "credit_rf_isotonic_v1"), result);
+        Assert.Equal(new MlScore(0.2731, "credit_lc_xgb_isotonic_v1"), result);
     }
 
     [Theory]

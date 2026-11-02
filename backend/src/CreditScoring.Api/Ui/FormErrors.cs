@@ -56,6 +56,7 @@ public static class FormErrors
     {
         var t when t == typeof(int) => "Enter a whole number without dots or commas, for example 3500.",
         var t when t == typeof(decimal) || t == typeof(double) => "Enter a number with a dot for decimals, for example 22.5.",
+        var t when t == typeof(DateOnly) => "Enter the month and year, for example 2015-05.",
         _ => "This value is not valid.",
     };
 }

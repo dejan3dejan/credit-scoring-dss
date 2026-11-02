@@ -18,7 +18,7 @@ public sealed record MatrixRow(int Approved, int Rejected, int Pending)
     public int Decided => Approved + Rejected;
 }
 
-public sealed record DecisionMatrix(MatrixRow Approve, MatrixRow Reject, MatrixRow Unavailable);
+public sealed record DecisionMatrix(MatrixRow Approve, MatrixRow Review, MatrixRow Reject, MatrixRow Unavailable);
 
 public sealed record HistogramBin(double From, double To, int Count);
 
@@ -49,6 +49,7 @@ public static class DashboardCalculator
     {
         var matrix = new DecisionMatrix(
             Row(rows.Where(r => r.Recommendation == Recommendation.Approve)),
+            Row(rows.Where(r => r.Recommendation == Recommendation.Review)),
             Row(rows.Where(r => r.Recommendation == Recommendation.Reject)),
             Row(rows.Where(r => r.Recommendation is null)));
 
@@ -69,9 +70,9 @@ public static class DashboardCalculator
             .GroupBy(r => r.DecidedBy ?? "")
             .Select(g =>
             {
-                var withRecommendation = g.Where(r => r.Recommendation is not null).ToList();
-                var overrides = withRecommendation.Count(IsOverride);
-                return new OfficerStats(g.Key, g.Count(), overrides, Rate(overrides, withRecommendation.Count));
+                var overridable = g.Where(r => r.Recommendation is Recommendation.Approve or Recommendation.Reject).ToList();
+                var overrides = overridable.Count(IsOverride);
+                return new OfficerStats(g.Key, g.Count(), overrides, Rate(overrides, overridable.Count));
             })
             .OrderByDescending(o => o.Decisions)
             .ThenBy(o => o.Name, StringComparer.Ordinal)
@@ -114,7 +115,7 @@ public static class DashboardCalculator
     }
 
     private static bool IsOverride(StatsRow r) =>
-        r.Recommendation is { } recommendation && r.Outcome is { } outcome && !OfficerDecision.Agrees(recommendation, outcome);
+        r.Recommendation is { } recommendation && r.Outcome is { } outcome && OfficerDecision.IsOverrideOf(recommendation, outcome);
 
     private static int BinOf(double pBad) => Math.Clamp((int)Math.Floor(pBad * Bins), 0, Bins - 1);
 

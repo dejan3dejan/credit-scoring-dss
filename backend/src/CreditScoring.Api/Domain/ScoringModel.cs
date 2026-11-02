@@ -15,6 +15,7 @@ public class ScoringModel
     public string DisplayName { get; private set; } = "";
     public string Dataset { get; private set; } = "";
     public double Threshold { get; private set; }
+    public double? ReviewFrom { get; private set; }
     public ModelRole Role { get; private set; }
     public DateTimeOffset RegisteredAt { get; private set; }
     public Guid? RegisteredByUserId { get; private set; }
@@ -24,6 +25,7 @@ public class ScoringModel
         string displayName,
         string dataset,
         double threshold,
+        double? reviewFrom,
         Actor registeredBy,
         DateTimeOffset registeredAt)
     {
@@ -32,6 +34,8 @@ public class ScoringModel
         ArgumentException.ThrowIfNullOrWhiteSpace(dataset);
         if (!double.IsFinite(threshold) || threshold <= 0 || threshold >= 1)
             throw new ArgumentOutOfRangeException(nameof(threshold), threshold, "must be in (0, 1)");
+        if (reviewFrom is { } from && !(from > 0 && from < threshold))
+            throw new ArgumentOutOfRangeException(nameof(reviewFrom), from, "must be in (0, threshold)");
 
         return new ScoringModel
         {
@@ -39,11 +43,17 @@ public class ScoringModel
             DisplayName = displayName.Trim(),
             Dataset = dataset.Trim(),
             Threshold = threshold,
+            ReviewFrom = reviewFrom,
             Role = ModelRole.Shadow,
             RegisteredAt = registeredAt,
             RegisteredByUserId = registeredBy.UserId,
         };
     }
+
+    public Recommendation RecommendationFor(double pBad) =>
+        pBad >= Threshold ? Recommendation.Reject
+        : ReviewFrom is { } from && pBad >= from ? Recommendation.Review
+        : Recommendation.Approve;
 
     internal ModelEvent MoveTo(ModelRole role, string reason, Actor changedBy, DateTimeOffset changedAt)
     {
@@ -107,10 +117,11 @@ public static class ModelRegistry
         string displayName,
         string dataset,
         double threshold,
+        double? reviewFrom,
         Actor registeredBy,
         DateTimeOffset now)
     {
-        var model = ScoringModel.Create(modelId, displayName, dataset, threshold, registeredBy, now);
+        var model = ScoringModel.Create(modelId, displayName, dataset, threshold, reviewFrom, registeredBy, now);
         return (model, ModelEvent.Create(model.ModelId, null, model.Role, null, registeredBy, now));
     }
 

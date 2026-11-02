@@ -24,6 +24,7 @@
     var rows = new (string Label, MatrixRow Row, bool HasRecommendation, FinalDecision? Agrees, HistoryOutcome Outcome)[]
     {
         ("Model recommends approve", s.Matrix.Approve, true, FinalDecision.Approve, HistoryOutcome.Approve),
+        ("Model asks for a closer review", s.Matrix.Review, false, null, HistoryOutcome.Review),
         ("Model recommends reject", s.Matrix.Reject, true, FinalDecision.Reject, HistoryOutcome.Reject),
         ("No score", s.Matrix.Unavailable, false, null, HistoryOutcome.ScoringUnavailable),
     };
@@ -140,6 +141,14 @@ else
                 @if (Model.Active is { } active)
                 {
                     var tx = X(active.Threshold);
+                    @if (active.ReviewFrom is { } reviewFrom)
+                    {
+                        var rx = X(reviewFrom);
+                        <g>
+                            <line class="chart-threshold chart-review" x1="@F(rx)" x2="@F(rx)" y1="@F(Top - 14)" y2="@F(Top + plotHeight)" />
+                            <text class="chart-label chart-threshold-label" x="@F(rx - 6)" y="@F(Top - 16)" text-anchor="end">Review from @reviewFrom.ToString("P1")</text>
+                        </g>
+                    }
                     <g>
                         <line class="chart-threshold" x1="@F(tx)" x2="@F(tx)" y1="@F(Top - 14)" y2="@F(Top + plotHeight)" />
                         <text class="chart-label chart-threshold-label" x="@F(tx + 6)" y="@F(Top - 16)">Reject from @active.Threshold.ToString("P1")</text>
@@ -159,7 +168,7 @@ else
                 </tbody>
             </table>
         </details>
-        <div class="panel-foot">Scores of the model that made each recommendation. The line marks the current active model's threshold; older applications may have been scored by another model.</div>
+        <div class="panel-foot">Scores of the model that made each recommendation. The lines mark where the active model starts asking for a closer review and where it recommends rejecting; older applications may have been scored by another model.</div>
     </section>
 
     <div class="cards">

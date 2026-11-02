@@ -29,14 +29,4 @@ public class ClientTests
         Assert.Throws<ArgumentOutOfRangeException>(
             () => Client.Create("Ana", DateOnly.FromDateTime(TestData.Now.UtcDateTime).AddDays(1), TestData.Officer, TestData.Now));
     }
-
-    [Theory]
-    [InlineData("1990-11-01", 36)]
-    [InlineData("1990-11-02", 35)]
-    public void Age_is_counted_in_whole_years_on_a_date(string birth, int expected)
-    {
-        var client = Client.Create("Ana", DateOnly.Parse(birth), TestData.Officer, TestData.Now);
-
-        Assert.Equal(expected, client.AgeOn(new DateOnly(2026, 11, 1)));
-    }
 }

@@ -10,6 +10,7 @@ public class ShadowScore
     public DecisionStatus Status { get; private set; }
     public double? PBad { get; private set; }
     public double? ThresholdUsed { get; private set; }
+    public double? ReviewFromUsed { get; private set; }
     public Recommendation? Recommendation { get; private set; }
     public string? ErrorCode { get; private set; }
     public DateTimeOffset ScoredAt { get; private set; }
@@ -20,6 +21,7 @@ public class ShadowScore
         Status = result.Status,
         PBad = result.PBad,
         ThresholdUsed = result.ThresholdUsed,
+        ReviewFromUsed = result.ReviewFromUsed,
         Recommendation = result.Recommendation,
         ErrorCode = result.ErrorCode,
         ScoredAt = result.EvaluatedAt,
