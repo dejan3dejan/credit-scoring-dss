@@ -53,6 +53,7 @@ RAW_INPUTS = [
     "mort_acc",
 ]
 RAW_COLUMNS = ["issue_d", "loan_status"] + RAW_INPUTS
+RESULT_COLUMNS = ["funded_amnt", "total_pymnt"]
 
 FEATURES = [
     "loan_amnt",
@@ -126,8 +127,13 @@ def prepare(df: pd.DataFrame) -> pd.DataFrame:
     return out[FEATURES + ["issue_year", "target"]]
 
 
-def load_dataset(path: Path = ACCEPTED_PATH) -> pd.DataFrame:
-    return prepare(keep_term(matured(add_target(load_raw(path)))))
+def load_dataset(path: Path = ACCEPTED_PATH, with_result: bool = False) -> pd.DataFrame:
+    columns = RAW_COLUMNS + RESULT_COLUMNS if with_result else RAW_COLUMNS
+    loans = keep_term(matured(add_target(load_raw(path, columns))))
+    prepared = prepare(loans)
+    if not with_result:
+        return prepared
+    return prepared.assign(result=loans["total_pymnt"] - loans["funded_amnt"])
 
 
 def split_by_time(df: pd.DataFrame, test_year: int = TEST_YEAR, train_from: int | None = None,

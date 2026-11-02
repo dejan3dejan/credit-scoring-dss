@@ -1,8 +1,8 @@
 import pandas as pd
 import pytest
 
-from src.data.lending_club import (FEATURES, add_target, emp_length_years, keep_term, matured, prepare,
-                                   split_by_time, term_months)
+from src.data.lending_club import (FEATURES, RAW_COLUMNS, RESULT_COLUMNS, add_target, emp_length_years, keep_term,
+                                   load_dataset, matured, prepare, split_by_time, term_months)
 
 
 def loans(**columns):
@@ -140,3 +140,30 @@ def test_split_by_time_refuses_a_year_with_no_loans():
     df = prepare(add_target(loans(issue_d=["Mar-2013"])))
     with pytest.raises(ValueError, match="2015"):
         split_by_time(df, test_year=2015)
+
+
+def write_loans(path, total_pymnt=11200.0, **columns):
+    loans(**columns).assign(funded_amnt=10000.0, total_pymnt=total_pymnt).to_csv(path, index=False)
+    return path
+
+
+def test_load_dataset_can_bring_each_loans_result(tmp_path):
+    path = write_loans(tmp_path / "accepted.csv", total_pymnt=[11200.0, 3800.0],
+                       loan_status=["Fully Paid", "Charged Off"], issue_d=["Mar-2014", "Feb-2015"])
+
+    df = load_dataset(path, with_result=True)
+
+    assert list(df["result"]) == [1200.0, -6200.0]
+    assert list(df["target"]) == [0, 1]
+
+
+def test_load_dataset_leaves_the_result_out_by_default(tmp_path):
+    df = load_dataset(write_loans(tmp_path / "accepted.csv"))
+    assert "result" not in df.columns
+
+
+def test_the_result_never_reaches_the_model_inputs(tmp_path):
+    df = load_dataset(write_loans(tmp_path / "accepted.csv", issue_d=["Mar-2014", "Feb-2015"]), with_result=True)
+    X_train, X_test, _, _ = split_by_time(df, test_year=2015)
+    assert "result" not in FEATURES and not set(RESULT_COLUMNS) & set(RAW_COLUMNS)
+    assert list(X_train.columns) == FEATURES and list(X_test.columns) == FEATURES
