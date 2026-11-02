@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 AtLeastOne = Annotated[int, Field(ge=1)]
 Bucket4 = Annotated[int, Field(ge=1, le=4)]
+Count = Annotated[int, Field(ge=0)]
+NonNegative = Annotated[float, Field(ge=0)]
 
 
 class PredictRequest(BaseModel):
@@ -31,13 +33,43 @@ class PredictRequest(BaseModel):
     foreign_worker: Literal["A201", "A202"]
 
 
-FEATURES = list(PredictRequest.model_fields)
+class LendingClubRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
 
-CATEGORY_CODES = {
-    name: list(get_args(field.annotation))
-    for name, field in PredictRequest.model_fields.items()
-    if get_origin(field.annotation) is Literal
-}
+    loan_amnt: AtLeastOne
+    purpose: Literal["car", "credit_card", "debt_consolidation", "home_improvement", "house", "major_purchase",
+                     "medical", "moving", "other", "renewable_energy", "small_business", "vacation", "wedding"]
+    emp_length_years: Annotated[int, Field(ge=0, le=10)] | None
+    home_ownership: Literal["RENT", "OWN", "MORTGAGE", "OTHER"]
+    annual_inc: NonNegative
+    verification_status: Literal["Not Verified", "Source Verified", "Verified"]
+    dti: NonNegative
+    fico: Annotated[float, Field(ge=300, le=850)]
+    credit_history_years: NonNegative
+    inq_last_6mths: Count
+    delinq_2yrs: Count
+    pub_rec: Count
+    pub_rec_bankruptcies: Count
+    revol_bal: NonNegative
+    revol_util: NonNegative | None
+    open_acc: Count
+    total_acc: Count
+    mort_acc: Count | None
+
+
+def category_codes(request_model):
+    return {
+        name: list(get_args(field.annotation))
+        for name, field in request_model.model_fields.items()
+        if get_origin(field.annotation) is Literal
+    }
+
+
+FEATURES = list(PredictRequest.model_fields)
+CATEGORY_CODES = category_codes(PredictRequest)
+
+LC_FEATURES = list(LendingClubRequest.model_fields)
+LC_CATEGORY_CODES = category_codes(LendingClubRequest)
 
 
 class PredictResponse(BaseModel):
@@ -70,6 +102,22 @@ class ModelSummary(BaseModel):
 
 class ModelList(BaseModel):
     models: list[ModelSummary]
+
+
+class ReviewBand(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: float = Field(alias="from", serialization_alias="from")
+    to: float
+    rule: str
+
+
+class LendingClubModelSummary(ModelSummary):
+    recommended_review_band: ReviewBand | None
+
+
+class LendingClubModelList(BaseModel):
+    models: list[LendingClubModelSummary]
 
 
 class Health(BaseModel):

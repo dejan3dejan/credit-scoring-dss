@@ -70,3 +70,9 @@ def test_metadata_carries_a_review_band_only_when_given(fitted):
 def test_review_band_must_start_below_the_threshold():
     with pytest.raises(ValueError, match="below the threshold"):
         lc_metadata(review_from=0.4)
+
+
+def test_feature_note_names_the_dataset_loader(fitted):
+    _, meta, _ = fitted
+    assert "src/data/load.py" in meta["features"]["note"]
+    assert "src/data/lending_club.py" in lc_metadata(dataset="lending_club")["features"]["note"]

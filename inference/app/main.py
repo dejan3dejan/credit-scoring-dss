@@ -8,8 +8,9 @@ import pandas as pd
 from fastapi import FastAPI, Request, Response
 
 from app.errors import ModelNotFound, ModelUnavailable, install_handlers
-from app.schemas import (CATEGORY_CODES, FEATURES, Health, ModelInfo, ModelList, ModelSummary, PredictRequest,
-                         PredictResponse)
+from app.schemas import (CATEGORY_CODES, FEATURES, LC_CATEGORY_CODES, LC_FEATURES, Health, LendingClubModelList,
+                         LendingClubModelSummary, LendingClubRequest, ModelInfo, ModelList, ModelSummary,
+                         PredictRequest, PredictResponse)
 from src.models.artifact import load_artifact
 
 logger = logging.getLogger("uvicorn.error.inference")
@@ -18,6 +19,11 @@ DEFAULT_MODEL_PATH = (
     Path(__file__).resolve().parents[2] / "ml" / "models" / "credit_rf_isotonic_v1.joblib"
 )
 DATASET = "statlog_german_credit"
+LC_DATASET = "lending_club"
+
+
+def dataset_of(metadata):
+    return metadata.get("dataset", DATASET)
 
 
 def check_contract_matches(metadata):
@@ -34,6 +40,20 @@ def check_contract_matches(metadata):
             )
 
 
+def check_lc_contract_matches(metadata):
+    features = metadata["features"]
+    if features["order"] != LC_FEATURES:
+        raise RuntimeError(f"artifact feature order {features['order']} differs from the v3 contract")
+    seen = features["categorical_levels_seen_in_training"]
+    for field, codes in LC_CATEGORY_CODES.items():
+        unseen = set(codes) - set(seen.get(field, []))
+        if unseen:
+            raise RuntimeError(f"{field}: contract codes {sorted(unseen)} were never seen in training")
+
+
+CONTRACT_CHECKS = {DATASET: check_contract_matches, LC_DATASET: check_lc_contract_matches}
+
+
 def load_model(model_path):
     model, metadata = load_artifact(model_path)
     check_contract_matches(metadata)
@@ -41,20 +61,29 @@ def load_model(model_path):
 
 
 def load_models_dir(models_dir):
-    models = {}
+    models = {DATASET: {}, LC_DATASET: {}}
     for path in sorted(Path(models_dir).glob("*.joblib")):
         try:
-            model, metadata = load_model(path)
+            model, metadata = load_artifact(path)
+            dataset = dataset_of(metadata)
+            if dataset not in CONTRACT_CHECKS:
+                raise RuntimeError(f"unknown dataset {dataset!r}")
+            CONTRACT_CHECKS[dataset](metadata)
         except Exception:
-            logger.exception("skipping %s: it failed to load or does not match the contract", path)
+            logger.exception("skipping %s: it failed to load or does not match its contract", path)
             continue
-        models[metadata["model_id"]] = (model, metadata)
-        logger.info("loaded %s for /v2", metadata["model_id"])
+        models[dataset][metadata["model_id"]] = (model, metadata)
+        logger.info("loaded %s (%s)", metadata["model_id"], dataset)
     return models
 
 
-def score(model, metadata, body):
-    X = pd.DataFrame([body.model_dump()], columns=FEATURES)
+def lc_frame(body):
+    X = pd.DataFrame([body.model_dump()], columns=LC_FEATURES)
+    return X.astype({name: float for name in LC_FEATURES if name not in LC_CATEGORY_CODES})
+
+
+def score(model, metadata, body, frame=None):
+    X = pd.DataFrame([body.model_dump()], columns=FEATURES) if frame is None else frame
     p_bad = float(model.predict_proba(X)[0, 1])
     if not (math.isfinite(p_bad) and 0.0 <= p_bad <= 1.0):
         raise ValueError(f"model returned p_bad={p_bad}, outside [0, 1]")
@@ -73,7 +102,8 @@ def create_app(model_path=None, models_dir=None) -> FastAPI:
         except Exception:
             logger.exception("model load failed for %s; scoring endpoints return 503", model_path)
             app.state.model, app.state.metadata = None, None
-        app.state.models = load_models_dir(models_dir)
+        loaded_models = load_models_dir(models_dir)
+        app.state.models, app.state.lc_models = loaded_models[DATASET], loaded_models[LC_DATASET]
         yield
 
     app = FastAPI(title="Credit scoring inference", version="1", lifespan=lifespan)
@@ -110,6 +140,28 @@ def create_app(model_path=None, models_dir=None) -> FastAPI:
         model, metadata = request.app.state.models[model_id]
         return score(model, metadata, body)
 
+    @app.get("/v3/models", response_model=LendingClubModelList, response_model_by_alias=True)
+    def list_lc_models(request: Request):
+        return LendingClubModelList(models=[
+            LendingClubModelSummary(
+                model_id=model_id,
+                model_name=metadata["model_name"],
+                dataset=LC_DATASET,
+                recommended_threshold=metadata["recommended_threshold"],
+                recommended_review_band=metadata.get("recommended_review_band"),
+                created_at=metadata["created_at"],
+                library_versions=metadata["library_versions"],
+            )
+            for model_id, (_, metadata) in sorted(request.app.state.lc_models.items())
+        ])
+
+    @app.post("/v3/models/{model_id}/predict", response_model=PredictResponse)
+    def predict_lc(model_id: str, body: LendingClubRequest, request: Request):
+        if model_id not in request.app.state.lc_models:
+            raise ModelNotFound(model_id)
+        model, metadata = request.app.state.lc_models[model_id]
+        return score(model, metadata, body, lc_frame(body))
+
     @app.get("/v1/model", response_model=ModelInfo)
     def model_info(request: Request):
         _, metadata = loaded(request)
@@ -124,7 +176,7 @@ def create_app(model_path=None, models_dir=None) -> FastAPI:
     @app.get("/health", response_model=Health)
     def health(request: Request, response: Response):
         metadata = request.app.state.metadata
-        loaded_ids = sorted(request.app.state.models)
+        loaded_ids = sorted([*request.app.state.models, *request.app.state.lc_models])
         if request.app.state.model is None:
             response.status_code = 503
             return Health(status="degraded", model_loaded=False, model_id=None, models_loaded=loaded_ids)

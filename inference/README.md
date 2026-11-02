@@ -1,7 +1,12 @@
 # credit-scoring-inference
 
 FastAPI service that scores one applicant and returns P(bad). It serves the
-`/v1` and `/v2` scoring endpoints and nothing else: no decision, no business rules.
+`/v1` and `/v2` endpoints for German Credit models and `/v3` for Lending Club
+models, and nothing else: no decision, no business rules.
+
+Each model file in the models directory is served under the version that
+matches the dataset in its metadata, after a check that its inputs match
+that version. A file that fails the check is logged and skipped.
 
 It loads the model with `load_artifact` from `../ml/src`, so `../ml` must be
 on `PYTHONPATH` (pytest sets this through `pytest.ini`).

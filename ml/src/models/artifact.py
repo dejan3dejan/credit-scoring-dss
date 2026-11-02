@@ -4,7 +4,10 @@ from pathlib import Path
 import joblib
 import sklearn
 
-FEATURE_ORDER_NOTE = "raw German Credit columns, names as in src/data/load.py"
+FEATURE_ORDER_NOTES = {
+    "statlog_german_credit": "raw German Credit columns, names as in src/data/load.py",
+    "lending_club": "Lending Club inputs, names as in src/data/lending_club.py",
+}
 
 
 def build_metadata(*, model_id, model_name, calibration, threshold, cost_fn, cost_fp,
@@ -34,7 +37,7 @@ def build_metadata(*, model_id, model_name, calibration, threshold, cost_fn, cos
         },
         "features": {
             "order": list(X_train.columns),
-            "note": FEATURE_ORDER_NOTE,
+            "note": FEATURE_ORDER_NOTES[dataset],
             "categorical_levels_seen_in_training": {
                 c: sorted(X_train[c].unique().tolist()) for c in categorical
             },
