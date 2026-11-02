@@ -77,6 +77,16 @@ class PredictResponse(BaseModel):
     p_bad: float
 
 
+class TopFactor(BaseModel):
+    feature: str
+    value: int | float | str | None
+    contribution: float
+
+
+class LendingClubPredictResponse(PredictResponse):
+    top_factors: list[TopFactor] | None
+
+
 class Threshold(BaseModel):
     value: float
     rule: str

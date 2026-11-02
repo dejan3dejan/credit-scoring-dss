@@ -9,9 +9,10 @@ from fastapi import FastAPI, Request, Response
 
 from app.errors import ModelNotFound, ModelUnavailable, install_handlers
 from app.schemas import (CATEGORY_CODES, FEATURES, LC_CATEGORY_CODES, LC_FEATURES, Health, LendingClubModelList,
-                         LendingClubModelSummary, LendingClubRequest, ModelInfo, ModelList, ModelSummary,
+                         LendingClubModelSummary, LendingClubPredictResponse, LendingClubRequest, ModelInfo, ModelList, ModelSummary,
                          PredictRequest, PredictResponse)
 from src.models.artifact import load_artifact
+from src.models.explain import explainable, top_factors
 
 logger = logging.getLogger("uvicorn.error.inference")
 
@@ -90,6 +91,16 @@ def score(model, metadata, body, frame=None):
     return PredictResponse(model_id=metadata["model_id"], p_bad=p_bad)
 
 
+def explain(model, body, frame):
+    if not explainable(model):
+        return None
+    sent = body.model_dump()
+    factors = top_factors(model, frame, LC_FEATURES)
+    if not all(math.isfinite(f["contribution"]) for f in factors):
+        raise ValueError(f"model returned a non-finite contribution: {factors}")
+    return [{**f, "value": sent[f["feature"]]} for f in factors]
+
+
 def create_app(model_path=None, models_dir=None) -> FastAPI:
     model_path = Path(model_path or os.environ.get("MODEL_PATH", DEFAULT_MODEL_PATH))
     models_dir = Path(models_dir or os.environ.get("MODELS_DIR", model_path.parent))
@@ -155,12 +166,14 @@ def create_app(model_path=None, models_dir=None) -> FastAPI:
             for model_id, (_, metadata) in sorted(request.app.state.lc_models.items())
         ])
 
-    @app.post("/v3/models/{model_id}/predict", response_model=PredictResponse)
+    @app.post("/v3/models/{model_id}/predict", response_model=LendingClubPredictResponse)
     def predict_lc(model_id: str, body: LendingClubRequest, request: Request):
         if model_id not in request.app.state.lc_models:
             raise ModelNotFound(model_id)
         model, metadata = request.app.state.lc_models[model_id]
-        return score(model, metadata, body, lc_frame(body))
+        frame = lc_frame(body)
+        scored = score(model, metadata, body, frame)
+        return LendingClubPredictResponse(**scored.model_dump(), top_factors=explain(model, body, frame))
 
     @app.get("/v1/model", response_model=ModelInfo)
     def model_info(request: Request):

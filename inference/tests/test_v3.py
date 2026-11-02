@@ -4,13 +4,15 @@ import numpy as np
 import pandas as pd
 import pytest
 import sklearn
+from sklearn.calibration import CalibratedClassifierCV
 from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.schemas import LC_CATEGORY_CODES, LC_FEATURES
 from conftest import VALID_REQUEST, make_artifact
 from src.models.artifact import build_metadata, load_artifact, save_artifact
-from src.models.lending_club_pipelines import logistic_regression_pipeline
+from src.models.explain import top_factors
+from src.models.lending_club_pipelines import logistic_regression_pipeline, xgboost_pipeline
 
 LC_REQUEST = {
     "loan_amnt": 12000,
@@ -60,10 +62,10 @@ def lc_training_data(n=600, seed=0, home_ownership=("RENT", "OWN", "MORTGAGE", "
     return df, y
 
 
-def make_lc_artifact(out_dir, model_id="test_lc_v1", columns=None, **data_options):
+def make_lc_artifact(out_dir, model_id="test_lc_v1", columns=None, build=logistic_regression_pipeline, **data_options):
     X, y = lc_training_data(**data_options)
     X = X[columns or LC_FEATURES]
-    model = logistic_regression_pipeline().fit(X, y)
+    model = build().fit(X, y)
     metadata = build_metadata(
         model_id=model_id, model_name="LogReg", calibration="none", threshold=0.3286,
         cost_fn=2.0431, cost_fp=1, seed=0, X_train=X, y_train=y, data_sha256="0" * 64,
@@ -75,6 +77,10 @@ def make_lc_artifact(out_dir, model_id="test_lc_v1", columns=None, **data_option
     return model_path
 
 
+def calibrated_xgboost():
+    return CalibratedClassifierCV(xgboost_pipeline(), method="isotonic", cv=3)
+
+
 @pytest.fixture(scope="module")
 def models_dir(tmp_path_factory):
     out = tmp_path_factory.mktemp("mixed_models")
@@ -82,6 +88,7 @@ def models_dir(tmp_path_factory):
     make_lc_artifact(out, "test_lc_v1")
     make_lc_artifact(out, "test_lc_reordered_v1", columns=list(reversed(LC_FEATURES)))
     make_lc_artifact(out, "test_lc_no_other_v1", home_ownership=("RENT", "OWN", "MORTGAGE"))
+    make_lc_artifact(out, "test_lc_xgb_v1", build=calibrated_xgboost)
     return out
 
 
@@ -97,7 +104,7 @@ def test_lists_only_lending_club_models_with_their_review_band(v3_client):
 
     assert resp.status_code == 200
     models = resp.json()["models"]
-    assert [m["model_id"] for m in models] == ["test_lc_v1"]
+    assert [m["model_id"] for m in models] == ["test_lc_v1", "test_lc_xgb_v1"]
     assert models[0]["dataset"] == "lending_club"
     assert models[0]["recommended_threshold"]["value"] == pytest.approx(0.3286)
     assert models[0]["recommended_review_band"]["from"] == pytest.approx(0.2)
@@ -113,7 +120,7 @@ def test_artifacts_that_break_the_lending_club_contract_are_skipped(v3_client):
     loaded = v3_client.get("/health").json()["models_loaded"]
     assert "test_lc_reordered_v1" not in loaded
     assert "test_lc_no_other_v1" not in loaded
-    assert {"test_model_v1", "test_lc_v1"} <= set(loaded)
+    assert {"test_model_v1", "test_lc_v1", "test_lc_xgb_v1"} <= set(loaded)
 
 
 def test_predict_scores_with_the_named_model(v3_client, models_dir):
@@ -122,7 +129,22 @@ def test_predict_scores_with_the_named_model(v3_client, models_dir):
     assert resp.status_code == 200
     model, _ = load_artifact(models_dir / "test_lc_v1.joblib")
     expected = model.predict_proba(pd.DataFrame([LC_REQUEST], columns=LC_FEATURES))[0, 1]
-    assert resp.json() == {"model_id": "test_lc_v1", "p_bad": pytest.approx(expected, abs=1e-12)}
+    assert resp.json() == {"model_id": "test_lc_v1", "p_bad": pytest.approx(expected, abs=1e-12), "top_factors": None}
+
+
+def test_calibrated_xgboost_explains_its_score_with_the_top_five_inputs(v3_client, models_dir):
+    body = {**LC_REQUEST, "emp_length_years": None}
+    resp = v3_client.post("/v3/models/test_lc_xgb_v1/predict", json=body)
+
+    assert resp.status_code == 200
+    model, _ = load_artifact(models_dir / "test_lc_xgb_v1.joblib")
+    frame = pd.DataFrame([body], columns=LC_FEATURES).astype({c: float for c in LC_FEATURES if c not in LC_CATEGORY_CODES})
+    factors = resp.json()["top_factors"]
+    assert len(factors) == 5
+    assert [f["feature"] for f in factors] == [f["feature"] for f in top_factors(model, frame, LC_FEATURES)]
+    for got, expected in zip(factors, top_factors(model, frame, LC_FEATURES)):
+        assert got["contribution"] == pytest.approx(expected["contribution"], abs=1e-9)
+        assert got["value"] == body[got["feature"]]
 
 
 @pytest.mark.parametrize("field", ["emp_length_years", "revol_util", "mort_acc"])
@@ -205,6 +227,40 @@ def test_real_lending_club_artifact_scores_like_direct_predict_proba():
         for body, p in zip(requests, expected):
             resp = c.post(f"/v3/models/{metadata['model_id']}/predict", json=body)
             assert resp.status_code == 200
-            assert resp.json() == {"model_id": metadata["model_id"], "p_bad": pytest.approx(p, abs=1e-12)}
+            got = resp.json()
+            assert (got["model_id"], got["p_bad"]) == (metadata["model_id"], pytest.approx(p, abs=1e-12))
+            one = frame.iloc[[requests.index(body)]]
+            expected = top_factors(model, one, LC_FEATURES)
+            assert [f["feature"] for f in got["top_factors"]] == [f["feature"] for f in expected]
+            assert [f["contribution"] for f in got["top_factors"]] == pytest.approx([f["contribution"] for f in expected], abs=1e-9)
         listed = c.get("/v3/models").json()["models"]
         assert [m["model_id"] for m in listed] == [metadata["model_id"]]
+
+
+def test_a_non_finite_contribution_is_an_internal_error(v3_client, monkeypatch):
+    import app.main
+    monkeypatch.setattr(app.main, "top_factors",
+                        lambda *a, **k: [{"feature": "fico", "value": 697.0, "contribution": float("nan")}])
+
+    resp = v3_client.post("/v3/models/test_lc_xgb_v1/predict", json=LC_REQUEST)
+
+    assert resp.status_code == 500
+    assert resp.json()["error"]["code"] == "internal_error"
+
+
+def test_factor_values_are_the_request_values_not_the_float_frame(v3_client, monkeypatch):
+    import app.main
+    monkeypatch.setattr(app.main, "top_factors", lambda *a, **k: [
+        {"feature": "loan_amnt", "value": 12000.0, "contribution": 0.2},
+        {"feature": "emp_length_years", "value": None, "contribution": -0.1},
+        {"feature": "fico", "value": 697.0, "contribution": 0.1},
+    ])
+
+    resp = v3_client.post("/v3/models/test_lc_xgb_v1/predict", json={**LC_REQUEST, "emp_length_years": None})
+
+    assert resp.json()["top_factors"] == [
+        {"feature": "loan_amnt", "value": 12000, "contribution": 0.2},
+        {"feature": "emp_length_years", "value": None, "contribution": -0.1},
+        {"feature": "fico", "value": 697.0, "contribution": 0.1},
+    ]
+    assert type(resp.json()["top_factors"][0]["value"]) is int

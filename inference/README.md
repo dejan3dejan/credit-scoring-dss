@@ -8,6 +8,11 @@ Each model file in the models directory is served under the version that
 matches the dataset in its metadata, after a check that its inputs match
 that version. A file that fails the check is logged and skipped.
 
+For a calibrated XGBoost model, a `/v3` score also lists the five inputs that
+moved it most (`top_factors`), using XGBoost's built-in TreeSHAP. The
+contributions are on the model's score scale before calibration, so they show
+direction and relative size, not shares of P(bad). Other models return `null`.
+
 It loads the model with `load_artifact` from `../ml/src`, so `../ml` must be
 on `PYTHONPATH` (pytest sets this through `pytest.ini`).
 
