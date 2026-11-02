@@ -195,4 +195,71 @@ public class CreditDecisionServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => Evaluate(new MlScore(0.1, ModelId), cts.Token));
     }
+    private static CreditApplication Unscored(string errorCode = MlErrorCodes.Timeout)
+    {
+        var application = TestData.ContractApplication();
+        application.Decision = CreditDecision.Unavailable(errorCode, TestData.Now.AddHours(-1));
+        return application;
+    }
+
+    [Fact]
+    public async Task Scoring_again_scores_an_unscored_application_and_keeps_the_failed_attempt()
+    {
+        var (service, _) = Create(new MlScore(0.3, ModelId));
+
+        var result = await service.RescoreAsync(Unscored(), [TestData.ActiveModel()], CancellationToken.None);
+
+        var rescored = Assert.IsType<Rescored>(result);
+        Assert.Equal((DecisionStatus.Scored, Recommendation.Reject), (rescored.Evaluation.Decision.Status, rescored.Evaluation.Decision.Recommendation));
+        Assert.Equal((MlErrorCodes.Timeout, TestData.Now.AddHours(-1)), (rescored.Previous!.ErrorCode, rescored.Previous.AttemptedAt));
+    }
+
+    [Fact]
+    public async Task Scoring_again_that_fails_again_is_a_new_failed_attempt()
+    {
+        var (service, _) = Create(new MlFailure(MlErrorCodes.Unreachable, null, "x", []));
+
+        var rescored = Assert.IsType<Rescored>(
+            await service.RescoreAsync(Unscored(), [TestData.ActiveModel()], CancellationToken.None));
+
+        Assert.Equal(MlErrorCodes.Unreachable, rescored.Evaluation.Decision.ErrorCode);
+        Assert.Equal(MlErrorCodes.Timeout, rescored.Previous!.ErrorCode);
+    }
+
+    [Fact]
+    public async Task Scoring_again_without_any_earlier_attempt_has_no_previous_failure()
+    {
+        var (service, _) = Create(new MlScore(0.1, ModelId));
+
+        var rescored = Assert.IsType<Rescored>(
+            await service.RescoreAsync(TestData.ContractApplication(), [TestData.ActiveModel()], CancellationToken.None));
+
+        Assert.Null(rescored.Previous);
+    }
+
+    [Fact]
+    public async Task Scoring_again_is_refused_for_a_scored_application_without_calling_the_model()
+    {
+        var (service, ml) = Create(new MlScore(0.1, ModelId));
+        var application = TestData.ContractApplication();
+        application.Decision = CreditDecision.Scored(0.1, ModelId, Threshold, Recommendation.Approve, TestData.Now);
+
+        var result = await service.RescoreAsync(application, [TestData.ActiveModel()], CancellationToken.None);
+
+        Assert.Equal(new RescoreRefused("This application already has a score."), result);
+        Assert.Null(ml.LastRequest);
+    }
+
+    [Fact]
+    public async Task Scoring_again_is_refused_once_an_officer_has_decided()
+    {
+        var (service, ml) = Create(new MlScore(0.1, ModelId));
+        var application = Unscored();
+        application.OfficerDecision = OfficerDecision.Record(null, FinalDecision.Reject, "assessed manually", TestData.Officer, TestData.Now);
+
+        var result = await service.RescoreAsync(application, [TestData.ActiveModel()], CancellationToken.None);
+
+        Assert.Equal(new RescoreRefused("A decision is already recorded for this application."), result);
+        Assert.Null(ml.LastRequest);
+    }
 }

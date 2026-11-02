@@ -316,4 +316,68 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
 
         Assert.IsType<NotFoundResult>(response.Result);
     }
+    private Task<ActionResult<ApplicationResponse>> Rescore(Guid id) =>
+        WithController(c => c.Rescore(id, CancellationToken.None));
+
+    [Fact]
+    public async Task Scoring_again_replaces_the_failed_score_and_keeps_the_failed_attempt()
+    {
+        const string challenger = "credit_lr_isotonic_v1";
+        await RegisterShadow(challenger);
+        ml.ResultsByModel[challenger] = new MlScore(0.3, challenger);
+        var created = await Submit("Unscored", new MlFailure(MlErrorCodes.Timeout, null, "x", []));
+        ml.Result = new MlScore(0.1, TestData.ModelId);
+        ml.ResultsByModel[challenger] = new MlScore(0.05, challenger);
+        clock.Now = TestData.Now.AddMinutes(10);
+
+        var response = await Rescore(created.Id);
+
+        var body = Assert.IsType<ApplicationResponse>(Assert.IsType<OkObjectResult>(response.Result).Value);
+        Assert.Equal((DecisionStatus.Scored, 0.1, TestData.Now.AddMinutes(10)), (body.Decision!.Status, body.Decision.PBad, body.Decision.EvaluatedAt));
+        Assert.Equal([new ScoringFailureResponse(MlErrorCodes.Timeout, TestData.Now)], body.ScoringFailures);
+
+        var fetched = (await WithController(c => c.Get(created.Id, CancellationToken.None))).Value!;
+        Assert.Equal(body.ScoringFailures, fetched.ScoringFailures);
+        await using var db = database.CreateContext();
+        Assert.Equal(DecisionStatus.Scored, (await db.Decisions.SingleAsync(d => d.CreditApplicationId == created.Id)).Status);
+        var shadow = await db.ShadowScores.SingleAsync(s => s.CreditApplicationId == created.Id);
+        Assert.Equal((0.05, TestData.Now.AddMinutes(10)), (shadow.PBad, shadow.ScoredAt));
+    }
+
+    [Fact]
+    public async Task Scoring_again_a_scored_application_is_a_conflict()
+    {
+        var created = await Submit("Scored", new MlScore(0.1, TestData.ModelId));
+        ml.Result = new MlScore(0.9, TestData.ModelId);
+
+        var response = await Rescore(created.Id);
+
+        var conflict = Assert.IsType<ConflictObjectResult>(response.Result);
+        Assert.Equal("This application already has a score.", Assert.IsType<ProblemDetails>(conflict.Value).Title);
+        await using var db = database.CreateContext();
+        Assert.Equal(0.1, (await db.Decisions.SingleAsync()).PBad);
+        Assert.False(await db.ScoringFailures.AnyAsync());
+    }
+
+    [Fact]
+    public async Task Scoring_again_after_a_manual_decision_is_a_conflict()
+    {
+        var created = await Submit("Assessed", new MlFailure(MlErrorCodes.Timeout, null, "x", []));
+        await Decide(created.Id, FinalDecision.Reject, "assessed manually");
+        ml.Result = new MlScore(0.1, TestData.ModelId);
+
+        var response = await Rescore(created.Id);
+
+        Assert.IsType<ConflictObjectResult>(response.Result);
+        await using var db = database.CreateContext();
+        Assert.Equal(DecisionStatus.ScoringUnavailable, (await db.Decisions.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task Scoring_again_an_unknown_application_is_not_found()
+    {
+        var response = await Rescore(Guid.NewGuid());
+
+        Assert.IsType<NotFoundResult>(response.Result);
+    }
 }

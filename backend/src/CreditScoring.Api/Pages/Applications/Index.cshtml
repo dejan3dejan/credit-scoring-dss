@@ -1,10 +1,14 @@
 @page "/applications"
 @model CreditScoring.Api.Pages.Applications.IndexModel
+@using CreditScoring.Api.Auth
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService Authorization
 @{
     ViewData["Title"] = "History";
     var r = Model.Result;
     var first = r.TotalCount == 0 ? 0 : (r.Page - 1) * r.PageSize + 1;
     var last = Math.Min(r.Page * r.PageSize, r.TotalCount);
+    var canDecide = (await Authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
     var outcomes = new (HistoryOutcome? Value, string Label)[]
     {
         (null, "All"),
@@ -19,7 +23,10 @@
         <h1>History</h1>
         <p>Every application and the recommendation it received, newest first.</p>
     </div>
-    <a class="button button-primary" asp-page="New">New application</a>
+    @if (canDecide)
+    {
+        <a class="button button-primary" asp-page="New">New application</a>
+    }
 }
 
 <form method="get" class="toolbar">

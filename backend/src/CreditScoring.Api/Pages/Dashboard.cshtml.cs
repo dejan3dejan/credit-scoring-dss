@@ -19,6 +19,14 @@ public class DashboardModel(ApplicationsApi api) : PageModel
 
     public ScoringModelResponse? Active { get; private set; }
 
+    public Dictionary<string, string?> HistoryRoute(HistoryOutcome? outcome = null, ReviewFilter? review = null) => new()
+    {
+        ["from"] = From?.ToString("yyyy-MM-dd"),
+        ["to"] = To?.ToString("yyyy-MM-dd"),
+        ["outcome"] = outcome?.ToString(),
+        ["review"] = review?.ToString(),
+    };
+
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         var zone = TimeZoneInfo.Local;

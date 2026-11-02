@@ -19,6 +19,8 @@ public class DetailsModel(ApplicationsApi api, IAuthorizationService authorizati
 
     public bool CanDecide { get; private set; }
 
+    public string? RescoreMessage { get; private set; }
+
     public List<ShadowScoreResponse>? ShadowScores { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(Guid id, CancellationToken cancellationToken)
@@ -44,6 +46,27 @@ public class DetailsModel(ApplicationsApi api, IAuthorizationService authorizati
                 break;
             case AlreadyDecided:
                 AlreadyDecidedElsewhere = true;
+                break;
+            default:
+                throw new UnreachableException();
+        }
+
+        return await LoadAsync(id, cancellationToken) ? Page() : NotFound();
+    }
+
+    public async Task<IActionResult> OnPostRescoreAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (!(await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded)
+            return Forbid();
+
+        switch (await api.RescoreAsync(id, cancellationToken))
+        {
+            case null:
+                return NotFound();
+            case Submitted:
+                return RedirectToPage(new { id });
+            case Conflicted conflicted:
+                RescoreMessage = conflicted.Message;
                 break;
             default:
                 throw new UnreachableException();

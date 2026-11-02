@@ -37,6 +37,11 @@ public sealed record OfficerDecisionResponse(
         decision.IsOverride);
 }
 
+public sealed record ScoringFailureResponse(string ErrorCode, DateTimeOffset AttemptedAt)
+{
+    public static ScoringFailureResponse From(ScoringFailure failure) => new(failure.ErrorCode, failure.AttemptedAt);
+}
+
 public sealed record ApplicationResponse
 {
     public required Guid Id { get; init; }
@@ -70,6 +75,7 @@ public sealed record ApplicationResponse
 
     public required DecisionResponse? Decision { get; init; }
     public required OfficerDecisionResponse? OfficerDecision { get; init; }
+    public required IReadOnlyList<ScoringFailureResponse> ScoringFailures { get; init; }
 
     public static ApplicationResponse From(CreditApplication application) => new()
     {
@@ -102,6 +108,7 @@ public sealed record ApplicationResponse
         IsForeignWorker = application.IsForeignWorker,
         Decision = application.Decision is null ? null : DecisionResponse.From(application.Decision),
         OfficerDecision = application.OfficerDecision is null ? null : OfficerDecisionResponse.From(application.OfficerDecision),
+        ScoringFailures = application.ScoringFailures.OrderBy(f => f.AttemptedAt).Select(ScoringFailureResponse.From).ToList(),
     };
 }
 

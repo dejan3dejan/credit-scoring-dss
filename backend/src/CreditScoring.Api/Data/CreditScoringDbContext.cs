@@ -15,6 +15,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
     public DbSet<ScoringModel> ScoringModels => Set<ScoringModel>();
     public DbSet<ModelEvent> ModelEvents => Set<ModelEvent>();
     public DbSet<ShadowScore> ShadowScores => Set<ShadowScore>();
+    public DbSet<ScoringFailure> ScoringFailures => Set<ScoringFailure>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -61,6 +62,17 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
                 .WithOne()
                 .HasForeignKey(s => s.CreditApplicationId)
                 .OnDelete(DeleteBehavior.Cascade);
+            application.HasMany(a => a.ScoringFailures)
+                .WithOne()
+                .HasForeignKey(f => f.CreditApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ScoringFailure>(failure =>
+        {
+            failure.ToTable("scoring_failures");
+            failure.Property(f => f.ErrorCode).HasMaxLength(64);
+            failure.HasIndex(f => new { f.CreditApplicationId, f.AttemptedAt });
         });
 
         modelBuilder.Entity<ScoringModel>(model =>

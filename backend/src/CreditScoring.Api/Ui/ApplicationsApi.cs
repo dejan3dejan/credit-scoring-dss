@@ -63,6 +63,19 @@ public class ApplicationsApi(HttpClient http)
         };
     }
 
+    public async Task<SubmitResult?> RescoreAsync(Guid id, CancellationToken cancellationToken)
+    {
+        using var response = await http.PostAsync($"{Path}/{id}/rescore", null, cancellationToken);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.OK => new Submitted(await ReadAsync<ApplicationResponse>(response, Json, cancellationToken)),
+            HttpStatusCode.Conflict => new Conflicted(
+                (await ReadAsync<ProblemDetails>(response, JsonSerializerOptions.Web, cancellationToken)).Title ?? "The application could not be scored again."),
+            HttpStatusCode.NotFound => null,
+            _ => throw Unexpected(response),
+        };
+    }
+
     public async Task<SubmitResult> CreateClientAsync(CreateClientRequest request, CancellationToken cancellationToken)
     {
         using var response = await http.PostAsJsonAsync(ClientsPath, request, Json, cancellationToken);

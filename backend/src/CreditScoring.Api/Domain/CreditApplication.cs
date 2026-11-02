@@ -35,4 +35,5 @@ public class CreditApplication
     public CreditDecision? Decision { get; set; }
     public OfficerDecision? OfficerDecision { get; set; }
     public List<ShadowScore> ShadowScores { get; init; } = [];
+    public List<ScoringFailure> ScoringFailures { get; init; } = [];
 }

@@ -8,6 +8,7 @@
     string YesNo(bool value) => value ? "Yes" : "No";
     string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
     const double Radius = 90;
+    var canRescore = Model.CanDecide && a.OfficerDecision is null && d?.Status != DecisionStatus.Scored;
     var circumference = 2 * Math.PI * Radius;
 }
 
@@ -23,7 +24,10 @@
             <p><span class="mono">@a.ClientNumber</span> · @a.CreditAmount.ToString("N0") DM over @a.DurationMonths months · @Labels.Of(a.Purpose) · submitted by @a.SubmittedBy</p>
         </div>
     </div>
-    <a class="button" asp-page="New">New application</a>
+    @if (Model.CanDecide)
+    {
+        <a class="button" asp-page="New">New application</a>
+    }
 }
 
 <section class="panel">
@@ -72,12 +76,27 @@
                 <div class="verdict verdict-unavailable">Scoring unavailable</div>
                 <p class="result-text">
                     @(d?.ErrorCode is { } code ? Labels.ScoringError(code) ?? "The scoring service failed." : "No scoring result was recorded.")
-                    No recommendation was made and no score was substituted. Assess the application manually, or submit it again once scoring is available.
+                    No recommendation was made and no score was substituted.
+                    @(canRescore ? "Score it again once the service is back, or assess the application manually." : "")
                 </p>
                 <dl class="facts">
                     <div><dt>Error code</dt><dd class="mono">@(d?.ErrorCode ?? "none")</dd></div>
                     <div><dt>Attempted</dt><dd>@(d?.EvaluatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm") ?? "–")</dd></div>
+                    @if (a.ScoringFailures.Count > 0)
+                    {
+                        <div><dt>Earlier attempts</dt><dd>@a.ScoringFailures.Count</dd></div>
+                    }
                 </dl>
+                @if (Model.RescoreMessage is { } message)
+                {
+                    <div class="alert" role="alert">@message</div>
+                }
+                @if (canRescore)
+                {
+                    <form method="post" asp-page-handler="Rescore" class="rescore">
+                        <button type="submit" class="button">Score again</button>
+                    </form>
+                }
             </div>
         </div>
     }
@@ -165,6 +184,13 @@
                 <span class="timeline-what">Submitted by @a.SubmittedBy</span>
                 <span class="timeline-when">@a.SubmittedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</span>
             </li>
+            @foreach (var failure in a.ScoringFailures)
+            {
+                <li class="failed">
+                    <span class="timeline-what">Scoring failed (<span class="mono">@failure.ErrorCode</span>)</span>
+                    <span class="timeline-when">@failure.AttemptedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</span>
+                </li>
+            }
             @if (d is null)
             {
                 <li class="failed"><span class="timeline-what">No scoring result recorded</span></li>

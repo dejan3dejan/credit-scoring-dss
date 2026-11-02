@@ -28,6 +28,18 @@ public class CreditDecisionService(
         return new Evaluation(results[0], shadows.Select((m, i) => ShadowScore.Of(m, results[i + 1])).ToList());
     }
 
+    public async Task<RescoreResult> RescoreAsync(
+        CreditApplication application,
+        IReadOnlyCollection<ScoringModel> models,
+        CancellationToken cancellationToken)
+    {
+        if (Rescoring.Refusal(application) is { } refusal)
+            return new RescoreRefused(refusal);
+
+        var evaluation = await EvaluateAsync(application, models, cancellationToken);
+        return new Rescored(evaluation, application.Decision is { } previous ? ScoringFailure.Of(previous) : null);
+    }
+
     private async Task<CreditDecision> ScoreAsync(ScoringModel model, MlPredictRequest request, CancellationToken cancellationToken)
     {
         var result = await ml.PredictAsync(model.ModelId, request, cancellationToken);

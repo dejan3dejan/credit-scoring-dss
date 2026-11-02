@@ -251,4 +251,26 @@ public class ApplicationsApiTests
 
         await Assert.ThrowsAsync<HttpRequestException>(() => api.ListAsync(new HistoryQuery(), CancellationToken.None));
     }
+    [Fact]
+    public async Task Rescore_posts_to_the_rescore_endpoint_and_returns_the_application()
+    {
+        var (api, handler) = Respond(HttpStatusCode.OK, StoredApplicationJson());
+        var id = Guid.NewGuid();
+
+        var result = await api.RescoreAsync(id, CancellationToken.None);
+
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal($"http://app.test/api/applications/{id}/rescore", handler.LastRequest.RequestUri!.ToString());
+        Assert.IsType<Submitted>(result);
+    }
+
+    [Fact]
+    public async Task Rescore_conflict_carries_the_message_and_not_found_is_null()
+    {
+        var (conflictApi, _) = Respond(HttpStatusCode.Conflict, """{"status":409,"title":"This application already has a score."}""");
+        var (missingApi, _) = Respond(HttpStatusCode.NotFound, "{}");
+
+        Assert.Equal(new Conflicted("This application already has a score."), await conflictApi.RescoreAsync(Guid.NewGuid(), CancellationToken.None));
+        Assert.Null(await missingApi.RescoreAsync(Guid.NewGuid(), CancellationToken.None));
+    }
 }

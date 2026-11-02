@@ -49,15 +49,78 @@ public class ApplicationsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApplicationResponse>> Get(Guid id, CancellationToken cancellationToken)
     {
-        var application = await db.Applications
-            .AsNoTracking()
-            .Include(a => a.Client)
-            .Include(a => a.Decision)
-            .Include(a => a.OfficerDecision)
+        var application = await WithDetails(db.Applications.AsNoTracking())
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
         return application is null ? NotFound() : ApplicationResponse.From(application);
     }
+
+    [HttpPost("{id:guid}/rescore")]
+    [Authorize(Policy = Policies.CanDecide)]
+    [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApplicationResponse>> Rescore(Guid id, CancellationToken cancellationToken)
+    {
+        var snapshot = await WithDetails(db.Applications.AsNoTracking())
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+        if (snapshot is null)
+            return NotFound();
+
+        var models = await db.ScoringModels.AsNoTracking().ToListAsync(cancellationToken);
+        switch (await decisions.RescoreAsync(snapshot, models, cancellationToken))
+        {
+            case RescoreRefused refused:
+                return RescoreConflict(refused.Message);
+
+            case Rescored rescored:
+                await using (var transaction = await db.Database.BeginTransactionAsync(CancellationToken.None))
+                {
+                    await LockAsync(id);
+                    var application = await WithDetails(db.Applications)
+                        .Include(a => a.ShadowScores)
+                        .SingleAsync(a => a.Id == id, CancellationToken.None);
+                    if (Rescoring.Refusal(application) is { } refusal)
+                        return RescoreConflict(refusal);
+                    if (application.Decision?.Id != snapshot.Decision?.Id)
+                        return RescoreConflict("This application was scored again by someone else.");
+
+                    if (rescored.Previous is { } previous)
+                        application.ScoringFailures.Add(previous);
+                    if (application.Decision is { } failed)
+                        db.Decisions.Remove(failed);
+                    application.Decision = rescored.Evaluation.Decision;
+                    db.ShadowScores.RemoveRange(application.ShadowScores);
+                    application.ShadowScores.Clear();
+                    application.ShadowScores.AddRange(rescored.Evaluation.ShadowScores);
+
+                    await db.SaveChangesAsync(CancellationToken.None);
+                    await transaction.CommitAsync(CancellationToken.None);
+                    return Ok(ApplicationResponse.From(application));
+                }
+
+            default:
+                throw new UnreachableException();
+        }
+    }
+
+    private static IQueryable<CreditApplication> WithDetails(IQueryable<CreditApplication> applications) =>
+        applications
+            .Include(a => a.Client)
+            .Include(a => a.Decision)
+            .Include(a => a.OfficerDecision)
+            .Include(a => a.ScoringFailures);
+
+    private Task LockAsync(Guid id) =>
+        db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT 1 FROM credit_applications WHERE id = {id} FOR UPDATE",
+            CancellationToken.None);
+
+    private ConflictObjectResult RescoreConflict(string message) => Conflict(new ProblemDetails
+    {
+        Status = StatusCodes.Status409Conflict,
+        Title = message,
+    });
 
     [HttpGet("{id:guid}/shadow-scores")]
     [Authorize(Policy = Policies.CanSeeStats)]
@@ -87,10 +150,9 @@ public class ApplicationsController(
         RecordDecisionRequest request,
         CancellationToken cancellationToken)
     {
-        var application = await db.Applications
-            .Include(a => a.Client)
-            .Include(a => a.Decision)
-            .Include(a => a.OfficerDecision)
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await LockAsync(id);
+        var application = await WithDetails(db.Applications)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
         if (application is null)
             return NotFound();
@@ -102,6 +164,7 @@ public class ApplicationsController(
                 try
                 {
                     await db.SaveChangesAsync(CancellationToken.None);
+                    await transaction.CommitAsync(CancellationToken.None);
                 }
                 catch (DbUpdateException ex) when (Pg.IsUniqueViolation(ex))
                 {

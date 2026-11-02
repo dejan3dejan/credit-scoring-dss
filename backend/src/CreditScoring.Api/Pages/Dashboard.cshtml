@@ -21,12 +21,23 @@
         return $"M{F(x)},{F(y + h)} V{F(y + r)} Q{F(x)},{F(y)} {F(x + r)},{F(y)} H{F(x + w - r)} Q{F(x + w)},{F(y)} {F(x + w)},{F(y + r)} V{F(y + h)} Z";
     }
     string Range(HistogramBin b) => $"{b.From:P0} – {b.To:P0}";
-    var rows = new (string Label, MatrixRow Row, bool HasRecommendation, FinalDecision? Agrees)[]
+    var rows = new (string Label, MatrixRow Row, bool HasRecommendation, FinalDecision? Agrees, HistoryOutcome Outcome)[]
     {
-        ("Model recommends approve", s.Matrix.Approve, true, FinalDecision.Approve),
-        ("Model recommends reject", s.Matrix.Reject, true, FinalDecision.Reject),
-        ("No score", s.Matrix.Unavailable, false, null),
+        ("Model recommends approve", s.Matrix.Approve, true, FinalDecision.Approve, HistoryOutcome.Approve),
+        ("Model recommends reject", s.Matrix.Reject, true, FinalDecision.Reject, HistoryOutcome.Reject),
+        ("No score", s.Matrix.Unavailable, false, null, HistoryOutcome.ScoringUnavailable),
     };
+    async Task Cell(int count, HistoryOutcome outcome, ReviewFilter review)
+    {
+        if (count == 0)
+        {
+            @count
+        }
+        else
+        {
+            <a class="cell-link" asp-page="/Applications/Index" asp-all-route-data="Model.HistoryRoute(outcome, review)">@count</a>
+        }
+    }
 }
 
 @section Band {
@@ -61,10 +72,10 @@
 else
 {
     <div class="stat-row stat-row-4">
-        <div class="panel stat"><span class="stat-value">@s.Applications</span><span class="stat-label">Applications</span></div>
-        <div class="panel stat"><span class="stat-value">@s.Pending</span><span class="stat-label">Awaiting decision</span></div>
-        <div class="panel stat"><span class="stat-value">@Pct(s.OverrideRate)</span><span class="stat-label">Decisions against the model</span></div>
-        <div class="panel stat"><span class="stat-value">@Pct(s.UnavailableRate)</span><span class="stat-label">Scoring unavailable</span></div>
+        <a class="panel stat stat-link" asp-page="/Applications/Index" asp-all-route-data="Model.HistoryRoute()"><span class="stat-value">@s.Applications</span><span class="stat-label">Applications</span></a>
+        <a class="panel stat stat-link" asp-page="/Applications/Index" asp-all-route-data="Model.HistoryRoute(review: ReviewFilter.Pending)"><span class="stat-value">@s.Pending</span><span class="stat-label">Awaiting decision</span></a>
+        <a class="panel stat stat-link" asp-page="/Applications/Index" asp-all-route-data="Model.HistoryRoute(review: ReviewFilter.Override)"><span class="stat-value">@Pct(s.OverrideRate)</span><span class="stat-label">Decisions against the model</span></a>
+        <a class="panel stat stat-link" asp-page="/Applications/Index" asp-all-route-data="Model.HistoryRoute(HistoryOutcome.ScoringUnavailable)"><span class="stat-value">@Pct(s.UnavailableRate)</span><span class="stat-label">Scoring unavailable</span></a>
     </div>
 
     <h2 class="section-title">Recommendation and decision</h2>
@@ -74,13 +85,13 @@ else
                 <tr><th scope="col"></th><th scope="col" class="num">Officer approved</th><th scope="col" class="num">Officer rejected</th><th scope="col" class="num">Awaiting</th><th scope="col" class="num">Against the model</th></tr>
             </thead>
             <tbody>
-                @foreach (var (label, row, hasRecommendation, agrees) in rows)
+                @foreach (var (label, row, hasRecommendation, agrees, outcome) in rows)
                 {
                     <tr>
                         <th scope="row">@label</th>
-                        <td class="num @(agrees == FinalDecision.Reject ? "cell-override" : null)">@row.Approved</td>
-                        <td class="num @(agrees == FinalDecision.Approve ? "cell-override" : null)">@row.Rejected</td>
-                        <td class="num muted">@row.Pending</td>
+                        <td class="num @(agrees == FinalDecision.Reject ? "cell-override" : null)">@{ await Cell(row.Approved, outcome, ReviewFilter.Approved); }</td>
+                        <td class="num @(agrees == FinalDecision.Approve ? "cell-override" : null)">@{ await Cell(row.Rejected, outcome, ReviewFilter.Rejected); }</td>
+                        <td class="num muted">@{ await Cell(row.Pending, outcome, ReviewFilter.Pending); }</td>
                         <td class="num">
                             @if (hasRecommendation)
                             {
@@ -95,7 +106,7 @@ else
                 }
             </tbody>
         </table>
-        <div class="panel-foot">Highlighted cells are decisions against the model. Rejecting an applicant the model would approve is the cautious side; approving one it would reject carries the risk. Rates are out of decided applications in that row.</div>
+        <div class="panel-foot">Select a count to open those applications in History. Highlighted cells are decisions against the model. Rejecting an applicant the model would approve is the cautious side; approving one it would reject carries the risk. Rates are out of decided applications in that row.</div>
     </section>
 
     <h2 class="section-title">P(bad) of scored applications</h2>
