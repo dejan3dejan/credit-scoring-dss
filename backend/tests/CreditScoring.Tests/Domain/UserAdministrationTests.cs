@@ -4,7 +4,10 @@ namespace CreditScoring.Tests.Domain;
 
 public class UserAdministrationTests
 {
-    private static User NewUser(UserRole role = UserRole.Officer) => User.Create("ana", "Ana Jovanović", role, TestData.Now);
+    private static readonly Branch HeadOffice = Branch.Create("HQ", "Head office", null, TestData.Now);
+
+    private static User NewUser(UserRole role = UserRole.Officer) =>
+        User.Create("ana", "Ana Jovanović", role, TestData.Now, role is UserRole.Officer or UserRole.Manager ? HeadOffice.Id : null);
 
     private static User Locked()
     {
@@ -30,11 +33,11 @@ public class UserAdministrationTests
     {
         var user = NewUser();
 
-        user.Edit("  Ana Marić ", "   ", UserRole.Manager, Languages.Serbian);
+        user.Edit("  Ana Marić ", "   ", UserRole.Manager, Languages.Serbian, null);
 
         Assert.Equal(("Ana Marić", null, UserRole.Manager, "sr"), (user.DisplayName, user.Email, user.Role, user.PreferredLanguage));
 
-        user.Edit("Ana Marić", " ana@bank.rs ", UserRole.Manager, Languages.Serbian);
+        user.Edit("Ana Marić", " ana@bank.rs ", UserRole.Manager, Languages.Serbian, null);
         Assert.Equal("ana@bank.rs", user.Email);
     }
 
@@ -44,7 +47,7 @@ public class UserAdministrationTests
         var user = NewUser();
         var stamp = user.SecurityStamp;
 
-        user.Edit("Ana", null, UserRole.Risk, Languages.English);
+        user.Edit("Ana", null, UserRole.Risk, Languages.English, null);
 
         Assert.Equal(stamp, user.SecurityStamp);
     }
@@ -57,13 +60,13 @@ public class UserAdministrationTests
         var user = NewUser();
 
         Assert.Throws<ArgumentOutOfRangeException>(() => user.SetPreferredLanguage(language));
-        Assert.Throws<ArgumentOutOfRangeException>(() => user.Edit("Ana", null, UserRole.Officer, language));
+        Assert.Throws<ArgumentOutOfRangeException>(() => user.Edit("Ana", null, UserRole.Officer, language, null));
     }
 
     [Fact]
     public void An_undefined_role_is_refused()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => NewUser().Edit("Ana", null, (UserRole)99, Languages.English));
+        Assert.Throws<ArgumentOutOfRangeException>(() => NewUser().Edit("Ana", null, (UserRole)99, Languages.English, null));
     }
 
     [Fact]
@@ -127,8 +130,8 @@ public class UserAdministrationTests
     {
         var admin = NewUser(UserRole.Admin);
 
-        var refused = Assert.IsType<UserRefused>(
-            UserAdministration.Update(admin, admin.Id, "Ana", null, UserRole.Officer, Languages.English));
+        var refused = Assert.IsType<Refused>(
+            UserAdministration.Update(admin, admin.Id, "Ana", null, UserRole.Officer, Languages.English, HeadOffice));
 
         Assert.Equal(("role", "own_role"), (refused.Field, refused.Code));
         Assert.Equal(UserRole.Admin, admin.Role);
@@ -139,7 +142,7 @@ public class UserAdministrationTests
     {
         var admin = NewUser(UserRole.Admin);
 
-        Assert.IsType<UserChanged>(UserAdministration.Update(admin, admin.Id, "Ana M.", "a@b.rs", UserRole.Admin, Languages.Serbian));
+        Assert.IsType<Changed>(UserAdministration.Update(admin, admin.Id, "Ana M.", "a@b.rs", UserRole.Admin, Languages.Serbian, null));
 
         Assert.Equal(("Ana M.", "sr"), (admin.DisplayName, admin.PreferredLanguage));
     }
@@ -149,7 +152,7 @@ public class UserAdministrationTests
     {
         var officer = NewUser();
 
-        Assert.IsType<UserChanged>(UserAdministration.Update(officer, Guid.NewGuid(), "Ana", null, UserRole.Manager, Languages.English));
+        Assert.IsType<Changed>(UserAdministration.Update(officer, Guid.NewGuid(), "Ana", null, UserRole.Manager, Languages.English, HeadOffice));
 
         Assert.Equal(UserRole.Manager, officer.Role);
     }
@@ -159,7 +162,7 @@ public class UserAdministrationTests
     {
         var admin = NewUser(UserRole.Admin);
 
-        var refused = Assert.IsType<UserRefused>(UserAdministration.Deactivate(admin, admin.Id));
+        var refused = Assert.IsType<Refused>(UserAdministration.Deactivate(admin, admin.Id));
 
         Assert.Equal((null, "own_account"), (refused.Field, refused.Code));
         Assert.True(admin.IsActive);
@@ -170,8 +173,80 @@ public class UserAdministrationTests
     {
         var officer = NewUser();
 
-        Assert.IsType<UserChanged>(UserAdministration.Deactivate(officer, Guid.NewGuid()));
+        Assert.IsType<Changed>(UserAdministration.Deactivate(officer, Guid.NewGuid()));
 
         Assert.False(officer.IsActive);
+    }
+
+    [Theory]
+    [InlineData(UserRole.Officer)]
+    [InlineData(UserRole.Manager)]
+    public void Officers_and_managers_need_a_branch(UserRole role)
+    {
+        var refused = Assert.IsType<Refused>(UserAdministration.CheckBranch(role, null));
+
+        Assert.Equal(("branchId", "branch_required"), (refused.Field, refused.Code));
+        Assert.Null(UserAdministration.CheckBranch(role, HeadOffice));
+    }
+
+    [Theory]
+    [InlineData(UserRole.Admin)]
+    [InlineData(UserRole.Risk)]
+    public void Admin_and_risk_have_no_branch(UserRole role)
+    {
+        var refused = Assert.IsType<Refused>(UserAdministration.CheckBranch(role, HeadOffice));
+
+        Assert.Equal(("branchId", "branch_not_allowed"), (refused.Field, refused.Code));
+        Assert.Null(UserAdministration.CheckBranch(role, null));
+    }
+
+    [Fact]
+    public void Users_cannot_join_an_inactive_branch()
+    {
+        var closed = Branch.Create("ZR", "Zrenjanin", null, TestData.Now);
+        closed.Deactivate(hasActiveUsers: false);
+
+        var refused = Assert.IsType<Refused>(UserAdministration.CheckBranch(UserRole.Officer, closed));
+
+        Assert.Equal(("branchId", "branch_inactive"), (refused.Field, refused.Code));
+    }
+
+    [Fact]
+    public void Update_moves_the_user_to_another_branch()
+    {
+        var officer = NewUser();
+        var other = Branch.Create("BG", "Beograd", null, TestData.Now);
+
+        Assert.IsType<Changed>(UserAdministration.Update(officer, Guid.NewGuid(), "Ana", null, UserRole.Officer, Languages.English, other));
+
+        Assert.Equal(other.Id, officer.BranchId);
+    }
+
+    [Fact]
+    public void Update_refuses_a_role_without_its_branch()
+    {
+        var risk = NewUser(UserRole.Risk);
+
+        var refused = Assert.IsType<Refused>(
+            UserAdministration.Update(risk, Guid.NewGuid(), "Ana", null, UserRole.Officer, Languages.English, null));
+
+        Assert.Equal("branch_required", refused.Code);
+        Assert.Equal(UserRole.Risk, risk.Role);
+    }
+
+    [Fact]
+    public void Reactivating_needs_an_active_branch()
+    {
+        var officer = NewUser();
+        officer.Deactivate();
+        var closed = Branch.Create("ZR", "Zrenjanin", null, TestData.Now);
+        closed.Deactivate(hasActiveUsers: false);
+
+        var refused = Assert.IsType<Refused>(UserAdministration.Reactivate(officer, closed));
+
+        Assert.Equal((null, "branch_inactive"), (refused.Field, refused.Code));
+        Assert.False(officer.IsActive);
+        Assert.IsType<Changed>(UserAdministration.Reactivate(officer, HeadOffice));
+        Assert.True(officer.IsActive);
     }
 }

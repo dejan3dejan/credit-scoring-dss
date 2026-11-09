@@ -8,7 +8,7 @@ public class PermissionsTests
     [Fact]
     public void Admin_permissions()
     {
-        Assert.Equal(["audit.read", "branches.manage", "users.manage"], Permissions.For(UserRole.Admin));
+        Assert.Equal(["audit.read", "branches.manage", "clients.anonymise", "users.manage"], Permissions.For(UserRole.Admin));
     }
 
     [Fact]

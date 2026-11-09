@@ -60,11 +60,11 @@ public class SessionCheckTests
         var user = NewUser();
         var principal = Credentials.PrincipalFor(user);
 
-        user.Edit("Ana Marić", null, UserRole.Officer, Languages.English);
+        user.Edit("Ana Marić", null, UserRole.Officer, Languages.English, null);
         Assert.Equal(SessionCheck.Refresh, Credentials.Check(principal, user));
 
         var renamed = Credentials.PrincipalFor(user);
-        user.Edit("Ana Marić", null, UserRole.Manager, Languages.English);
+        user.Edit("Ana Marić", null, UserRole.Manager, Languages.English, null);
         Assert.Equal(SessionCheck.Refresh, Credentials.Check(renamed, user));
     }
 
@@ -72,11 +72,42 @@ public class SessionCheckTests
     public void A_refreshed_principal_carries_the_new_role()
     {
         var user = NewUser();
-        user.Edit("Ana", null, UserRole.Risk, Languages.English);
+        user.Edit("Ana", null, UserRole.Risk, Languages.English, null);
 
         var principal = Credentials.PrincipalFor(user);
 
         Assert.True(principal.IsInRole(nameof(UserRole.Risk)));
         Assert.Equal(user.SecurityStamp.ToString(), principal.FindFirstValue(Credentials.StampClaim));
+    }
+
+    [Fact]
+    public void A_move_to_another_branch_refreshes_the_session()
+    {
+        var user = User.Create("ana", "Ana", UserRole.Officer, TestData.Now, TestData.BranchId);
+        var principal = Credentials.PrincipalFor(user);
+
+        user.Edit("Ana", null, UserRole.Officer, Languages.English, Guid.NewGuid());
+
+        Assert.Equal(SessionCheck.Refresh, Credentials.Check(principal, user));
+    }
+
+    [Fact]
+    public void Officers_and_managers_are_scoped_to_their_branch_and_others_are_not()
+    {
+        var officer = User.Create("o", "O", UserRole.Officer, TestData.Now, TestData.BranchId);
+        var manager = User.Create("m", "M", UserRole.Manager, TestData.Now, TestData.BranchId);
+
+        Assert.Equal(TestData.BranchId, Credentials.BranchScopeOf(Credentials.PrincipalFor(officer)));
+        Assert.Equal(TestData.BranchId, Credentials.BranchScopeOf(Credentials.PrincipalFor(manager)));
+        Assert.Null(Credentials.BranchScopeOf(Credentials.PrincipalFor(User.Create("r", "R", UserRole.Risk, TestData.Now))));
+        Assert.Null(Credentials.BranchScopeOf(Credentials.PrincipalFor(User.Create("a", "A", UserRole.Admin, TestData.Now))));
+    }
+
+    [Fact]
+    public void An_officer_without_a_branch_fails_loudly_instead_of_seeing_everything()
+    {
+        var officer = Credentials.PrincipalFor(User.Create("o", "O", UserRole.Officer, TestData.Now));
+
+        Assert.Throws<InvalidOperationException>(() => Credentials.BranchScopeOf(officer));
     }
 }

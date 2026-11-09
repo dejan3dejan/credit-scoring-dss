@@ -17,7 +17,9 @@ public sealed class DevelopmentDatabaseTests
     }
 
     private static readonly SeedUser Officer =
-        new() { UserName = "officer", DisplayName = "Ana Jovanović", Role = UserRole.Officer, Password = "pw-officer" };
+        new() { UserName = "officer", DisplayName = "Ana Jovanović", Role = UserRole.Officer, Password = "pw-officer", Branch = "HQ" };
+
+    private static readonly SeedOptions Seed = new() { Users = [Officer] };
 
     [Fact]
     public async Task An_empty_database_is_migrated_and_seeded_on_start()
@@ -25,7 +27,7 @@ public sealed class DevelopmentDatabaseTests
         await using (var db = Context())
         {
             await db.Database.EnsureDeletedAsync();
-            await DevelopmentDatabase.PrepareAsync(db, [Officer], TestData.Now);
+            await DevelopmentDatabase.PrepareAsync(db, Seed, TestData.Now);
         }
 
         await using var check = Context();
@@ -40,10 +42,10 @@ public sealed class DevelopmentDatabaseTests
         await using (var db = Context())
         {
             await db.Database.EnsureDeletedAsync();
-            await DevelopmentDatabase.PrepareAsync(db, [Officer], TestData.Now);
+            await DevelopmentDatabase.PrepareAsync(db, Seed, TestData.Now);
         }
         await using (var db = Context())
-            await DevelopmentDatabase.PrepareAsync(db, [Officer], TestData.Now);
+            await DevelopmentDatabase.PrepareAsync(db, Seed, TestData.Now);
 
         await using var check = Context();
         Assert.Equal(1, await check.Users.CountAsync());

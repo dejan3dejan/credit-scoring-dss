@@ -18,6 +18,7 @@ var connectionString = builder.Configuration.GetConnectionString("CreditScoring"
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditContext, HttpAuditContext>();
+builder.Services.AddScoped<IBranchScope, HttpBranchScope>();
 builder.Services.AddScoped<AuditInterceptor>();
 builder.Services.AddDbContext<CreditScoringDbContext>((services, options) => options
     .UseNpgsql(connectionString)
@@ -73,7 +74,7 @@ if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var seed = app.Configuration.GetSection(SeedOptions.SectionName).Get<SeedOptions>() ?? new SeedOptions();
-    await DevelopmentDatabase.PrepareAsync(scope.ServiceProvider.GetRequiredService<CreditScoringDbContext>(), seed.Users, TimeProvider.System.GetUtcNow());
+    await DevelopmentDatabase.PrepareAsync(scope.ServiceProvider.GetRequiredService<CreditScoringDbContext>(), seed, TimeProvider.System.GetUtcNow());
 
     app.MapOpenApi().AllowAnonymous();
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Credit scoring API v1"));

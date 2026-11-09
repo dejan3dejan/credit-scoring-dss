@@ -9,6 +9,7 @@ public static class Permissions
     public const string AuditRead = "audit.read";
     public const string ClientsRead = "clients.read";
     public const string ClientsWrite = "clients.write";
+    public const string ClientsAnonymise = "clients.anonymise";
     public const string ApplicationsRead = "applications.read";
     public const string ApplicationsWrite = "applications.write";
     public const string ApplicationsDecide = "applications.decide";
@@ -21,11 +22,11 @@ public static class Permissions
 
     public static readonly IReadOnlyList<string> All =
     [
-        UsersManage, BranchesManage, AuditRead, ClientsRead, ClientsWrite, ApplicationsRead, ApplicationsWrite,
+        UsersManage, BranchesManage, AuditRead, ClientsRead, ClientsWrite, ClientsAnonymise, ApplicationsRead, ApplicationsWrite,
         ApplicationsDecide, ApplicationsAssign, ApplicationsApproveEscalated, OutcomesRecord, StatsRead, ModelsRead, ModelsManage,
     ];
 
-    private static readonly string[] Admin = [UsersManage, BranchesManage, AuditRead];
+    private static readonly string[] Admin = [UsersManage, BranchesManage, AuditRead, ClientsAnonymise];
 
     private static readonly string[] Officer =
         [ClientsRead, ClientsWrite, ApplicationsRead, ApplicationsWrite, ApplicationsDecide, ModelsRead];

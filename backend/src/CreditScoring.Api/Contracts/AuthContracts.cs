@@ -28,7 +28,15 @@ public sealed record LanguageRequest
     public string? Language { get; init; }
 }
 
-public sealed record BranchSummary(Guid Id, string Code, string Name);
+public sealed record BranchSummary(Guid Id, string Code, string Name)
+{
+    public static BranchSummary? For(User user, Branch? branch)
+    {
+        if (branch?.Id != user.BranchId)
+            throw new ArgumentException("The branch given is not the user's branch.", nameof(branch));
+        return branch is null ? null : new(branch.Id, branch.Code, branch.Name);
+    }
+}
 
 public sealed record MeResponse(
     Guid Id,
@@ -40,12 +48,12 @@ public sealed record MeResponse(
     string PreferredLanguage,
     bool MustChangePassword)
 {
-    public static MeResponse From(User user) => new(
+    public static MeResponse From(User user, Branch? branch) => new(
         user.Id,
         user.UserName,
         user.DisplayName,
         user.Role,
-        null,
+        BranchSummary.For(user, branch),
         Auth.Permissions.For(user.Role),
         user.PreferredLanguage,
         user.MustChangePassword);

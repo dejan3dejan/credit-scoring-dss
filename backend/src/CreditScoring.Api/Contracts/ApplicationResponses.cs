@@ -53,6 +53,7 @@ public sealed record ApplicationResponse
 {
     public required Guid Id { get; init; }
     public required Guid ClientId { get; init; }
+    public required Guid BranchId { get; init; }
     public required string ClientNumber { get; init; }
     public required string ApplicantName { get; init; }
     public required string SubmittedBy { get; init; }
@@ -87,6 +88,7 @@ public sealed record ApplicationResponse
     {
         Id = application.Id,
         ClientId = application.ClientId,
+        BranchId = application.BranchId,
         ClientNumber = application.Client?.ClientNumber
             ?? throw new InvalidOperationException("the application's client must be loaded to build a response"),
         ApplicantName = application.ApplicantName,
@@ -130,7 +132,8 @@ public sealed record ApplicationSummary(
     Recommendation? Recommendation,
     double? PBad,
     FinalDecision? FinalDecision,
-    bool? IsOverride)
+    bool? IsOverride,
+    Guid BranchId)
 {
     public static readonly Expression<Func<CreditApplication, ApplicationSummary>> FromApplication = a => new ApplicationSummary(
         a.Id,
@@ -144,7 +147,8 @@ public sealed record ApplicationSummary(
         a.Decision == null ? null : a.Decision.Recommendation,
         a.Decision == null ? null : a.Decision.PBad,
         a.OfficerDecision == null ? null : a.OfficerDecision.Outcome,
-        a.OfficerDecision == null ? null : a.OfficerDecision.IsOverride);
+        a.OfficerDecision == null ? null : a.OfficerDecision.IsOverride,
+        a.BranchId);
 }
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

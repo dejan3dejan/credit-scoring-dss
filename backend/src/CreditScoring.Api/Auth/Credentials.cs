@@ -15,6 +15,7 @@ public enum SessionCheck
 public static class Credentials
 {
     public const string StampClaim = "security_stamp";
+    public const string BranchClaim = "branch_id";
 
     public static SessionCheck Check(ClaimsPrincipal principal, User? user)
     {
@@ -22,7 +23,8 @@ public static class Credentials
             return SessionCheck.Reject;
 
         var current = principal.FindFirstValue(ClaimTypes.Role) == user.Role.ToString()
-            && principal.FindFirstValue(ClaimTypes.Name) == user.DisplayName;
+            && principal.FindFirstValue(ClaimTypes.Name) == user.DisplayName
+            && principal.FindFirstValue(BranchClaim) == user.BranchId?.ToString();
         return current ? SessionCheck.Valid : SessionCheck.Refresh;
     }
 
@@ -56,9 +58,20 @@ public static class Credentials
                 new Claim(ClaimTypes.Name, user.DisplayName),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim(StampClaim, user.SecurityStamp.ToString()),
+                .. user.BranchId is { } branchId ? [new Claim(BranchClaim, branchId.ToString())] : Array.Empty<Claim>(),
             ],
             CookieAuthenticationDefaults.AuthenticationScheme);
         return new ClaimsPrincipal(identity);
+    }
+
+    public static Guid? BranchScopeOf(ClaimsPrincipal principal)
+    {
+        var role = principal.FindFirstValue(ClaimTypes.Role);
+        if (role != nameof(UserRole.Officer) && role != nameof(UserRole.Manager))
+            return null;
+        return Guid.TryParse(principal.FindFirstValue(BranchClaim), out var branchId)
+            ? branchId
+            : throw new InvalidOperationException($"A signed-in {role} has no branch; refusing to show every branch.");
     }
 
     public static Actor ActorOf(ClaimsPrincipal principal)

@@ -54,7 +54,7 @@ public sealed class AuthControllerTests(DatabaseFixture database) : IAsyncLifeti
 
     private async Task<User> NewUser(UserRole role = UserRole.Officer)
     {
-        var user = User.Create($"user-{Guid.NewGuid():N}"[..20], "Ana Jovanović", role, TestData.Now);
+        var user = User.Create($"user-{Guid.NewGuid():N}"[..20], "Ana Jovanović", role, TestData.Now, role is UserRole.Officer or UserRole.Manager ? database.HeadOfficeId : null);
         user.SetPasswordHash(Credentials.Hash(user, Password));
         await using var db = database.CreateContext();
         db.Users.Add(user);
@@ -108,7 +108,7 @@ public sealed class AuthControllerTests(DatabaseFixture database) : IAsyncLifeti
         Assert.Equal(user.UserName, me.UserName);
         Assert.Equal("Ana Jovanović", me.DisplayName);
         Assert.Equal(UserRole.Officer, me.Role);
-        Assert.Null(me.Branch);
+        Assert.Equal(database.HeadOfficeId, me.Branch!.Id);
         Assert.Equal(Permissions.For(UserRole.Officer), me.Permissions);
         Assert.Equal("en", me.PreferredLanguage);
         Assert.Equal(new Actor(user.Id, "Ana Jovanović"), Credentials.ActorOf(authentication.SignedIn!));

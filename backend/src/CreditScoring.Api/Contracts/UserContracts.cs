@@ -17,6 +17,9 @@ public sealed record CreateUserRequest
     [Required, EnumDataType(typeof(UserRole)), Display(Name = "Role")]
     public UserRole? Role { get; init; }
 
+    [Display(Name = "Branch")]
+    public Guid? BranchId { get; init; }
+
     [AllowedValues(Languages.English, Languages.Serbian, null), Display(Name = "Language")]
     public string? PreferredLanguage { get; init; }
 
@@ -34,6 +37,9 @@ public sealed record UpdateUserRequest
 
     [Required, EnumDataType(typeof(UserRole)), Display(Name = "Role")]
     public UserRole? Role { get; init; }
+
+    [Display(Name = "Branch")]
+    public Guid? BranchId { get; init; }
 
     [Required, AllowedValues(Languages.English, Languages.Serbian, null), Display(Name = "Language")]
     public string? PreferredLanguage { get; init; }
@@ -59,13 +65,13 @@ public sealed record UserResponse(
     DateTimeOffset? LastSignedInAt,
     DateTimeOffset? LockedUntil)
 {
-    public static UserResponse From(User user, DateTimeOffset now) => new(
+    public static UserResponse From(User user, Branch? branch, DateTimeOffset now) => new(
         user.Id,
         user.UserName,
         user.DisplayName,
         user.Email,
         user.Role,
-        null,
+        BranchSummary.For(user, branch),
         user.IsActive,
         user.PreferredLanguage,
         user.MustChangePassword,

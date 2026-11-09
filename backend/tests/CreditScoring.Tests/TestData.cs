@@ -15,7 +15,9 @@ internal static class TestData
 
     public static readonly Actor Officer = new(Guid.Parse("0192f000-0000-7000-8000-000000000001"), "Tester");
 
-    public static readonly Client Client = Client.Create("Test Applicant", null, Officer, Now);
+    public static readonly Guid BranchId = Guid.Parse("0192f000-0000-7000-8000-0000000000b1");
+
+    public static readonly Client Client = Client.Create("Test Applicant", null, BranchId, Officer, Now);
 
     public static ScoringModel ShadowModel(string modelId, double threshold = Threshold, double? reviewFrom = ReviewFrom) =>
         ModelRegistry.Register(modelId, "Test model", Dataset, threshold, reviewFrom, Officer, Now).Model;
@@ -72,11 +74,14 @@ internal static class TestData
         MortAcc = 0,
     };
 
-    public static CreditApplication ContractApplication() => new()
+    public static CreditApplication ContractApplication() => Application(Client);
+
+    public static CreditApplication Application(Client client) => new()
     {
-        ApplicantName = "Test Applicant",
-        ClientId = Client.Id,
-        Client = Client,
+        ApplicantName = client.FullName,
+        ClientId = client.Id,
+        Client = client,
+        BranchId = client.BranchId,
         SubmittedBy = "tester",
         SubmittedAt = Now,
         LoanAmount = 12_000,

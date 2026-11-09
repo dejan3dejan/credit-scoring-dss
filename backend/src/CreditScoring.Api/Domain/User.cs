@@ -31,10 +31,11 @@ public class User
     public bool IsActive { get; private set; } = true;
     public bool MustChangePassword { get; private set; }
     public Guid SecurityStamp { get; private set; }
+    public Guid? BranchId { get; private set; }
 
     public static string NormalizeUserName(string userName) => userName.Trim().ToLowerInvariant();
 
-    public static User Create(string userName, string displayName, UserRole role, DateTimeOffset createdAt)
+    public static User Create(string userName, string displayName, UserRole role, DateTimeOffset createdAt, Guid? branchId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userName);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -49,6 +50,7 @@ public class User
             Role = role,
             CreatedAt = createdAt,
             SecurityStamp = Guid.NewGuid(),
+            BranchId = branchId,
         };
     }
 
@@ -83,7 +85,7 @@ public class User
         LastSignedInAt = now;
     }
 
-    public void Edit(string displayName, string? email, UserRole role, string preferredLanguage)
+    public void Edit(string displayName, string? email, UserRole role, string preferredLanguage, Guid? branchId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         if (!Enum.IsDefined(role))
@@ -91,8 +93,9 @@ public class User
         SetPreferredLanguage(preferredLanguage);
 
         DisplayName = displayName.Trim();
-        Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+        Email = Text.TrimToNull(email);
         Role = role;
+        BranchId = branchId;
     }
 
     public void SetPreferredLanguage(string language)

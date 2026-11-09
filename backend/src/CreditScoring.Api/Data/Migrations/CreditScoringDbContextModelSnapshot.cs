@@ -82,12 +82,64 @@ namespace CreditScoring.Api.Data.Migrations
                     b.ToTable("audit_entries", (string)null);
                 });
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.Branch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("branches", (string)null);
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.Client", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("address");
+
+                    b.Property<DateTimeOffset?>("AnonymisedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("anonymised_at");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
 
                     b.Property<string>("ClientNumber")
                         .IsRequired()
@@ -109,13 +161,34 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("date")
                         .HasColumnName("date_of_birth");
 
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Employer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("employer");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("full_name");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("phone");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("ClientNumber")
                         .IsUnique();
@@ -148,6 +221,10 @@ namespace CreditScoring.Api.Data.Migrations
                     b.Property<int>("Bankruptcies")
                         .HasColumnType("integer")
                         .HasColumnName("bankruptcies");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
 
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uuid")
@@ -245,6 +322,8 @@ namespace CreditScoring.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicantName");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("ClientId");
 
@@ -619,6 +698,10 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -689,11 +772,15 @@ namespace CreditScoring.Api.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BranchId");
+
                     b.HasIndex("UserName")
                         .IsUnique();
 
                     b.ToTable("users", null, t =>
                         {
+                            t.HasCheckConstraint("ck_users_branch_for_branch_roles", "(role IN ('Officer', 'Manager')) = (branch_id IS NOT NULL)");
+
                             t.HasCheckConstraint("ck_users_failed_sign_in_count", "failed_sign_in_count >= 0");
 
                             t.HasCheckConstraint("ck_users_preferred_language", "preferred_language IN ('en', 'sr')");
@@ -702,6 +789,12 @@ namespace CreditScoring.Api.Data.Migrations
 
             modelBuilder.Entity("CreditScoring.Api.Domain.Client", b =>
                 {
+                    b.HasOne("CreditScoring.Api.Domain.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("CreditScoring.Api.Domain.User", null)
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
@@ -710,6 +803,12 @@ namespace CreditScoring.Api.Data.Migrations
 
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
                 {
+                    b.HasOne("CreditScoring.Api.Domain.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("CreditScoring.Api.Domain.Client", "Client")
                         .WithMany()
                         .HasForeignKey("ClientId")
@@ -800,6 +899,14 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasForeignKey("ModelId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.User", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>

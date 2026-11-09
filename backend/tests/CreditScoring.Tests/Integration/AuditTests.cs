@@ -37,7 +37,7 @@ public sealed class AuditTests(DatabaseFixture database) : IAsyncLifetime
     private async Task<Client> NewClient()
     {
         await using var db = database.CreateContext(database.Officer.AsActor());
-        var client = Client.Create("Ana Petrović", new DateOnly(1990, 5, 1), database.Officer.AsActor(), TestData.Now);
+        var client = Client.Create("Ana Petrović", new DateOnly(1990, 5, 1), database.HeadOfficeId, database.Officer.AsActor(), TestData.Now);
         db.Clients.Add(client);
         await db.SaveChangesAsync();
         return client;
@@ -63,8 +63,9 @@ public sealed class AuditTests(DatabaseFixture database) : IAsyncLifetime
         Assert.Equal((database.Officer.Id, "Olga Officer"), (entry.UserId!.Value, entry.UserName));
         Assert.Equal(DatabaseFixture.TraceId, entry.TraceId);
         var changes = Changes(entry);
-        Assert.Equal("Ana Petrović", changes.GetProperty("fullName").GetProperty("after").GetString());
-        Assert.Equal("1990-05-01", changes.GetProperty("dateOfBirth").GetProperty("after").GetString());
+        Assert.Equal("[personal]", changes.GetProperty("fullName").GetProperty("after").GetString());
+        Assert.Equal("[personal]", changes.GetProperty("dateOfBirth").GetProperty("after").GetString());
+        Assert.Equal(database.HeadOfficeId.ToString(), changes.GetProperty("branchId").GetProperty("after").GetString());
         Assert.False(changes.GetProperty("fullName").TryGetProperty("before", out _));
         Assert.False(changes.TryGetProperty("clientNumber", out _));
     }
@@ -72,7 +73,7 @@ public sealed class AuditTests(DatabaseFixture database) : IAsyncLifetime
     [Fact]
     public async Task An_update_records_only_what_changed_before_and_after()
     {
-        var user = User.Create($"u-{Guid.NewGuid():N}"[..20], "Ana", UserRole.Officer, TestData.Now);
+        var user = User.Create($"u-{Guid.NewGuid():N}"[..20], "Ana", UserRole.Officer, TestData.Now, database.HeadOfficeId);
         await using (var db = database.CreateContext())
         {
             db.Users.Add(user);
@@ -82,7 +83,7 @@ public sealed class AuditTests(DatabaseFixture database) : IAsyncLifetime
         {
             await db.AuditEntries.ExecuteDeleteAsync();
             var tracked = await db.Users.SingleAsync(u => u.Id == user.Id);
-            tracked.Edit("Ana", null, UserRole.Manager, Languages.English);
+            tracked.Edit("Ana", null, UserRole.Manager, Languages.English, database.HeadOfficeId);
             await db.SaveChangesAsync();
         }
 
@@ -126,7 +127,7 @@ public sealed class AuditTests(DatabaseFixture database) : IAsyncLifetime
         var deleted = (await Entries()).Last();
         Assert.Equal(AuditAction.Deleted, deleted.Action);
         var changes = Changes(deleted);
-        Assert.Equal("Ana Petrović", changes.GetProperty("fullName").GetProperty("before").GetString());
+        Assert.Equal("[personal]", changes.GetProperty("fullName").GetProperty("before").GetString());
         Assert.False(changes.GetProperty("fullName").TryGetProperty("after", out _));
     }
 
@@ -175,7 +176,7 @@ public sealed class AuditTests(DatabaseFixture database) : IAsyncLifetime
         Assert.Equal([second.Id.ToString(), first.Id.ToString()], page.Items.Select(i => i.EntityId));
         var item = page.Items[0];
         Assert.Equal(("Client", AuditAction.Created, "Olga Officer"), (item.Entity, item.Action, item.UserName));
-        Assert.Equal("Ana Petrović", item.Changes.GetProperty("fullName").GetProperty("after").GetString());
+        Assert.Equal("[personal]", item.Changes.GetProperty("fullName").GetProperty("after").GetString());
     }
 
     [Fact]

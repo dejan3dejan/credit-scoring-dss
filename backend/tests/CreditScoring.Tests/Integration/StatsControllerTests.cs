@@ -33,7 +33,7 @@ public sealed class StatsControllerTests(DatabaseFixture database) : IAsyncLifet
         ml.ResultsByModel[Challenger] = shadow;
         clock.Now = at;
         await using var db = database.CreateContext();
-        var client = Client.Create("Stats Client", null, database.Officer.AsActor(), at);
+        var client = Client.Create("Stats Client", null, database.HeadOfficeId, database.Officer.AsActor(), at);
         db.Clients.Add(client);
         await db.SaveChangesAsync();
 

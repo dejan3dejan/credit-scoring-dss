@@ -49,6 +49,8 @@ internal sealed class FakeMlClient : IMlClient
 
 internal sealed record FixedAuditContext(Actor? Actor, string? TraceId) : IAuditContext;
 
+internal sealed record FixedBranchScope(Guid? BranchId) : IBranchScope;
+
 internal sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider
 {
     public DateTimeOffset Now { get; set; } = now;

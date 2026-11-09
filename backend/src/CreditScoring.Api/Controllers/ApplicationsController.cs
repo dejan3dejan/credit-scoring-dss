@@ -32,6 +32,8 @@ public class ApplicationsController(
         var client = await db.Clients.FirstOrDefaultAsync(c => c.Id == request.ClientId, cancellationToken);
         if (client is null)
             return FieldErrors.Reject(this, "clientId", new FieldError("client_not_found"), "No client with this id exists.");
+        if (!client.IsActive)
+            return FieldErrors.Reject(this, "clientId", new FieldError("client_inactive"), "This client is inactive and cannot get new applications.");
 
         var application = request.ToDomain(now, Credentials.ActorOf(User), client);
         var models = await db.ScoringModels.AsNoTracking().ToListAsync(cancellationToken);

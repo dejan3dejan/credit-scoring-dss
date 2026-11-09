@@ -47,7 +47,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     private async Task<Guid> ClientNamed(string name)
     {
         await using var db = database.CreateContext();
-        var client = Client.Create(name, null, database.Officer.AsActor(), TestData.Now);
+        var client = Client.Create(name, null, database.HeadOfficeId, database.Officer.AsActor(), TestData.Now);
         db.Clients.Add(client);
         await db.SaveChangesAsync();
         return client.Id;

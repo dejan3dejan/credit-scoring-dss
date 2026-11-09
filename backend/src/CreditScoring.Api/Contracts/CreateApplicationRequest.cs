@@ -66,6 +66,7 @@ public sealed record CreateApplicationRequest
     {
         ClientId = client.Id,
         Client = client,
+        BranchId = client.BranchId,
         ApplicantName = client.FullName,
         SubmittedBy = submittedBy.Name,
         SubmittedByUserId = submittedBy.UserId,

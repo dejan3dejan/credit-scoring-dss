@@ -18,7 +18,20 @@ public sealed class AuditInterceptor(TimeProvider time, IAuditContext context) :
 {
     private const string Redacted = "[redacted]";
 
+    private const string Personal = "[personal]";
+
     private static readonly HashSet<string> Secrets = [nameof(User.PasswordHash), nameof(User.SecurityStamp)];
+
+    private static readonly HashSet<(string Entity, string Property)> PersonalData =
+    [
+        (nameof(Client), nameof(Client.FullName)),
+        (nameof(Client), nameof(Client.DateOfBirth)),
+        (nameof(Client), nameof(Client.Address)),
+        (nameof(Client), nameof(Client.Phone)),
+        (nameof(Client), nameof(Client.Email)),
+        (nameof(Client), nameof(Client.Employer)),
+        (nameof(CreditApplication), nameof(CreditApplication.ApplicantName)),
+    ];
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -75,11 +88,12 @@ public sealed class AuditInterceptor(TimeProvider time, IAuditContext context) :
                 continue;
 
             var name = property.Metadata.Name;
+            var entity = entry.Metadata.ClrType.Name;
             var change = new Dictionary<string, object?>();
             if (action != AuditAction.Created)
-                change["before"] = Shown(name, property.OriginalValue);
+                change["before"] = Shown(entity, name, property.OriginalValue);
             if (action != AuditAction.Deleted)
-                change["after"] = Shown(name, property.CurrentValue);
+                change["after"] = Shown(entity, name, property.CurrentValue);
             changes[JsonNamingPolicy.CamelCase.ConvertName(name)] = change;
         }
 
@@ -100,7 +114,10 @@ public sealed class AuditInterceptor(TimeProvider time, IAuditContext context) :
         property.IsTemporary
         || (property.Metadata.GetDefaultValueSql() is not null && Equals(property.CurrentValue, property.Metadata.Sentinel));
 
-    private static object? Shown(string property, object? value) => Secrets.Contains(property) ? Redacted : value;
+    private static object? Shown(string entity, string property, object? value) =>
+        Secrets.Contains(property) ? Redacted
+        : PersonalData.Contains((entity, property)) ? Personal
+        : value;
 
     private static string KeyOf(EntityEntry entry)
     {

@@ -5,8 +5,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CreditScoring.Api.Data;
 
-public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> options) : DbContext(options)
+public interface IBranchScope
 {
+    Guid? BranchId { get; }
+}
+
+public class CreditScoringDbContext : DbContext
+{
+    private readonly IBranchScope? branchScope;
+
+    public CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> options)
+        : base(options)
+    {
+    }
+
+    public CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> options, IBranchScope branchScope)
+        : base(options)
+    {
+        this.branchScope = branchScope;
+    }
+
+    private Guid? ScopeBranchId => branchScope?.BranchId;
+
     public DbSet<CreditApplication> Applications => Set<CreditApplication>();
     public DbSet<CreditDecision> Decisions => Set<CreditDecision>();
     public DbSet<OfficerDecision> OfficerDecisions => Set<OfficerDecision>();
@@ -18,6 +38,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
     public DbSet<ScoringFailure> ScoringFailures => Set<ScoringFailure>();
     public DbSet<ScoreFactor> ScoreFactors => Set<ScoreFactor>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<Branch> Branches => Set<Branch>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -37,6 +58,12 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
                 .HasSentinel("")
                 .ValueGeneratedOnAdd();
             client.Property(c => c.FullName).HasMaxLength(BusinessLimits.ApplicantNameMaxLength);
+            client.Property(c => c.Address).HasMaxLength(BusinessLimits.AddressMaxLength);
+            client.Property(c => c.Phone).HasMaxLength(BusinessLimits.PhoneMaxLength);
+            client.Property(c => c.Email).HasMaxLength(BusinessLimits.EmailMaxLength);
+            client.Property(c => c.Employer).HasMaxLength(BusinessLimits.EmployerMaxLength);
+            client.HasOne<Branch>().WithMany().HasForeignKey(c => c.BranchId).OnDelete(DeleteBehavior.Restrict);
+            client.HasQueryFilter(c => ScopeBranchId == null || c.BranchId == ScopeBranchId);
             client.HasIndex(c => c.ClientNumber).IsUnique();
             client.HasIndex(c => c.FullName);
             client.HasOne<User>().WithMany().HasForeignKey(c => c.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
@@ -55,6 +82,8 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             application.HasIndex(a => a.ApplicantName);
             application.HasOne<User>().WithMany().HasForeignKey(a => a.SubmittedByUserId).OnDelete(DeleteBehavior.Restrict);
             application.HasOne(a => a.Client).WithMany().HasForeignKey(a => a.ClientId).OnDelete(DeleteBehavior.Restrict);
+            application.HasOne<Branch>().WithMany().HasForeignKey(a => a.BranchId).OnDelete(DeleteBehavior.Restrict);
+            application.HasQueryFilter(a => ScopeBranchId == null || a.BranchId == ScopeBranchId);
             application.HasOne(a => a.Decision)
                 .WithOne()
                 .HasForeignKey<CreditDecision>(d => d.CreditApplicationId)
@@ -168,7 +197,11 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
                     "ck_users_preferred_language",
                     $"preferred_language IN ({string.Join(", ", Languages.All.Select(l => $"'{l}'"))})");
                 table.HasCheckConstraint("ck_users_failed_sign_in_count", "failed_sign_in_count >= 0");
+                table.HasCheckConstraint(
+                    "ck_users_branch_for_branch_roles",
+                    "(role IN ('Officer', 'Manager')) = (branch_id IS NOT NULL)");
             });
+            user.HasOne<Branch>().WithMany().HasForeignKey(u => u.BranchId).OnDelete(DeleteBehavior.Restrict);
             user.Property(u => u.UserName).HasMaxLength(BusinessLimits.UserNameMaxLength);
             user.Property(u => u.DisplayName).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
             user.Property(u => u.PreferredLanguage).HasMaxLength(8).HasDefaultValue(Languages.English);
@@ -176,6 +209,16 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             user.Property(u => u.MustChangePassword).HasDefaultValue(false);
             user.Property(u => u.SecurityStamp).HasDefaultValueSql("gen_random_uuid()");
             user.HasIndex(u => u.UserName).IsUnique();
+        });
+
+        modelBuilder.Entity<Branch>(branch =>
+        {
+            branch.ToTable("branches");
+            branch.Property(b => b.Id).ValueGeneratedNever();
+            branch.Property(b => b.Code).HasMaxLength(Branch.CodeMaxLength);
+            branch.Property(b => b.Name).HasMaxLength(Branch.NameMaxLength);
+            branch.Property(b => b.City).HasMaxLength(BusinessLimits.CityMaxLength);
+            branch.HasIndex(b => b.Code).IsUnique();
         });
 
         modelBuilder.Entity<AuditEntry>(entry =>

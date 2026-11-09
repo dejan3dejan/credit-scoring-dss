@@ -29,6 +29,12 @@ public static class BusinessLimits
     public const int PasswordMinLength = 10;
     public const int DisplayNameMaxLength = SubmittedByMaxLength;
     public const int EmailMaxLength = 254;
+    public const int AddressMaxLength = 200;
+    public const int PhoneMaxLength = 32;
+    public const int EmployerMaxLength = 200;
+    public const int CityMaxLength = 100;
+    public const string PhonePattern = @"^[0-9+()/\s-]+$";
+    public const string BranchCodePattern = @"^\s*[A-Za-z0-9-]{2,16}\s*$";
     public const string UserNamePattern = @"^\s*[A-Za-z0-9._-]+\s*$";
     public const int ModelIdMaxLength = 100;
 }

@@ -5,7 +5,10 @@ public class CreditApplication
     public Guid Id { get; private set; }
     public Guid ClientId { get; init; }
     public Client? Client { get; set; }
-    public required string ApplicantName { get; init; }
+    private string applicantName = "";
+
+    public required string ApplicantName { get => applicantName; init => applicantName = value; }
+    public Guid BranchId { get; init; }
     public required string SubmittedBy { get; init; }
     public Guid? SubmittedByUserId { get; init; }
     public required DateTimeOffset SubmittedAt { get; init; }
@@ -33,4 +36,6 @@ public class CreditApplication
     public OfficerDecision? OfficerDecision { get; set; }
     public List<ShadowScore> ShadowScores { get; init; } = [];
     public List<ScoringFailure> ScoringFailures { get; init; } = [];
+
+    public void RemoveApplicantName() => applicantName = Client.AnonymisedName;
 }

@@ -26,6 +26,14 @@ public sealed class ClientBackfillMigrationTests
             'Rent', 'SkilledEmployeeOrOfficial', false, false);
         """;
 
+    private sealed class ClientRow
+    {
+        public string FullName { get; init; } = "";
+        public string ClientNumber { get; init; } = "";
+        public DateTimeOffset CreatedAt { get; init; }
+        public Guid? CreatedByUserId { get; init; }
+    }
+
     [Fact]
     public async Task Existing_applications_get_one_client_per_applicant_name()
     {
@@ -39,7 +47,10 @@ public sealed class ClientBackfillMigrationTests
 
         await db.GetService<IMigrator>().MigrateAsync("AddScoringFailures");
 
-        var clients = await db.Clients.OrderBy(c => c.FullName).ToListAsync();
+        var clients = await db.Database.SqlQueryRaw<ClientRow>("""
+            SELECT full_name AS "FullName", client_number AS "ClientNumber", created_at AS "CreatedAt", created_by_user_id AS "CreatedByUserId"
+            FROM clients ORDER BY full_name
+            """).ToListAsync();
         Assert.Equal(["Ana Petrović", "Marko Ilić"], clients.Select(c => c.FullName));
         Assert.All(clients, c => Assert.Matches("^C-[0-9]{6}$", c.ClientNumber));
         Assert.Equal(new DateTimeOffset(2026, 10, 30, 10, 0, 0, TimeSpan.Zero), clients[0].CreatedAt);

@@ -26,7 +26,7 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
 
     private async Task<User> NewUser(UserRole role = UserRole.Officer, string displayName = "Ana Jovanović")
     {
-        var user = User.Create($"u-{Guid.NewGuid():N}"[..20], displayName, role, TestData.Now);
+        var user = User.Create($"u-{Guid.NewGuid():N}"[..20], displayName, role, TestData.Now, role is UserRole.Officer or UserRole.Manager ? database.HeadOfficeId : null);
         user.SetPasswordHash(Credentials.Hash(user, "old password 123"));
         await using var db = database.CreateContext();
         db.Users.Add(user);
@@ -46,12 +46,13 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
         return await db.Users.AsNoTracking().SingleAsync(u => u.Id == id);
     }
 
-    private static CreateUserRequest NewRequest(string userName = "Marko.Ilic") => new()
+    private CreateUserRequest NewRequest(string? userName = null) => new()
     {
-        UserName = userName,
+        UserName = userName ?? $"Marko.{Guid.NewGuid():N}"[..20],
         DisplayName = "Marko Ilić",
         Email = "marko@bank.rs",
         Role = UserRole.Manager,
+        BranchId = database.HeadOfficeId,
         PreferredLanguage = Languages.Serbian,
         TemporaryPassword = Temporary,
     };
@@ -61,6 +62,7 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
         DisplayName = user.DisplayName,
         Email = user.Email,
         Role = role ?? user.Role,
+        BranchId = user.BranchId,
         PreferredLanguage = user.PreferredLanguage,
     };
 
@@ -121,14 +123,16 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
     [Fact]
     public async Task Create_stores_a_user_who_must_change_the_temporary_password()
     {
-        var response = await AsAdmin(c => c.Create(NewRequest(), CancellationToken.None));
+        var name = $"Marko.{Guid.NewGuid():N}"[..20];
+        var response = await AsAdmin(c => c.Create(NewRequest(name), CancellationToken.None));
 
         var created = Assert.IsType<CreatedAtActionResult>(response.Result);
         var body = Assert.IsType<UserResponse>(created.Value);
-        Assert.Equal(("marko.ilic", "Marko Ilić", "marko@bank.rs", UserRole.Manager, "sr"),
+        Assert.Equal((name.ToLowerInvariant(), "Marko Ilić", "marko@bank.rs", UserRole.Manager, "sr"),
             (body.UserName, body.DisplayName, body.Email, body.Role, body.PreferredLanguage));
         Assert.True(body.IsActive);
         Assert.True(body.MustChangePassword);
+        Assert.Equal(database.HeadOfficeId, body.Branch!.Id);
         Assert.Equal(TestData.Now, body.CreatedAt);
         var stored = await Reload(body.Id);
         Assert.True(Credentials.Verify(stored, Temporary));
@@ -137,9 +141,10 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
     [Fact]
     public async Task A_taken_user_name_is_a_field_error_whatever_its_case()
     {
-        await AsAdmin(c => c.Create(NewRequest(), CancellationToken.None));
+        var name = $"Marko.{Guid.NewGuid():N}"[..20];
+        await AsAdmin(c => c.Create(NewRequest(name), CancellationToken.None));
 
-        var response = await AsAdmin(c => c.Create(NewRequest(" MARKO.ILIC "), CancellationToken.None));
+        var response = await AsAdmin(c => c.Create(NewRequest($" {name.ToUpperInvariant()} "), CancellationToken.None));
 
         var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
         Assert.Equal(["user_name_taken"], TestServices.FieldCodes(problem, "userName"));
@@ -155,12 +160,15 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
             DisplayName = "Ana Marić",
             Email = "ana@bank.rs",
             Role = UserRole.Manager,
+            BranchId = database.OtherBranchId,
             PreferredLanguage = Languages.Serbian,
         }, CancellationToken.None));
 
         var body = Assert.IsType<UserResponse>(response.Value);
         Assert.Equal(("Ana Marić", "ana@bank.rs", UserRole.Manager, "sr"), (body.DisplayName, body.Email, body.Role, body.PreferredLanguage));
-        Assert.Equal(UserRole.Manager, (await Reload(user.Id)).Role);
+        Assert.Equal(database.OtherBranchId, body.Branch!.Id);
+        Assert.Equal(("OTHER", "Other branch"), (body.Branch.Code, body.Branch.Name));
+        Assert.Equal((UserRole.Manager, database.OtherBranchId), ((await Reload(user.Id)).Role, (await Reload(user.Id)).BranchId));
     }
 
     [Fact]
@@ -232,5 +240,68 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
         var response = await AsAdmin(c => c.ResetPassword(Guid.NewGuid(), new ResetPasswordRequest { TemporaryPassword = Temporary }, CancellationToken.None));
 
         Problem(response, 404, "not_found");
+    }
+
+    private async Task<string[]> CreateCodes(CreateUserRequest request, string field = "branchId")
+    {
+        var response = await AsAdmin(c => c.Create(request, CancellationToken.None));
+        var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
+        return TestServices.FieldCodes(problem, field);
+    }
+
+    [Fact]
+    public async Task Branch_rules_on_create()
+    {
+        Assert.Equal(["branch_required"], await CreateCodes(NewRequest() with { BranchId = null }));
+        Assert.Equal(["branch_not_allowed"], await CreateCodes(NewRequest() with { Role = UserRole.Risk }));
+        Assert.Equal(["branch_not_found"], await CreateCodes(NewRequest() with { BranchId = Guid.NewGuid() }));
+
+        var closed = Branch.Create($"Z{Guid.NewGuid():N}"[..8].ToUpperInvariant(), "Closed", null, TestData.Now);
+        closed.Deactivate(hasActiveUsers: false);
+        await using (var db = database.CreateContext())
+        {
+            db.Branches.Add(closed);
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal(["branch_inactive"], await CreateCodes(NewRequest() with { BranchId = closed.Id }));
+    }
+
+    [Fact]
+    public async Task A_risk_user_is_created_without_a_branch()
+    {
+        var response = await AsAdmin(c => c.Create(NewRequest() with { Role = UserRole.Risk, BranchId = null }, CancellationToken.None));
+
+        var body = Assert.IsType<UserResponse>(Assert.IsType<CreatedAtActionResult>(response.Result).Value);
+        Assert.Null(body.Branch);
+    }
+
+    [Fact]
+    public async Task Moving_a_user_to_an_unknown_branch_is_a_field_error()
+    {
+        var user = await NewUser();
+
+        var response = await AsAdmin(c => c.Update(user.Id, Edit(user) with { BranchId = Guid.NewGuid() }, CancellationToken.None));
+
+        var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
+        Assert.Equal(["branch_not_found"], TestServices.FieldCodes(problem, "branchId"));
+    }
+
+    [Fact]
+    public async Task A_user_of_an_inactive_branch_cannot_be_reactivated()
+    {
+        var branch = Branch.Create($"Z{Guid.NewGuid():N}"[..8].ToUpperInvariant(), "Closing", null, TestData.Now);
+        var user = User.Create($"u-{Guid.NewGuid():N}"[..20], "Ana", UserRole.Officer, TestData.Now, branch.Id);
+        user.Deactivate();
+        branch.Deactivate(hasActiveUsers: false);
+        await using (var db = database.CreateContext())
+        {
+            db.Branches.Add(branch);
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await AsAdmin(c => c.Reactivate(user.Id, CancellationToken.None));
+
+        Problem(response.Result!, 409, "branch_inactive");
     }
 }

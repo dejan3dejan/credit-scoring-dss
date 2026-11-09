@@ -25,7 +25,7 @@ public class AuthController(SignInService signIn, CreditScoringDbContext db) : C
         {
             case SignedIn signedIn:
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, Credentials.PrincipalFor(signedIn.User));
-                return MeResponse.From(signedIn.User);
+                return MeResponse.From(signedIn.User, await BranchOf(signedIn.User, cancellationToken));
 
             case LockedOut lockedOut:
                 return ApiProblems.Create(this, StatusCodes.Status401Unauthorized, ApiProblems.LockedOut,
@@ -78,14 +78,17 @@ public class AuthController(SignInService signIn, CreditScoringDbContext db) : C
 
         user.SetPreferredLanguage(request.Language!);
         await db.SaveChangesAsync(CancellationToken.None);
-        return MeResponse.From(user);
+        return MeResponse.From(user, await BranchOf(user, CancellationToken.None));
     }
 
     [HttpGet("me")]
     [ProducesResponseType<MeResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<MeResponse>> Me(CancellationToken cancellationToken) =>
-        await SignedInUser(cancellationToken) is { } user ? MeResponse.From(user) : await Gone();
+        await SignedInUser(cancellationToken) is { } user ? MeResponse.From(user, await BranchOf(user, cancellationToken)) : await Gone();
+
+    private async Task<Domain.Branch?> BranchOf(Domain.User user, CancellationToken cancellationToken) =>
+        user.BranchId is { } id ? await db.Branches.AsNoTracking().SingleAsync(b => b.Id == id, cancellationToken) : null;
 
     private Task<Domain.User?> SignedInUser(CancellationToken cancellationToken)
     {

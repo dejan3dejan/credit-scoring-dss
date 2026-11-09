@@ -14,11 +14,16 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     public const string TraceId = "test-trace";
 
-    public CreditScoringDbContext CreateContext(Actor? actor = null) =>
+    public CreditScoringDbContext CreateContext(Actor? actor = null, Guid? branchScope = null) =>
         new(new DbContextOptionsBuilder<CreditScoringDbContext>()
-            .UseNpgsql(ConnectionString)
-            .AddInterceptors(new AuditInterceptor(TimeProvider.System, new FixedAuditContext(actor, TraceId)))
-            .Options);
+                .UseNpgsql(ConnectionString)
+                .AddInterceptors(new AuditInterceptor(TimeProvider.System, new FixedAuditContext(actor, TraceId)))
+                .Options,
+            new FixedBranchScope(branchScope));
+
+    public Guid HeadOfficeId { get; private set; }
+    public Guid OtherBranchId { get; private set; }
+    public User OtherOfficer { get; private set; } = null!;
 
     public User Officer { get; private set; } = null!;
 
@@ -28,8 +33,14 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await db.Database.EnsureDeletedAsync();
         await db.Database.MigrateAsync();
 
-        Officer = User.Create("officer", "Olga Officer", UserRole.Officer, TestData.Now);
-        db.Users.Add(Officer);
+        HeadOfficeId = (await db.Branches.SingleAsync(b => b.Code == "HQ")).Id;
+        var other = Branch.Create("OTHER", "Other branch", null, TestData.Now);
+        db.Branches.Add(other);
+        OtherBranchId = other.Id;
+
+        Officer = User.Create("officer", "Olga Officer", UserRole.Officer, TestData.Now, HeadOfficeId);
+        OtherOfficer = User.Create("other.officer", "Oskar Other", UserRole.Officer, TestData.Now, OtherBranchId);
+        db.Users.AddRange(Officer, OtherOfficer);
         await db.SaveChangesAsync();
     }
 
