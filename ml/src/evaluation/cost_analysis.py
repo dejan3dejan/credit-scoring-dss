@@ -17,11 +17,59 @@ def expected_cost_at(y_true, p_bad, threshold, cost_fn=COST_FN, cost_fp=COST_FP)
     return expected_cost(cm, cost_fn, cost_fp)
 
 
+def policy_cost_curve(p_bad, cost_if_approved, cost_if_rejected, grid, weights=None):
+    p_bad = np.asarray(p_bad, dtype=float)
+    weights = np.ones(len(p_bad)) if weights is None else np.asarray(weights, dtype=float)
+    order = np.argsort(p_bad, kind="stable")
+    approved = np.searchsorted(p_bad[order], np.asarray(grid, dtype=float), side="left")
+    approved_cost = np.r_[0.0, np.cumsum((weights * np.asarray(cost_if_approved, dtype=float))[order])]
+    rejected_cost = np.r_[0.0, np.cumsum((weights * np.asarray(cost_if_rejected, dtype=float))[order])]
+    return (approved_cost[approved] + rejected_cost[-1] - rejected_cost[approved]) / weights.sum()
+
+
 def cost_curve(y_true, p_bad, cost_fn=COST_FN, cost_fp=COST_FP, grid=THRESHOLD_GRID):
+    y_true = np.asarray(y_true)
     return pd.DataFrame({
         "threshold": grid,
-        "expected_cost": [expected_cost_at(y_true, p_bad, t, cost_fn, cost_fp) for t in grid],
+        "expected_cost": policy_cost_curve(p_bad, cost_fn * (y_true == 1), cost_fp * (y_true == 0), grid),
     })
+
+
+def dollar_curve(result, p_bad, grid=THRESHOLD_GRID):
+    result = np.asarray(result, dtype=float)
+    return pd.DataFrame({
+        "threshold": grid,
+        "result_per_applicant": -policy_cost_curve(p_bad, -result, np.zeros(len(result)), grid),
+        "share_approved": policy_cost_curve(p_bad, np.ones(len(result)), np.zeros(len(result)), grid),
+    })
+
+
+def near_optimal_range(thresholds, costs, tolerance=0.01):
+    thresholds, costs = np.asarray(thresholds), np.asarray(costs)
+    best = costs.min()
+    near = thresholds[costs <= best + tolerance * abs(best)]
+    return float(near.min()), float(near.max())
+
+
+def cost_ratios(result, target, funded):
+    result, target, funded = (np.asarray(a, dtype=float) for a in (result, target, funded))
+    bad, good = target == 1, target == 0
+    if not bad.any() or not good.any():
+        raise ValueError("cost ratios need both bad and good loans")
+    return {
+        "mean": -result[bad].mean() / result[good].mean(),
+        "median": -np.median(result[bad]) / np.median(result[good]),
+        "per_dollar": (-result[bad].sum() / funded[bad].sum()) / (result[good].sum() / funded[good].sum()),
+    }
+
+
+def edge_for_capacity(p_bad, high, capacity, grid):
+    p_bad = np.asarray(p_bad)
+    below_high = p_bad < high
+    for edge in sorted(grid):
+        if ((p_bad >= edge) & below_high).mean() <= capacity:
+            return float(edge)
+    raise ValueError(f"no edge on the grid keeps the review share within capacity {capacity}")
 
 
 def optimal_threshold(y_true, p_bad, cost_fn=COST_FN, cost_fp=COST_FP, grid=THRESHOLD_GRID):

@@ -3,7 +3,7 @@ from sklearn.base import clone
 from sklearn.model_selection import RepeatedStratifiedKFold
 
 from src.config import RANDOM_STATE
-from src.evaluation.cost_analysis import expected_cost_at
+from src.evaluation.cost_analysis import expected_cost_at, policy_cost_curve
 from src.evaluation.cv_evaluate import COST_FN, COST_FP
 
 
@@ -61,3 +61,14 @@ def repeated_cv_cost(pipeline, X, y, threshold, n_splits=5, n_repeats=5, seed=RA
         p = model.predict_proba(X.iloc[val_idx])[:, 1]
         costs.append(expected_cost_at(y.iloc[val_idx], p, threshold))
     return np.array(costs)
+
+
+def bootstrap_best_threshold(p_bad, cost_if_approved, cost_if_rejected, grid, n_boot=1000, seed=RANDOM_STATE):
+    grid = np.asarray(grid)
+    n = len(p_bad)
+    rng = np.random.default_rng(seed)
+    best = np.empty(n_boot)
+    for i in range(n_boot):
+        weights = np.bincount(rng.integers(0, n, size=n), minlength=n)
+        best[i] = grid[np.argmin(policy_cost_curve(p_bad, cost_if_approved, cost_if_rejected, grid, weights))]
+    return best

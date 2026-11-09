@@ -133,7 +133,7 @@ def load_dataset(path: Path = ACCEPTED_PATH, with_result: bool = False) -> pd.Da
     prepared = prepare(loans)
     if not with_result:
         return prepared
-    return prepared.assign(result=loans["total_pymnt"] - loans["funded_amnt"])
+    return prepared.assign(result=loans["total_pymnt"] - loans["funded_amnt"], funded_amnt=loans["funded_amnt"])
 
 
 def split_by_time(df: pd.DataFrame, test_year: int = TEST_YEAR, train_from: int | None = None,

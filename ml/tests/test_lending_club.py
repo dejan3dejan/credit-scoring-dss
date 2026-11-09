@@ -154,6 +154,7 @@ def test_load_dataset_can_bring_each_loans_result(tmp_path):
     df = load_dataset(path, with_result=True)
 
     assert list(df["result"]) == [1200.0, -6200.0]
+    assert list(df["funded_amnt"]) == [10000.0, 10000.0]
     assert list(df["target"]) == [0, 1]
 
 
