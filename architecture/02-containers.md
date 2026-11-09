@@ -31,38 +31,21 @@ flowchart TB
 
 Why the pages call the API over HTTP instead of calling services directly: there is one way in to the business rules, so the API and the UI cannot drift apart, and every rule is tested once.
 
-## Deployment today
+## Deployment
 
-Everything runs on one developer machine. Only PostgreSQL runs in Docker.
-
-```mermaid
-flowchart LR
-    subgraph machine["Developer machine"]
-        subgraph docker["Docker"]
-            pg[("postgres:17<br/>port 5433")]
-        end
-        dotnet["dotnet run<br/>CreditScoring.Api<br/>port 5276"]
-        uvicorn["uvicorn app.main:app<br/>port 8000"]
-        files[("ml/models/")]
-    end
-    dotnet --> pg
-    dotnet --> uvicorn
-    uvicorn --> files
-```
-
-## Deployment planned
-
-One `docker compose up` starts all three, with health checks so the web app waits for its dependencies. Not built yet.
+`docker compose up --build` in the repository root starts all three on one machine. Health checks make the web app wait until the database accepts connections and the inference service has a model loaded. In Development the web app migrates the database and seeds the demo users on start, so a fresh clone runs without manual steps. Running on a server is out of scope (supervisor, 2026-11-06).
 
 ```mermaid
 flowchart LR
-    subgraph compose["docker compose, planned"]
+    subgraph compose["docker compose"]
         web2["web<br/>ASP.NET Core<br/>port 8080"]
         inf2["inference<br/>FastAPI<br/>port 8000"]
-        db2[("db<br/>postgres:17")]
+        db2[("db<br/>postgres:17<br/>port 5433")]
         models2[("ml/models<br/>mounted read-only")]
     end
-    web2 -.-> db2
-    web2 -.-> inf2
-    inf2 -.-> models2
+    web2 -- "waits for healthy" --> db2
+    web2 -- "waits for healthy" --> inf2
+    inf2 --> models2
 ```
+
+For development the two services can also run directly (`dotnet run`, `uvicorn`) against the Compose database; see the root README.

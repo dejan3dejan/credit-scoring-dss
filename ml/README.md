@@ -31,7 +31,7 @@ src/features/    preprocessing pipeline
 src/models/      model pipelines, GLM inference, saved-model helpers
 src/evaluation/  split, cross-validation, cost analysis, calibration
 scripts/         baseline CV, final holdout evaluation, model training
-models/          saved model and metadata, not committed
+models/          saved models and metadata; only the served Lending Club model is committed
 tests/
 ```
 

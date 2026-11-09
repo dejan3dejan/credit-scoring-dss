@@ -1,0 +1,12 @@
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+ml/data/
+ml/models/
+ml/experiments/
+ml/notebooks/
+backend/
+docs/
+architecture/
+.git/
+.claude/

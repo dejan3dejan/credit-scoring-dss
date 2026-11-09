@@ -1,0 +1,86 @@
+{
+  "model_id": "credit_lc_xgb_isotonic_v1",
+  "model_name": "XGBoost",
+  "dataset": "lending_club",
+  "calibration": "isotonic (CalibratedClassifierCV, inner 5-fold)",
+  "output": "P(bad), probability of default, class 1",
+  "recommended_threshold": {
+    "value": 0.32861227038217605,
+    "rule": "reject iff P(bad) >= value",
+    "applied_by": "backend ICreditDecisionService, not the inference service",
+    "derivation": "cost_fp / (cost_fp + cost_fn), cost_fn=2.0431, cost_fp=1"
+  },
+  "training": {
+    "seed": 42,
+    "rows": 306462,
+    "bad_rate": 0.13246666797188558,
+    "split": "36-month loans issued 2012 to 2014; 2015 held out",
+    "data_sha256": "3eae03c28fd9d2e8a076ebeb73507e8d4d0f44d90500decdb0936e0933d1f36a"
+  },
+  "features": {
+    "order": [
+      "loan_amnt",
+      "purpose",
+      "emp_length_years",
+      "home_ownership",
+      "annual_inc",
+      "verification_status",
+      "dti",
+      "fico",
+      "credit_history_years",
+      "inq_last_6mths",
+      "delinq_2yrs",
+      "pub_rec",
+      "pub_rec_bankruptcies",
+      "revol_bal",
+      "revol_util",
+      "open_acc",
+      "total_acc",
+      "mort_acc"
+    ],
+    "note": "Lending Club inputs, names as in src/data/lending_club.py",
+    "categorical_levels_seen_in_training": {
+      "purpose": [
+        "car",
+        "credit_card",
+        "debt_consolidation",
+        "home_improvement",
+        "house",
+        "major_purchase",
+        "medical",
+        "moving",
+        "other",
+        "renewable_energy",
+        "small_business",
+        "vacation",
+        "wedding"
+      ],
+      "home_ownership": [
+        "ANY",
+        "MORTGAGE",
+        "NONE",
+        "OTHER",
+        "OWN",
+        "RENT"
+      ],
+      "verification_status": [
+        "Not Verified",
+        "Source Verified",
+        "Verified"
+      ]
+    }
+  },
+  "library_versions": {
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1",
+    "python": "3.13.8"
+  },
+  "evaluation_ref": "36-month loans; fitted on 2012 to 2014, scored once on 2015",
+  "created_at": "2026-11-02T12:55:25+00:00",
+  "recommended_review_band": {
+    "from": 0.2,
+    "to": 0.32861227038217605,
+    "rule": "review closely iff from <= P(bad) < to",
+    "applied_by": "backend ICreditDecisionService, not the inference service"
+  }
+}

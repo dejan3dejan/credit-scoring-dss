@@ -1,0 +1,51 @@
+name: credit-scoring
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: credit_scoring
+      POSTGRES_USER: credit_scoring
+      POSTGRES_PASSWORD: dev_only_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U credit_scoring -d credit_scoring"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  inference:
+    build:
+      context: .
+      dockerfile: inference/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ml/models:/models:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  web:
+    build:
+      context: backend
+      dockerfile: src/CreditScoring.Api/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ConnectionStrings__CreditScoring: Host=db;Port=5432;Database=credit_scoring;Username=credit_scoring;Password=dev_only_password
+      MlService__BaseUrl: http://inference:8000/
+    depends_on:
+      db:
+        condition: service_healthy
+      inference:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    name: backend_pgdata

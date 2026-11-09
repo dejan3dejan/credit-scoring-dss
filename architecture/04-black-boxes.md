@@ -59,7 +59,7 @@ REST endpoints (all need a signed-in user):
 |---|---|---|---|
 | GET | `/v3/models` | | every loaded Lending Club model: id, name, dataset, threshold, review band, created |
 | POST | `/v3/models/{model_id}/predict` | 18 named inputs, missing allowed where the data had gaps | `p_bad` (0 to 1), `model_id`, `top_factors` (5, or `null`) |
-| GET | `/health` | | `200` with the ids of all loaded models; `503` when the `/v1` default model (German Credit) is missing, even if the Lending Club model is loaded (known gap) |
+| GET | `/health` | | `200` with the ids of all loaded models while any model can score; `503` only when none loaded |
 
 `/v1` and `/v2` still serve the retired German Credit models. The exact contract is kept in the project's API contract document.
 

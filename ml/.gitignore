@@ -9,6 +9,8 @@ data/raw/*
 
 models/*
 !models/.gitkeep
+!models/credit_lc_xgb_isotonic_v1.joblib
+!models/credit_lc_xgb_isotonic_v1.json
 
 .DS_Store
 .vscode/settings.json

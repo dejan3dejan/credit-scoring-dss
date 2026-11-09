@@ -1,6 +1,6 @@
 # 12. Status and roadmap
 
-Where the system is on 2026-11-03 and what is planned next. Solid boxes are built and tested; dashed ones are planned.
+Where the system is on 2026-11-09 and what is planned next. Solid boxes are built and tested; dashed ones are planned.
 
 ```mermaid
 flowchart LR
@@ -15,8 +15,6 @@ flowchart LR
 
     subgraph next["Planned, in order"]
         direction TB
-        n1["One-command start<br/>(Docker Compose) + README"]
-        n2["CI: tests on every push"]
         n3["Loan outcome tracking:<br/>repaid or defaulted"]
         n4["Security basics:<br/>lockout, headers, HTTPS"]
     end
@@ -31,11 +29,13 @@ flowchart LR
         d6["Model registry,<br/>champion and challenger"]
         d7["Dashboard"]
         d8["Review band and<br/>top 5 factors, checklist"]
-        d9["ML: Lending Club model,<br/>LC-01 to LC-05, LC-07"]
+        d9["ML: Lending Club model,<br/>LC-01 to LC-11"]
+        d10["One-command start<br/>(Docker Compose) + README"]
+        d11["CI: tests on every push"]
     end
 
     classDef plan stroke-dasharray: 5 5
-    class n1,n2,n3,n4,l1,l2,l3,l4,l5 plan
+    class n3,n4,l1,l2,l3,l4,l5 plan
 ```
 
 ## What changes when outcome tracking lands
@@ -60,6 +60,6 @@ flowchart LR
 
 | Part | Tests |
 |---|---|
-| Backend (xUnit, with PostgreSQL) | 452 |
+| Backend (xUnit, with PostgreSQL) | 454 |
 | ML (pytest) | 113 |
-| Inference (pytest) | 78 |
+| Inference (pytest) | 79 |
