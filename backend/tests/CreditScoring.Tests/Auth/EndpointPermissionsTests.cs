@@ -21,6 +21,7 @@ public class EndpointPermissionsTests
         ["Applications.Decide"] = "applications.decide",
         ["Applications.SignOff"] = "applications.approve-escalated",
         ["Applications.Assign"] = "applications.assign",
+        ["Applications.RecordOutcome"] = "outcomes.record",
         ["Applications.Withdraw"] = "applications.write",
         ["Applications.Notes"] = "applications.read",
         ["Applications.AddNote"] = "applications.write",

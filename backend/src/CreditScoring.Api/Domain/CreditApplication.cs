@@ -51,6 +51,7 @@ public class CreditApplication
     public CreditDecision? Decision { get; set; }
     public OfficerDecision? OfficerDecision { get; private set; }
     public List<SignOffRequest> SignOffs { get; init; } = [];
+    public LoanOutcome? LoanOutcome { get; private set; }
     public List<ShadowScore> ShadowScores { get; init; } = [];
     public List<ScoringFailure> ScoringFailures { get; init; } = [];
 
@@ -59,6 +60,17 @@ public class CreditApplication
     public bool IsClosed => Stage is ApplicationStage.Decided or ApplicationStage.Withdrawn;
 
     public void RemoveApplicantName() => applicantName = Client.AnonymisedName;
+
+    public ChangeResult RecordOutcome(LoanOutcomeKind outcome, string? note, Actor by, DateTimeOffset now)
+    {
+        var recorded = Domain.LoanOutcome.Record(outcome, note, by, now);
+        if (Stage != ApplicationStage.Decided || OfficerDecision?.Outcome != FinalDecision.Approve)
+            return new Refused(null, "no_loan", "Only an application decided as approved became a loan.");
+        if (LoanOutcome is not null)
+            return new Refused(null, "outcome_recorded", "The outcome of this loan is already recorded.");
+        LoanOutcome = recorded;
+        return new Changed();
+    }
 
     public bool MayBeHandledBy(Guid userId, bool actsForBranch) => actsForBranch || AssignedToUserId == userId;
 

@@ -61,6 +61,7 @@ public sealed record ApplicationResponse
     public required UserRef? AssignedTo { get; init; }
     public required WithdrawalResponse? Withdrawal { get; init; }
     public required IReadOnlyList<SignOffResponse> SignOffs { get; init; }
+    public required LoanOutcomeResponse? LoanOutcome { get; init; }
     public required Guid ClientId { get; init; }
     public required Guid BranchId { get; init; }
     public required string ClientNumber { get; init; }
@@ -103,6 +104,7 @@ public sealed record ApplicationResponse
             ? new WithdrawalResponse(at, application.WithdrawnBy!, application.WithdrawalReason!)
             : null,
         SignOffs = application.SignOffs.OrderBy(s => s.RequestedAt).ThenBy(s => s.Id).Select(SignOffResponse.From).ToList(),
+        LoanOutcome = application.LoanOutcome is null ? null : LoanOutcomeResponse.From(application.LoanOutcome),
         ClientId = application.ClientId,
         BranchId = application.BranchId,
         ClientNumber = application.Client?.ClientNumber
@@ -152,7 +154,8 @@ public sealed record ApplicationSummary(
     Guid BranchId,
     string Reference,
     ApplicationStage Stage,
-    UserRef? AssignedTo)
+    UserRef? AssignedTo,
+    LoanOutcomeKind? LoanOutcome)
 {
     public static readonly Expression<Func<CreditApplication, ApplicationSummary>> FromApplication = a => new ApplicationSummary(
         a.Id,
@@ -170,7 +173,8 @@ public sealed record ApplicationSummary(
         a.BranchId,
         a.Reference,
         a.Stage,
-        a.AssignedTo == null ? null : new UserRef(a.AssignedTo.Id, a.AssignedTo.DisplayName));
+        a.AssignedTo == null ? null : new UserRef(a.AssignedTo.Id, a.AssignedTo.DisplayName),
+        a.LoanOutcome == null ? null : a.LoanOutcome.Outcome);
 }
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

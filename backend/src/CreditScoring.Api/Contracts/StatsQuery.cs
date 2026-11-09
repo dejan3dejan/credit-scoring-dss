@@ -9,4 +9,7 @@ public sealed record StatsQuery
 
     [FromQuery(Name = "to")]
     public DateTimeOffset? To { get; init; }
+
+    [FromQuery(Name = "branchId")]
+    public Guid? BranchId { get; init; }
 }

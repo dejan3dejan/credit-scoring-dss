@@ -32,6 +32,9 @@ public sealed record HistoryQuery
     [FromQuery(Name = "stage"), EnumDataType(typeof(ApplicationStage))]
     public ApplicationStage? Stage { get; init; }
 
+    [FromQuery(Name = "loanOutcome"), EnumDataType(typeof(LoanOutcomeFilter))]
+    public LoanOutcomeFilter? LoanOutcome { get; init; }
+
     [FromQuery(Name = "review"), EnumDataType(typeof(ReviewFilter))]
     public ReviewFilter? Review { get; init; }
 

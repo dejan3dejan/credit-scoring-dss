@@ -145,7 +145,8 @@ public class ApplicationsController(
             .Include(a => a.OfficerDecision)
             .Include(a => a.ScoringFailures)
             .Include(a => a.AssignedTo)
-            .Include(a => a.SignOffs);
+            .Include(a => a.SignOffs)
+            .Include(a => a.LoanOutcome);
 
     private Task LockAsync(Guid id) =>
         db.Database.ExecuteSqlInterpolatedAsync(
@@ -232,6 +233,16 @@ public class ApplicationsController(
     public Task<ActionResult<ApplicationResponse>> SignOff(Guid id, SignOffReviewRequest request, CancellationToken cancellationToken) =>
         ChangeLockedAsync(id, application =>
             decisions.ReviewSignOff(application, request.Approve!.Value, request.Note, Credentials.ActorOf(User)), cancellationToken);
+
+    [HttpPost("{id:guid}/outcome")]
+    [Authorize(Policy = Permissions.OutcomesRecord)]
+    [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public Task<ActionResult<ApplicationResponse>> RecordOutcome(Guid id, RecordOutcomeRequest request, CancellationToken cancellationToken) =>
+        ChangeLockedAsync(id, application =>
+            application.RecordOutcome(request.Outcome!.Value, request.Note, Credentials.ActorOf(User), time.GetUtcNow()), cancellationToken);
 
     [HttpPost("{id:guid}/assign")]
     [Authorize(Policy = Permissions.ApplicationsAssign)]
@@ -386,6 +397,16 @@ public class ApplicationsController(
         {
             applications = applications.Where(a => a.Stage == stage);
         }
+
+        applications = query.LoanOutcome switch
+        {
+            LoanOutcomeFilter.Pending => applications.Where(a => a.Stage == ApplicationStage.Decided
+                && a.OfficerDecision!.Outcome == FinalDecision.Approve
+                && a.LoanOutcome == null),
+            LoanOutcomeFilter.Repaid => applications.Where(a => a.LoanOutcome!.Outcome == LoanOutcomeKind.Repaid),
+            LoanOutcomeFilter.Defaulted => applications.Where(a => a.LoanOutcome!.Outcome == LoanOutcomeKind.Defaulted),
+            _ => applications,
+        };
 
         applications = query.Review switch
         {

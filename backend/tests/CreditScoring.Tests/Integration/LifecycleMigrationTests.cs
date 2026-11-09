@@ -53,6 +53,7 @@ public sealed class LifecycleMigrationTests
         Assert.Equal([ApplicationStage.Submitted, ApplicationStage.Decided], applications.Select(a => a.Stage));
         Assert.Equal([null, Guid.Parse("0192f000-0000-7000-8000-000000000001")], applications.Select(a => a.AssignedToUserId));
         Assert.Null((await db.OfficerDecisions.AsNoTracking().SingleAsync()).SignedOffBy);
+        Assert.False(await db.LoanOutcomes.AnyAsync());
         var next = await db.Database.SqlQueryRaw<string>("SELECT 'A-' || lpad(nextval('application_reference_seq')::text, 6, '0') AS \"Value\"").SingleAsync();
         Assert.Equal("A-000003", next);
 

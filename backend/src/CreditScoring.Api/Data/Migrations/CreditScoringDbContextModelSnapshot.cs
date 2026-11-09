@@ -545,6 +545,51 @@ namespace CreditScoring.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.LoanOutcome", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("outcome");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<string>("RecordedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("recorded_by");
+
+                    b.Property<Guid?>("RecordedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recorded_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditApplicationId")
+                        .IsUnique();
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.ToTable("loan_outcomes", (string)null);
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.ModelEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1128,6 +1173,20 @@ namespace CreditScoring.Api.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.LoanOutcome", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithOne("LoanOutcome")
+                        .HasForeignKey("CreditScoring.Api.Domain.LoanOutcome", "CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.ModelEvent", b =>
                 {
                     b.HasOne("CreditScoring.Api.Domain.User", null)
@@ -1232,6 +1291,8 @@ namespace CreditScoring.Api.Data.Migrations
             modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
                 {
                     b.Navigation("Decision");
+
+                    b.Navigation("LoanOutcome");
 
                     b.Navigation("OfficerDecision");
 

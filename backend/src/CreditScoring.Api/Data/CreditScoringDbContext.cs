@@ -42,6 +42,7 @@ public class CreditScoringDbContext : DbContext
     public DbSet<SignOffRequest> SignOffRequests => Set<SignOffRequest>();
     public DbSet<ApplicationNote> Notes => Set<ApplicationNote>();
     public DbSet<ApplicationDraft> Drafts => Set<ApplicationDraft>();
+    public DbSet<LoanOutcome> LoanOutcomes => Set<LoanOutcome>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -100,6 +101,10 @@ public class CreditScoringDbContext : DbContext
             application.HasOne(a => a.AssignedTo).WithMany().HasForeignKey(a => a.AssignedToUserId).OnDelete(DeleteBehavior.Restrict);
             application.HasOne<User>().WithMany().HasForeignKey(a => a.WithdrawnByUserId).OnDelete(DeleteBehavior.Restrict);
             application.HasMany(a => a.SignOffs).WithOne().HasForeignKey(s => s.CreditApplicationId).OnDelete(DeleteBehavior.Cascade);
+            application.HasOne(a => a.LoanOutcome)
+                .WithOne()
+                .HasForeignKey<LoanOutcome>(o => o.CreditApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
             application.HasMany<ApplicationNote>().WithOne().HasForeignKey(n => n.CreditApplicationId).OnDelete(DeleteBehavior.Cascade);
             application.HasOne(a => a.Decision)
                 .WithOne()
@@ -206,6 +211,16 @@ public class CreditScoringDbContext : DbContext
             draft.HasOne<User>().WithMany().HasForeignKey(d => d.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
             draft.HasOne<CreditApplication>().WithMany().HasForeignKey(d => d.ApplicationId).OnDelete(DeleteBehavior.Restrict);
             draft.HasQueryFilter(d => ScopeBranchId == null || d.BranchId == ScopeBranchId);
+        });
+
+        modelBuilder.Entity<LoanOutcome>(outcome =>
+        {
+            outcome.ToTable("loan_outcomes");
+            outcome.Property(o => o.Id).ValueGeneratedNever();
+            outcome.Property(o => o.Note).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
+            outcome.Property(o => o.RecordedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            outcome.HasIndex(o => o.CreditApplicationId).IsUnique();
+            outcome.HasOne<User>().WithMany().HasForeignKey(o => o.RecordedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ApplicationNote>(note =>
