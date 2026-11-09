@@ -106,7 +106,7 @@ public abstract record RegistryResult;
 
 public sealed record RegistryChanged(IReadOnlyList<ModelEvent> Events) : RegistryResult;
 
-public sealed record RegistryRefused(string Field, string Message) : RegistryResult;
+public sealed record RegistryRefused(string Field, string Code, string Message) : RegistryResult;
 
 public sealed record ModelNotRegistered : RegistryResult;
 
@@ -135,11 +135,11 @@ public static class ModelRegistry
         if (models.FirstOrDefault(m => m.ModelId == modelId) is not { } target)
             return new ModelNotRegistered();
         if (target.Role == ModelRole.Active)
-            return new RegistryRefused("modelId", "This model is already active.");
+            return new RegistryRefused("modelId", "model_already_active", "This model is already active.");
         if (target.Role == ModelRole.Retired)
-            return new RegistryRefused("modelId", "A retired model cannot be made active.");
+            return new RegistryRefused("modelId", "model_retired", "A retired model cannot be made active.");
         if (string.IsNullOrWhiteSpace(reason))
-            return new RegistryRefused("reason", "Give a reason for making this model active.");
+            return new RegistryRefused("reason", "reason_required", "Give a reason for making this model active.");
 
         var why = reason.Trim();
         var events = models
@@ -160,11 +160,11 @@ public static class ModelRegistry
         if (models.FirstOrDefault(m => m.ModelId == modelId) is not { } target)
             return new ModelNotRegistered();
         if (target.Role == ModelRole.Active)
-            return new RegistryRefused("modelId", "Make another model active before retiring this one.");
+            return new RegistryRefused("modelId", "model_is_active", "Make another model active before retiring this one.");
         if (target.Role == ModelRole.Retired)
-            return new RegistryRefused("modelId", "This model is already retired.");
+            return new RegistryRefused("modelId", "model_already_retired", "This model is already retired.");
         if (string.IsNullOrWhiteSpace(reason))
-            return new RegistryRefused("reason", "Give a reason for retiring this model.");
+            return new RegistryRefused("reason", "reason_required", "Give a reason for retiring this model.");
 
         return new RegistryChanged([target.MoveTo(ModelRole.Retired, reason.Trim(), changedBy, now)]);
     }

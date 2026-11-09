@@ -105,12 +105,15 @@ public class CreditDecisionService(
         var recommendation = application.Decision?.Recommendation;
         if (string.IsNullOrWhiteSpace(reason) && OfficerDecision.NeedsReason(recommendation, outcome))
         {
-            return new DecisionRefused("reason", recommendation switch
+            return recommendation switch
             {
-                null => "Give a reason: no recommendation was made for this application.",
-                Recommendation.Review => "Give a reason: the model asked for a closer review of this application.",
-                _ => "Give a reason: your decision differs from the recommendation.",
-            });
+                null => new DecisionRefused("reason", "reason_required_no_recommendation",
+                    "Give a reason: no recommendation was made for this application."),
+                Recommendation.Review => new DecisionRefused("reason", "reason_required_review",
+                    "Give a reason: the model asked for a closer review of this application."),
+                _ => new DecisionRefused("reason", "reason_required_override",
+                    "Give a reason: your decision differs from the recommendation."),
+            };
         }
 
         return new DecisionRecorded(OfficerDecision.Record(recommendation, outcome, reason, decidedBy, time.GetUtcNow()));

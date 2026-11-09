@@ -97,7 +97,7 @@ public class ModelRegistryTests
 
         var refused = Assert.IsType<RegistryRefused>(ModelRegistry.Promote(all, Challenger, reason, TestData.Officer, TestData.Now));
 
-        Assert.Equal("reason", refused.Field);
+        Assert.Equal(("reason", "reason_required"), (refused.Field, refused.Code));
         Assert.Equal(ModelRole.Active, active.Role);
         Assert.Equal(ModelRole.Shadow, shadow.Role);
     }
@@ -111,8 +111,8 @@ public class ModelRegistryTests
         var retired = Assert.IsType<RegistryRefused>(ModelRegistry.Promote(all, Challenger, "x", TestData.Officer, TestData.Now));
         var active = Assert.IsType<RegistryRefused>(ModelRegistry.Promote(all, TestData.ModelId, "x", TestData.Officer, TestData.Now));
 
-        Assert.Equal("modelId", retired.Field);
-        Assert.Equal("modelId", active.Field);
+        Assert.Equal(("modelId", "model_retired"), (retired.Field, retired.Code));
+        Assert.Equal(("modelId", "model_already_active"), (active.Field, active.Code));
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class ModelRegistryTests
 
         var refused = Assert.IsType<RegistryRefused>(ModelRegistry.Retire(all, TestData.ModelId, "old", TestData.Officer, TestData.Now));
 
-        Assert.Equal("modelId", refused.Field);
+        Assert.Equal(("modelId", "model_is_active"), (refused.Field, refused.Code));
         Assert.Equal(ModelRole.Active, active.Role);
     }
 
@@ -145,7 +145,18 @@ public class ModelRegistryTests
 
         var refused = Assert.IsType<RegistryRefused>(ModelRegistry.Retire(all, Challenger, "", TestData.Officer, TestData.Now));
 
-        Assert.Equal("reason", refused.Field);
+        Assert.Equal(("reason", "reason_required"), (refused.Field, refused.Code));
+    }
+
+    [Fact]
+    public void A_retired_model_cannot_be_retired_again()
+    {
+        var (_, _, all) = Lineup();
+        ModelRegistry.Retire(all, Challenger, "worse", TestData.Officer, TestData.Now);
+
+        var refused = Assert.IsType<RegistryRefused>(ModelRegistry.Retire(all, Challenger, "again", TestData.Officer, TestData.Now));
+
+        Assert.Equal(("modelId", "model_already_retired"), (refused.Field, refused.Code));
     }
 
     [Fact]

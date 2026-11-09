@@ -31,10 +31,7 @@ public sealed class ModelsControllerTests(DatabaseFixture database) : IAsyncLife
         await using var db = database.CreateContext();
         var controller = new ModelsController(db, ml, clock)
         {
-            ControllerContext = new ControllerContext
-            {
-                HttpContext = new DefaultHttpContext { User = Credentials.PrincipalFor(database.Officer) },
-            },
+            ControllerContext = TestServices.SignedIn(database.Officer),
         };
         return await action(controller);
     }
@@ -86,6 +83,7 @@ public sealed class ModelsControllerTests(DatabaseFixture database) : IAsyncLife
 
         var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
         Assert.Equal(["modelId"], problem.Errors.Keys);
+        Assert.Equal(["model_not_served"], TestServices.FieldCodes(problem, "modelId"));
     }
 
     [Fact]
@@ -145,6 +143,7 @@ public sealed class ModelsControllerTests(DatabaseFixture database) : IAsyncLife
 
         var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
         Assert.Equal(["reason"], problem.Errors.Keys);
+        Assert.Equal(["reason_required"], TestServices.FieldCodes(problem, "reason"));
     }
 
     [Fact]

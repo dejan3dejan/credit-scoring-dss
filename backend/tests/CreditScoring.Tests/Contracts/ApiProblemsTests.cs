@@ -13,11 +13,7 @@ namespace CreditScoring.Tests.Contracts;
 
 public class ApiProblemsTests
 {
-    private static IServiceProvider Services() => new ServiceCollection()
-        .AddLogging()
-        .AddProblemDetails(ApiProblems.Configure)
-        .AddControllers().Services
-        .BuildServiceProvider();
+    private static IServiceProvider Services() => TestServices.Api().BuildServiceProvider();
 
     private static DefaultHttpContext Context(string path)
     {

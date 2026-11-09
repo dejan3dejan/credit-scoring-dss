@@ -25,10 +25,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         await using var db = database.CreateContext();
         var controller = new ApplicationsController(db, TestServices.DecisionService(ml, clock), clock)
         {
-            ControllerContext = new ControllerContext
-            {
-                HttpContext = new DefaultHttpContext { User = Credentials.PrincipalFor(database.Officer) },
-            },
+            ControllerContext = TestServices.SignedIn(database.Officer),
         };
         return await action(controller);
     }
@@ -64,6 +61,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
 
         var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
         Assert.Equal(["clientId"], problem.Errors.Keys);
+        Assert.Equal(["client_not_found"], TestServices.FieldCodes(problem, "clientId"));
     }
 
     [Fact]
@@ -128,9 +126,9 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
     }
 
     [Theory]
-    [InlineData(2026, 12, 1)]
-    [InlineData(1900, 1, 1)]
-    public async Task First_credit_line_outside_a_possible_range_is_a_validation_problem(int year, int month, int day)
+    [InlineData(2026, 12, 1, "after_this_month")]
+    [InlineData(1900, 1, 1, "too_long_ago")]
+    public async Task First_credit_line_outside_a_possible_range_is_a_validation_problem(int year, int month, int day, string code)
     {
         var clientId = await ClientNamed("Future Credit");
 
@@ -140,6 +138,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
 
         var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
         Assert.Equal(["earliestCreditLine"], problem.Errors.Keys);
+        Assert.Equal([code], TestServices.FieldCodes(problem, "earliestCreditLine"));
         Assert.Empty(ml.ScoredModels);
     }
 
@@ -312,6 +311,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         var bad = Assert.IsType<BadRequestObjectResult>(response.Result);
         var problem = Assert.IsType<ValidationProblemDetails>(bad.Value);
         Assert.Equal(["reason"], problem.Errors.Keys);
+        Assert.Equal(["reason_required_override"], TestServices.FieldCodes(problem, "reason"));
         await using var db = database.CreateContext();
         Assert.False(await db.OfficerDecisions.AnyAsync());
     }

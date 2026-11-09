@@ -47,6 +47,6 @@ public abstract record OfficerDecisionResult;
 
 public sealed record DecisionRecorded(OfficerDecision Decision) : OfficerDecisionResult;
 
-public sealed record DecisionRefused(string Field, string Message) : OfficerDecisionResult;
+public sealed record DecisionRefused(string Field, string Code, string Message) : OfficerDecisionResult;
 
 public sealed record AlreadyDecided : OfficerDecisionResult;

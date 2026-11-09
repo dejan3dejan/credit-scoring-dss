@@ -20,10 +20,7 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
     {
         var now = time.GetUtcNow();
         if (request.DateOfBirth > DateOnly.FromDateTime(now.UtcDateTime))
-        {
-            ModelState.AddModelError("dateOfBirth", "Date of birth cannot be in the future.");
-            return BadRequest(new ValidationProblemDetails(ModelState) { Status = StatusCodes.Status400BadRequest });
-        }
+            return FieldErrors.Reject(this, "dateOfBirth", new FieldError("in_the_future"), "Date of birth cannot be in the future.");
 
         var client = Client.Create(request.FullName!, request.DateOfBirth, Credentials.ActorOf(User), now);
         db.Clients.Add(client);

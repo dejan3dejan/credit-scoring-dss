@@ -19,6 +19,8 @@ public static class ApiProblems
     public static void AddDefaultCode(ProblemDetailsContext context)
     {
         var problem = context.ProblemDetails;
+        if (problem is HttpValidationProblemDetails validation)
+            FieldErrors.AddTo(context.HttpContext, validation);
         if (problem.Extensions.ContainsKey(CodeKey))
             return;
 

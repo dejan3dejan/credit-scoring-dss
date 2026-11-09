@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -32,8 +31,7 @@ builder.Services.AddHttpClient<IMlClient, MlClient>((services, client) =>
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ICreditDecisionService, CreditDecisionService>();
-builder.Services.AddControllers(options =>
-        options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))
+builder.Services.AddControllers(ApiValidation.Configure)
     .AddJsonOptions(options => ApiJson.Configure(options.JsonSerializerOptions));
 builder.Services.AddProblemDetails(ApiProblems.Configure);
 builder.Services.AddOpenApi();

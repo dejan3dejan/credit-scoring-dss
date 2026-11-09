@@ -18,10 +18,7 @@ public sealed class ClientsControllerTests(DatabaseFixture database) : IAsyncLif
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private static ControllerContext SignedIn(DatabaseFixture database) => new()
-    {
-        HttpContext = new DefaultHttpContext { User = Credentials.PrincipalFor(database.Officer) },
-    };
+    private static ControllerContext SignedIn(DatabaseFixture database) => TestServices.SignedIn(database.Officer);
 
     private async Task<T> WithClients<T>(Func<ClientsController, Task<T>> action)
     {
@@ -65,6 +62,7 @@ public sealed class ClientsControllerTests(DatabaseFixture database) : IAsyncLif
 
         var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response.Result).Value);
         Assert.Equal(["dateOfBirth"], problem.Errors.Keys);
+        Assert.Equal(["in_the_future"], TestServices.FieldCodes(problem, "dateOfBirth"));
     }
 
     [Fact]

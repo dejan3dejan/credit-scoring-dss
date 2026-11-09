@@ -65,10 +65,7 @@ public sealed class AuthControllerTests(DatabaseFixture database) : IAsyncLifeti
     private async Task<T> WithAuth<T>(Func<AuthController, Task<T>> action, ClaimsPrincipal? user = null)
     {
         await using var db = database.CreateContext();
-        var services = new ServiceCollection()
-            .AddLogging()
-            .AddProblemDetails(ApiProblems.Configure)
-            .AddControllers().Services
+        var services = TestServices.Api()
             .AddSingleton<IAuthenticationService>(authentication)
             .BuildServiceProvider();
         var controller = new AuthController(new SignInService(db, clock), db)

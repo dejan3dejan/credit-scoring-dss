@@ -45,7 +45,7 @@ public class OfficerDecisionRuleTests
         var result = Service().RecordOfficerDecision(Scored(Recommendation.Approve), FinalDecision.Reject, "  ", TestData.Officer);
 
         var refused = Assert.IsType<DecisionRefused>(result);
-        Assert.Equal("reason", refused.Field);
+        Assert.Equal(("reason", "reason_required_override"), (refused.Field, refused.Code));
         Assert.Contains("differs from the recommendation", refused.Message);
     }
 
@@ -62,7 +62,7 @@ public class OfficerDecisionRuleTests
     {
         var refused = Assert.IsType<DecisionRefused>(
             Service().RecordOfficerDecision(Scored(Recommendation.Review), FinalDecision.Approve, null, TestData.Officer));
-        Assert.Equal("reason", refused.Field);
+        Assert.Equal(("reason", "reason_required_review"), (refused.Field, refused.Code));
         Assert.Contains("closer review", refused.Message);
 
         var recorded = Assert.IsType<DecisionRecorded>(
@@ -75,7 +75,7 @@ public class OfficerDecisionRuleTests
     {
         var refused = Assert.IsType<DecisionRefused>(
             Service().RecordOfficerDecision(Unavailable(), FinalDecision.Approve, null, TestData.Officer));
-        Assert.Equal("reason", refused.Field);
+        Assert.Equal(("reason", "reason_required_no_recommendation"), (refused.Field, refused.Code));
         Assert.Contains("no recommendation", refused.Message);
 
         var recorded = Assert.IsType<DecisionRecorded>(

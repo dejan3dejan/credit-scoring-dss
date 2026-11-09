@@ -58,7 +58,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
         if (await ml.ListModelsAsync(cancellationToken) is not MlCatalog catalog)
             return CatalogUnavailable();
         if (catalog.Models.FirstOrDefault(m => m.ModelId == modelId) is not { } info)
-            return Refused("modelId", "The inference service does not serve a model with this id.");
+            return FieldErrors.Reject(this, "modelId", new FieldError("model_not_served"), "The inference service does not serve a model with this id.");
 
         var (model, registered) = ModelRegistry.Register(
             info.ModelId, info.ModelName, info.Dataset, info.RecommendedThreshold, info.ReviewFrom, Credentials.ActorOf(User), time.GetUtcNow());
@@ -134,7 +134,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
                 return Ok(await List(CancellationToken.None));
 
             case RegistryRefused refused:
-                return Refused(refused.Field, refused.Message);
+                return FieldErrors.Reject(this, refused.Field, new FieldError(refused.Code), refused.Message);
 
             case ModelNotRegistered:
                 return NotFound();
@@ -142,12 +142,6 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
             default:
                 throw new UnreachableException();
         }
-    }
-
-    private BadRequestObjectResult Refused(string field, string message)
-    {
-        ModelState.AddModelError(field, message);
-        return BadRequest(new ValidationProblemDetails(ModelState) { Status = StatusCodes.Status400BadRequest });
     }
 
     private ConflictObjectResult Changed(string title) => Conflict(new ProblemDetails

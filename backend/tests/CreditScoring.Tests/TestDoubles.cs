@@ -1,5 +1,12 @@
+using System.Text.Json;
+using CreditScoring.Api.Auth;
+using CreditScoring.Api.Contracts;
 using CreditScoring.Api.Decisions;
+using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -55,4 +62,20 @@ internal static class TestServices
             TimeoutSeconds = 5,
             ShadowTimeoutSeconds = shadowTimeoutSeconds,
         }), NullLogger<CreditDecisionService>.Instance);
+
+    public static IServiceCollection Api() => new ServiceCollection()
+        .AddLogging()
+        .AddProblemDetails(ApiProblems.Configure)
+        .AddControllers(ApiValidation.Configure).Services;
+
+    public static ControllerContext SignedIn(User user) => new()
+    {
+        HttpContext = new DefaultHttpContext { RequestServices = Api().BuildServiceProvider(), User = Credentials.PrincipalFor(user) },
+    };
+
+    public static JsonElement FieldErrors(ValidationProblemDetails problem) =>
+        JsonSerializer.SerializeToElement(problem, JsonSerializerOptions.Web).GetProperty("fieldErrors");
+
+    public static string[] FieldCodes(ValidationProblemDetails problem, string field) =>
+        FieldErrors(problem).GetProperty(field).EnumerateArray().Select(e => e.GetProperty("code").GetString()!).ToArray();
 }

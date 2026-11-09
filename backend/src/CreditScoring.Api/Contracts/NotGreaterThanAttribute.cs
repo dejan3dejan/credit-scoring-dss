@@ -6,6 +6,8 @@ namespace CreditScoring.Api.Contracts;
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class NotGreaterThanAttribute(string otherProperty) : ValidationAttribute
 {
+    public string OtherProperty => otherProperty;
+
     protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
         var other = validationContext.ObjectType.GetProperty(otherProperty)
