@@ -29,6 +29,9 @@ public sealed record HistoryQuery
     [FromQuery(Name = "recommendation"), EnumDataType(typeof(Recommendation))]
     public Recommendation? Recommendation { get; init; }
 
+    [FromQuery(Name = "stage"), EnumDataType(typeof(ApplicationStage))]
+    public ApplicationStage? Stage { get; init; }
+
     [FromQuery(Name = "review"), EnumDataType(typeof(ReviewFilter))]
     public ReviewFilter? Review { get; init; }
 

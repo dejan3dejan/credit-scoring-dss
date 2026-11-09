@@ -121,7 +121,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         var created = await Submit("Ana Petrovic", new MlScore(0.1, TestData.ModelId));
 
         await using var db = database.CreateContext();
-        var saved = await db.Applications.Include(a => a.Client).SingleAsync(a => a.Id == created.Id);
+        var saved = await db.Applications.Include(a => a.Client).Include(a => a.AssignedTo).SingleAsync(a => a.Id == created.Id);
         Assert.Equal(TestData.ValidRequest() with { ClientId = saved.ClientId }, CreateApplicationRequest.From(ApplicationResponse.From(saved)));
     }
 
@@ -253,6 +253,17 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         Assert.Equal(["at one"], await NamesFor(new HistoryQuery { From = noon.AddHours(1), To = noon.AddHours(2) }));
     }
 
+    private async Task SignOff(Guid id)
+    {
+        await using var db = database.CreateContext();
+        var controller = new ApplicationsController(db, TestServices.DecisionService(ml, clock), clock)
+        {
+            ControllerContext = TestServices.SignedIn(database.Manager),
+        };
+        Assert.Equal(ApplicationStage.Decided,
+            (await controller.SignOff(id, new SignOffReviewRequest { Approve = true }, CancellationToken.None)).Value!.Stage);
+    }
+
     private Task<ActionResult<ApplicationResponse>> Decide(Guid id, FinalDecision outcome, string? reason = null) =>
         WithController(c => c.Decide(
             id,
@@ -339,6 +350,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
         await Decide(approved.Id, FinalDecision.Approve);
         await Decide(rejected.Id, FinalDecision.Reject);
         await Decide(overridden.Id, FinalDecision.Approve, "guarantor added");
+        await SignOff(overridden.Id);
 
         Assert.Equal(["pending"], await NamesFor(new HistoryQuery { Review = ReviewFilter.Pending }));
         Assert.Equal(["overridden", "approved"], await NamesFor(new HistoryQuery { Review = ReviewFilter.Approved }));

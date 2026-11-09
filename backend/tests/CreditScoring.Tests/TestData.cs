@@ -13,9 +13,11 @@ internal static class TestData
 
     public static readonly DateTimeOffset Now = new(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
 
-    public static readonly Actor Officer = new(Guid.Parse("0192f000-0000-7000-8000-000000000001"), "Tester");
-
     public static readonly Guid BranchId = Guid.Parse("0192f000-0000-7000-8000-0000000000b1");
+
+    public static readonly User OfficerUser = User.Create("tester", "Tester", UserRole.Officer, Now, BranchId);
+
+    public static readonly Actor Officer = OfficerUser.AsActor();
 
     public static readonly Client Client = Client.Create("Test Applicant", null, BranchId, Officer, Now);
 
@@ -76,7 +78,14 @@ internal static class TestData
 
     public static CreditApplication ContractApplication() => Application(Client);
 
-    public static CreditApplication Application(Client client) => new()
+    public static CreditApplication Application(Client client, int loanAmount = 12_000)
+    {
+        var application = Unassigned(client, loanAmount);
+        application.AssignTo(OfficerUser);
+        return application;
+    }
+
+    private static CreditApplication Unassigned(Client client, int loanAmount) => new()
     {
         ApplicantName = client.FullName,
         ClientId = client.Id,
@@ -84,7 +93,7 @@ internal static class TestData
         BranchId = client.BranchId,
         SubmittedBy = "tester",
         SubmittedAt = Now,
-        LoanAmount = 12_000,
+        LoanAmount = loanAmount,
         Purpose = LoanPurpose.DebtConsolidation,
         EmploymentLength = EmploymentLength.FourYears,
         HomeOwnership = HomeOwnership.Rent,

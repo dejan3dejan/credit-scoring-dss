@@ -97,10 +97,15 @@ public class CreditDecisionService(
         CreditApplication application,
         FinalDecision outcome,
         string? reason,
-        Actor decidedBy)
+        Actor decidedBy,
+        bool actsForBranch)
     {
         if (application.OfficerDecision is not null)
             return new AlreadyDecided();
+        if (application.Stage != ApplicationStage.Submitted)
+            return new NotDecidable(application.Stage);
+        if (!application.MayBeHandledBy(decidedBy.UserId, actsForBranch))
+            return new NotAssignee();
 
         var recommendation = application.Decision?.Recommendation;
         if (string.IsNullOrWhiteSpace(reason) && OfficerDecision.NeedsReason(recommendation, outcome))
@@ -116,6 +121,32 @@ public class CreditDecisionService(
             };
         }
 
-        return new DecisionRecorded(OfficerDecision.Record(recommendation, outcome, reason, decidedBy, time.GetUtcNow()));
+        var now = time.GetUtcNow();
+        if (!actsForBranch && SignOffRules.ReasonFor(recommendation, outcome, application.LoanAmount) is { } why)
+            return new SignOffRequested(application.RequestSignOff(outcome, reason, why, decidedBy, now));
+
+        var decision = OfficerDecision.Record(recommendation, outcome, reason, decidedBy, now);
+        application.RecordDecision(decision);
+        return new DecisionRecorded(decision);
+    }
+
+    public ChangeResult ReviewSignOff(CreditApplication application, bool approve, string? note, Actor reviewer)
+    {
+        if (application.PendingSignOff is not { } pending)
+            return new Refused(null, "no_pending_sign_off", "Nothing on this application waits for a sign-off.");
+
+        var now = time.GetUtcNow();
+        if (!approve)
+        {
+            if (string.IsNullOrWhiteSpace(note))
+                return new Refused("note", "note_required", "Say why the decision is returned.");
+            application.ReturnSignOff(reviewer, note, now);
+            return new Changed();
+        }
+
+        var decision = OfficerDecision.Record(
+            application.Decision?.Recommendation, pending.Outcome, pending.Reason, pending.Requester, now);
+        application.ApproveSignOff(decision, reviewer, note, now);
+        return new Changed();
     }
 }

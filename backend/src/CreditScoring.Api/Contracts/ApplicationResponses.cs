@@ -34,14 +34,18 @@ public sealed record OfficerDecisionResponse(
     string? Reason,
     string DecidedBy,
     DateTimeOffset DecidedAt,
-    bool IsOverride)
+    bool IsOverride,
+    string? SignedOffBy,
+    DateTimeOffset? SignedOffAt)
 {
     public static OfficerDecisionResponse From(OfficerDecision decision) => new(
         decision.Outcome,
         decision.Reason,
         decision.DecidedBy,
         decision.DecidedAt,
-        decision.IsOverride);
+        decision.IsOverride,
+        decision.SignedOffBy,
+        decision.SignedOffAt);
 }
 
 public sealed record ScoringFailureResponse(string ErrorCode, DateTimeOffset AttemptedAt)
@@ -52,6 +56,11 @@ public sealed record ScoringFailureResponse(string ErrorCode, DateTimeOffset Att
 public sealed record ApplicationResponse
 {
     public required Guid Id { get; init; }
+    public required string Reference { get; init; }
+    public required ApplicationStage Stage { get; init; }
+    public required UserRef? AssignedTo { get; init; }
+    public required WithdrawalResponse? Withdrawal { get; init; }
+    public required IReadOnlyList<SignOffResponse> SignOffs { get; init; }
     public required Guid ClientId { get; init; }
     public required Guid BranchId { get; init; }
     public required string ClientNumber { get; init; }
@@ -87,6 +96,13 @@ public sealed record ApplicationResponse
     public static ApplicationResponse From(CreditApplication application) => new()
     {
         Id = application.Id,
+        Reference = application.Reference,
+        Stage = application.Stage,
+        AssignedTo = UserRef.From(application.AssignedToUserId, application.AssignedTo),
+        Withdrawal = application.WithdrawnAt is { } at
+            ? new WithdrawalResponse(at, application.WithdrawnBy!, application.WithdrawalReason!)
+            : null,
+        SignOffs = application.SignOffs.OrderBy(s => s.RequestedAt).ThenBy(s => s.Id).Select(SignOffResponse.From).ToList(),
         ClientId = application.ClientId,
         BranchId = application.BranchId,
         ClientNumber = application.Client?.ClientNumber
@@ -133,7 +149,10 @@ public sealed record ApplicationSummary(
     double? PBad,
     FinalDecision? FinalDecision,
     bool? IsOverride,
-    Guid BranchId)
+    Guid BranchId,
+    string Reference,
+    ApplicationStage Stage,
+    UserRef? AssignedTo)
 {
     public static readonly Expression<Func<CreditApplication, ApplicationSummary>> FromApplication = a => new ApplicationSummary(
         a.Id,
@@ -148,7 +167,10 @@ public sealed record ApplicationSummary(
         a.Decision == null ? null : a.Decision.PBad,
         a.OfficerDecision == null ? null : a.OfficerDecision.Outcome,
         a.OfficerDecision == null ? null : a.OfficerDecision.IsOverride,
-        a.BranchId);
+        a.BranchId,
+        a.Reference,
+        a.Stage,
+        a.AssignedTo == null ? null : new UserRef(a.AssignedTo.Id, a.AssignedTo.DisplayName));
 }
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

@@ -35,7 +35,11 @@ public class ApplicationsController(
         if (!client.IsActive)
             return FieldErrors.Reject(this, "clientId", new FieldError("client_inactive"), "This client is inactive and cannot get new applications.");
 
-        var application = request.ToDomain(now, Credentials.ActorOf(User), client);
+        var actor = Credentials.ActorOf(User);
+        var application = request.ToDomain(now, actor, client);
+        var submitter = await db.Users.SingleAsync(u => u.Id == actor.UserId, cancellationToken);
+        if (application.AssignTo(submitter) is not Changed)
+            throw new InvalidOperationException("a new application could not be assigned to its submitter");
         var models = await db.ScoringModels.AsNoTracking().ToListAsync(cancellationToken);
         var evaluation = await decisions.EvaluateAsync(application, models, cancellationToken);
         application.Decision = evaluation.Decision;
@@ -127,7 +131,9 @@ public class ApplicationsController(
             .Include(a => a.Client)
             .Include(a => a.Decision!).ThenInclude(d => d.Factors)
             .Include(a => a.OfficerDecision)
-            .Include(a => a.ScoringFailures);
+            .Include(a => a.ScoringFailures)
+            .Include(a => a.AssignedTo)
+            .Include(a => a.SignOffs);
 
     private Task LockAsync(Guid id) =>
         db.Database.ExecuteSqlInterpolatedAsync(
@@ -175,10 +181,10 @@ public class ApplicationsController(
         if (application is null)
             return NotFound();
 
-        switch (decisions.RecordOfficerDecision(application, request.Outcome!.Value, request.Reason, Credentials.ActorOf(User)))
+        var actsForBranch = Credentials.Has(User, Permissions.ApplicationsApproveEscalated);
+        switch (decisions.RecordOfficerDecision(application, request.Outcome!.Value, request.Reason, Credentials.ActorOf(User), actsForBranch))
         {
-            case DecisionRecorded recorded:
-                application.OfficerDecision = recorded.Decision;
+            case DecisionRecorded or SignOffRequested:
                 try
                 {
                     await db.SaveChangesAsync(CancellationToken.None);
@@ -195,6 +201,135 @@ public class ApplicationsController(
 
             case AlreadyDecided:
                 return AlreadyDecidedConflict();
+
+            case NotAssignee:
+                return NotAssigneeProblem();
+
+            case NotDecidable:
+                return ApiProblems.Create(this, StatusCodes.Status409Conflict, "not_decidable",
+                    "Only a submitted application can be decided.");
+
+            default:
+                throw new UnreachableException();
+        }
+    }
+
+    [HttpPost("{id:guid}/sign-off")]
+    [Authorize(Policy = Permissions.ApplicationsApproveEscalated)]
+    [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public Task<ActionResult<ApplicationResponse>> SignOff(Guid id, SignOffReviewRequest request, CancellationToken cancellationToken) =>
+        ChangeLockedAsync(id, application =>
+            decisions.ReviewSignOff(application, request.Approve!.Value, request.Note, Credentials.ActorOf(User)), cancellationToken);
+
+    [HttpPost("{id:guid}/assign")]
+    [Authorize(Policy = Permissions.ApplicationsAssign)]
+    [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApplicationResponse>> Assign(Guid id, AssignRequest request, CancellationToken cancellationToken)
+    {
+        var branchId = await db.Applications.Where(a => a.Id == id).Select(a => (Guid?)a.BranchId).FirstOrDefaultAsync(cancellationToken);
+        if (branchId is null)
+            return NotFound();
+
+        var decisionRoles = Permissions.RolesWith(Permissions.ApplicationsDecide);
+        var assignee = await db.Users.FirstOrDefaultAsync(
+            u => u.Id == request.UserId && u.IsActive && u.BranchId == branchId && decisionRoles.Contains(u.Role),
+            cancellationToken);
+        if (assignee is null)
+            return FieldErrors.Reject(this, "userId", new FieldError("assignee_not_found"),
+                "Choose an active officer or manager of the application's branch.");
+
+        return await ChangeLockedAsync(id, application => application.AssignTo(assignee), cancellationToken);
+    }
+
+    [HttpPost("{id:guid}/withdraw")]
+    [Authorize(Policy = Permissions.ApplicationsWrite)]
+    [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public Task<ActionResult<ApplicationResponse>> Withdraw(Guid id, WithdrawRequest request, CancellationToken cancellationToken)
+    {
+        var actor = Credentials.ActorOf(User);
+        var actsForBranch = Credentials.Has(User, Permissions.ApplicationsAssign);
+        return ChangeLockedAsync(id, application =>
+            application.MayBeHandledBy(actor.UserId, actsForBranch)
+                ? application.Withdraw(request.Reason!, actor, time.GetUtcNow())
+                : new Refused(null, NotAssigneeCode, "Only the assigned officer or a manager can withdraw this application."),
+            cancellationToken);
+    }
+
+    [HttpGet("{id:guid}/notes")]
+    [Authorize(Policy = Permissions.ApplicationsRead)]
+    [ProducesResponseType<IReadOnlyList<NoteResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<NoteResponse>>> Notes(Guid id, CancellationToken cancellationToken)
+    {
+        if (!await db.Applications.AnyAsync(a => a.Id == id, cancellationToken))
+            return NotFound();
+
+        var notes = await db.Notes.AsNoTracking()
+            .Where(n => n.CreditApplicationId == id)
+            .OrderBy(n => n.CreatedAt)
+            .ThenBy(n => n.Id)
+            .ToListAsync(cancellationToken);
+        return notes.Select(NoteResponse.From).ToList();
+    }
+
+    [HttpPost("{id:guid}/notes")]
+    [Authorize(Policy = Permissions.ApplicationsWrite)]
+    [ProducesResponseType<NoteResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<NoteResponse>> AddNote(Guid id, NoteRequest request, CancellationToken cancellationToken)
+    {
+        if (!await db.Applications.AnyAsync(a => a.Id == id, cancellationToken))
+            return NotFound();
+
+        var note = ApplicationNote.Write(id, request.Text!, Credentials.ActorOf(User), time.GetUtcNow());
+        db.Notes.Add(note);
+        await db.SaveChangesAsync(CancellationToken.None);
+        return CreatedAtAction(nameof(Notes), new { id }, NoteResponse.From(note));
+    }
+
+    private const string NotAssigneeCode = "not_assignee";
+
+    private ObjectResult NotAssigneeProblem() =>
+        ApiProblems.Create(this, StatusCodes.Status403Forbidden, NotAssigneeCode,
+            "Only the assigned officer or a manager can act on this application.");
+
+    private async Task<ActionResult<ApplicationResponse>> ChangeLockedAsync(
+        Guid id,
+        Func<CreditApplication, ChangeResult> change,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await LockAsync(id);
+        var application = await WithDetails(db.Applications).FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+        if (application is null)
+            return NotFound();
+
+        switch (change(application))
+        {
+            case Changed:
+                await db.SaveChangesAsync(CancellationToken.None);
+                await transaction.CommitAsync(CancellationToken.None);
+                return ApplicationResponse.From(application);
+
+            case Refused { Field: { } field } refused:
+                return FieldErrors.Reject(this, field, new FieldError(refused.Code), refused.Message);
+
+            case Refused { Code: NotAssigneeCode }:
+                return NotAssigneeProblem();
+
+            case Refused refused:
+                return ApiProblems.Create(this, StatusCodes.Status409Conflict, refused.Code, refused.Message);
 
             default:
                 throw new UnreachableException();
@@ -239,6 +374,11 @@ public class ApplicationsController(
         if (query.Recommendation is { } recommendation)
         {
             applications = applications.Where(a => a.Decision!.Recommendation == recommendation);
+        }
+
+        if (query.Stage is { } stage)
+        {
+            applications = applications.Where(a => a.Stage == stage);
         }
 
         applications = query.Review switch

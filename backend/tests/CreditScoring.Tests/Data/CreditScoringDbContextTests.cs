@@ -26,7 +26,7 @@ public class CreditScoringDbContextTests
             .Where(p => (Nullable.GetUnderlyingType(p.ClrType) ?? p.ClrType).IsEnum)
             .ToList();
 
-        Assert.Equal(14, enumProperties.Count);
+        Assert.Equal(18, enumProperties.Count);
         Assert.All(enumProperties, p => Assert.Equal(typeof(string), p.GetProviderClrType()));
     }
 }

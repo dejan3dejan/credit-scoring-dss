@@ -24,6 +24,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public Guid HeadOfficeId { get; private set; }
     public Guid OtherBranchId { get; private set; }
     public User OtherOfficer { get; private set; } = null!;
+    public User Manager { get; private set; } = null!;
 
     public User Officer { get; private set; } = null!;
 
@@ -40,7 +41,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
         Officer = User.Create("officer", "Olga Officer", UserRole.Officer, TestData.Now, HeadOfficeId);
         OtherOfficer = User.Create("other.officer", "Oskar Other", UserRole.Officer, TestData.Now, OtherBranchId);
-        db.Users.AddRange(Officer, OtherOfficer);
+        Manager = User.Create("manager", "Mila Manager", UserRole.Manager, TestData.Now, HeadOfficeId);
+        db.Users.AddRange(Officer, OtherOfficer, Manager);
         await db.SaveChangesAsync();
     }
 

@@ -64,6 +64,11 @@ public static class Credentials
         return new ClaimsPrincipal(identity);
     }
 
+    public static bool Has(ClaimsPrincipal principal, string permission) =>
+        Enum.TryParse<UserRole>(principal.FindFirstValue(ClaimTypes.Role), out var role)
+        && Enum.IsDefined(role)
+        && Permissions.For(role).Contains(permission);
+
     public static Guid? BranchScopeOf(ClaimsPrincipal principal)
     {
         var role = principal.FindFirstValue(ClaimTypes.Role);

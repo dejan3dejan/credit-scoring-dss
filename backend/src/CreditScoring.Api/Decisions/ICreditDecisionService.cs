@@ -18,7 +18,10 @@ public interface ICreditDecisionService
         CreditApplication application,
         FinalDecision outcome,
         string? reason,
-        Actor decidedBy);
+        Actor decidedBy,
+        bool actsForBranch);
+
+    ChangeResult ReviewSignOff(CreditApplication application, bool approve, string? note, Actor reviewer);
 }
 
 public static class DecisionErrorCodes
@@ -38,7 +41,8 @@ public sealed record RescoreRefused(string Message) : RescoreResult;
 public static class Rescoring
 {
     public static string? Refusal(CreditApplication application) =>
-        application.OfficerDecision is not null ? "A decision is already recorded for this application."
+        application.Stage == ApplicationStage.Withdrawn ? "This application was withdrawn."
+        : application.OfficerDecision is not null || application.Stage != ApplicationStage.Submitted ? "A decision is already recorded for this application."
         : application.Decision?.Status == DecisionStatus.Scored ? "This application already has a score."
         : null;
 }
@@ -50,3 +54,9 @@ public sealed record DecisionRecorded(OfficerDecision Decision) : OfficerDecisio
 public sealed record DecisionRefused(string Field, string Code, string Message) : OfficerDecisionResult;
 
 public sealed record AlreadyDecided : OfficerDecisionResult;
+
+public sealed record SignOffRequested(SignOffRequest Request) : OfficerDecisionResult;
+
+public sealed record NotAssignee : OfficerDecisionResult;
+
+public sealed record NotDecidable(ApplicationStage Stage) : OfficerDecisionResult;

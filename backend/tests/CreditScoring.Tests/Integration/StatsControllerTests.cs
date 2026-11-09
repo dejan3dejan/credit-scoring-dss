@@ -49,6 +49,17 @@ public sealed class StatsControllerTests(DatabaseFixture database) : IAsyncLifet
         await controller.Decide(id, new RecordDecisionRequest { Outcome = outcome, Reason = reason }, CancellationToken.None);
     }
 
+    private async Task SignOff(Guid id)
+    {
+        await using var db = database.CreateContext();
+        var controller = new ApplicationsController(db, TestServices.DecisionService(ml, clock), clock)
+        {
+            ControllerContext = TestServices.SignedIn(database.Manager),
+        };
+        Assert.Equal(ApplicationStage.Decided,
+            (await controller.SignOff(id, new SignOffReviewRequest { Approve = true }, CancellationToken.None)).Value!.Stage);
+    }
+
     private async Task<DashboardStats> Stats(StatsQuery query)
     {
         await using var db = database.CreateContext();
@@ -73,6 +84,7 @@ public sealed class StatsControllerTests(DatabaseFixture database) : IAsyncLifet
         await Submit(new MlScore(0.9, TestData.ModelId), new MlScore(0.9, Challenger), TestData.Now.AddDays(-10));
         await Decide(agreed, FinalDecision.Approve);
         await Decide(overridden, FinalDecision.Approve, "guarantor added");
+        await SignOff(overridden);
         await Decide(review, FinalDecision.Reject, "income could not be verified");
 
         var stats = await Stats(new StatsQuery { From = TestData.Now.AddDays(-1), To = TestData.Now.AddDays(1) });

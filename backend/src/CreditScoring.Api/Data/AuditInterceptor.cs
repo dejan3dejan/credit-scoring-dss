@@ -31,6 +31,7 @@ public sealed class AuditInterceptor(TimeProvider time, IAuditContext context) :
         (nameof(Client), nameof(Client.Email)),
         (nameof(Client), nameof(Client.Employer)),
         (nameof(CreditApplication), nameof(CreditApplication.ApplicantName)),
+        (nameof(ApplicationNote), nameof(ApplicationNote.Text)),
     ];
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)

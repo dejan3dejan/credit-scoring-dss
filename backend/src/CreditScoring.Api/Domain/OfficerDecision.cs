@@ -18,6 +18,16 @@ public class OfficerDecision
     public Guid? DecidedByUserId { get; private set; }
     public DateTimeOffset DecidedAt { get; private set; }
     public bool IsOverride { get; private set; }
+    public string? SignedOffBy { get; private set; }
+    public Guid? SignedOffByUserId { get; private set; }
+    public DateTimeOffset? SignedOffAt { get; private set; }
+
+    internal void SignOff(Actor by, DateTimeOffset at)
+    {
+        SignedOffBy = by.Name;
+        SignedOffByUserId = by.UserId;
+        SignedOffAt = at;
+    }
 
     public static bool IsOverrideOf(Recommendation recommendation, FinalDecision outcome) =>
         (recommendation, outcome) is (Recommendation.Approve, FinalDecision.Reject)

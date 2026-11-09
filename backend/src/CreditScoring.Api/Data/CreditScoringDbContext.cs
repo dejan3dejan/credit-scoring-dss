@@ -39,6 +39,8 @@ public class CreditScoringDbContext : DbContext
     public DbSet<ScoreFactor> ScoreFactors => Set<ScoreFactor>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<SignOffRequest> SignOffRequests => Set<SignOffRequest>();
+    public DbSet<ApplicationNote> Notes => Set<ApplicationNote>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -48,6 +50,7 @@ public class CreditScoringDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasSequence<long>("client_number_seq");
+        modelBuilder.HasSequence<long>("application_reference_seq");
 
         modelBuilder.Entity<Client>(client =>
         {
@@ -84,6 +87,19 @@ public class CreditScoringDbContext : DbContext
             application.HasOne(a => a.Client).WithMany().HasForeignKey(a => a.ClientId).OnDelete(DeleteBehavior.Restrict);
             application.HasOne<Branch>().WithMany().HasForeignKey(a => a.BranchId).OnDelete(DeleteBehavior.Restrict);
             application.HasQueryFilter(a => ScopeBranchId == null || a.BranchId == ScopeBranchId);
+            application.Property(a => a.Reference)
+                .HasMaxLength(BusinessLimits.ClientNumberMaxLength)
+                .HasDefaultValueSql("'A-' || lpad(nextval('application_reference_seq')::text, 6, '0')")
+                .HasSentinel("")
+                .ValueGeneratedOnAdd();
+            application.HasIndex(a => a.Reference).IsUnique();
+            application.HasIndex(a => new { a.Stage, a.AssignedToUserId });
+            application.Property(a => a.WithdrawnBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            application.Property(a => a.WithdrawalReason).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
+            application.HasOne(a => a.AssignedTo).WithMany().HasForeignKey(a => a.AssignedToUserId).OnDelete(DeleteBehavior.Restrict);
+            application.HasOne<User>().WithMany().HasForeignKey(a => a.WithdrawnByUserId).OnDelete(DeleteBehavior.Restrict);
+            application.HasMany(a => a.SignOffs).WithOne().HasForeignKey(s => s.CreditApplicationId).OnDelete(DeleteBehavior.Cascade);
+            application.HasMany<ApplicationNote>().WithOne().HasForeignKey(n => n.CreditApplicationId).OnDelete(DeleteBehavior.Cascade);
             application.HasOne(a => a.Decision)
                 .WithOne()
                 .HasForeignKey<CreditDecision>(d => d.CreditApplicationId)
@@ -159,6 +175,32 @@ public class CreditScoringDbContext : DbContext
             decision.Property(d => d.DecidedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
             decision.HasIndex(d => new { d.IsOverride, d.Outcome });
             decision.HasOne<User>().WithMany().HasForeignKey(d => d.DecidedByUserId).OnDelete(DeleteBehavior.Restrict);
+            decision.Property(d => d.SignedOffBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            decision.HasOne<User>().WithMany().HasForeignKey(d => d.SignedOffByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SignOffRequest>(request =>
+        {
+            request.ToTable("sign_off_requests", table =>
+                table.HasCheckConstraint("ck_sign_off_requests_review", "(status = 'Pending') = (reviewed_at IS NULL)"));
+            request.Property(r => r.Id).ValueGeneratedNever();
+            request.Property(r => r.Reason).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
+            request.Property(r => r.Note).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
+            request.Property(r => r.RequestedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            request.Property(r => r.ReviewedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            request.HasIndex(r => r.CreditApplicationId).IsUnique().HasFilter("status = 'Pending'");
+            request.HasOne<User>().WithMany().HasForeignKey(r => r.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
+            request.HasOne<User>().WithMany().HasForeignKey(r => r.ReviewedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ApplicationNote>(note =>
+        {
+            note.ToTable("application_notes");
+            note.Property(n => n.Id).ValueGeneratedNever();
+            note.Property(n => n.Text).HasMaxLength(ApplicationNote.TextMaxLength);
+            note.Property(n => n.Author).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            note.HasIndex(n => new { n.CreditApplicationId, n.CreatedAt });
+            note.HasOne<User>().WithMany().HasForeignKey(n => n.AuthorUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CreditDecision>(decision =>

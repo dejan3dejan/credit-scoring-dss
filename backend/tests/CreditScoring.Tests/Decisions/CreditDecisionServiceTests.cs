@@ -308,7 +308,7 @@ public class CreditDecisionServiceTests
     {
         var (service, ml) = Create(new MlScore(0.1, ModelId));
         var application = Unscored();
-        application.OfficerDecision = OfficerDecision.Record(null, FinalDecision.Reject, "assessed manually", TestData.Officer, TestData.Now);
+        application.RecordDecision(OfficerDecision.Record(null, FinalDecision.Reject, "assessed manually", TestData.Officer, TestData.Now));
 
         var result = await service.RescoreAsync(application, [TestData.ActiveModel()], CancellationToken.None);
 
