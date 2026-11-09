@@ -5,6 +5,9 @@ namespace CreditScoring.Api.Contracts;
 
 public sealed record CreateApplicationRequest
 {
+    [Display(Name = "Draft")]
+    public Guid? DraftId { get; init; }
+
     [Required, Display(Name = "Client")]
     public Guid? ClientId { get; init; }
 

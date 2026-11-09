@@ -48,25 +48,27 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
             clients = clients.Where(c => c.IsActive == active);
 
         var total = await clients.CountAsync(cancellationToken);
-        var items = await clients
+        var page = clients
             .OrderBy(c => c.FullName)
             .ThenBy(c => c.ClientNumber)
             .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(c => new ClientSummary(
-                c.Id,
-                c.ClientNumber,
-                c.FullName,
-                c.DateOfBirth,
-                db.Applications.Count(a => a.ClientId == c.Id),
-                db.Applications.Where(a => a.ClientId == c.Id).Max(a => (DateTimeOffset?)a.SubmittedAt),
-                c.BranchId,
-                c.IsActive,
-                c.AnonymisedAt))
-            .ToListAsync(cancellationToken);
+            .Take(query.PageSize);
+        var items = await Summaries(page, db).ToListAsync(cancellationToken);
 
         return new PagedResult<ClientSummary>(items, query.Page, query.PageSize, total);
     }
+
+    internal static IQueryable<ClientSummary> Summaries(IQueryable<Client> clients, CreditScoringDbContext db) =>
+        clients.Select(c => new ClientSummary(
+            c.Id,
+            c.ClientNumber,
+            c.FullName,
+            c.DateOfBirth,
+            db.Applications.Count(a => a.ClientId == c.Id),
+            db.Applications.Where(a => a.ClientId == c.Id).Max(a => (DateTimeOffset?)a.SubmittedAt),
+            c.BranchId,
+            c.IsActive,
+            c.AnonymisedAt));
 
     [HttpGet("{id:guid}")]
     [Authorize(Policy = Permissions.ClientsRead)]

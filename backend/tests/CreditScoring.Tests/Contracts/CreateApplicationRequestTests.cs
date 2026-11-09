@@ -18,7 +18,15 @@ public class CreateApplicationRequestTests
     }
 
     public static TheoryData<string> PropertyNames() =>
-        new(typeof(CreateApplicationRequest).GetProperties().Select(p => p.Name));
+        new(typeof(CreateApplicationRequest).GetProperties()
+            .Select(p => p.Name)
+            .Where(n => n != nameof(CreateApplicationRequest.DraftId)));
+
+    [Fact]
+    public void The_draft_reference_is_optional()
+    {
+        Assert.Empty(Errors(Valid() with { DraftId = null }));
+    }
 
     [Fact]
     public void Valid_request_has_no_errors()

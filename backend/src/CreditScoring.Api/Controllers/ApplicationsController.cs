@@ -36,6 +36,16 @@ public class ApplicationsController(
             return FieldErrors.Reject(this, "clientId", new FieldError("client_inactive"), "This client is inactive and cannot get new applications.");
 
         var actor = Credentials.ActorOf(User);
+        ApplicationDraft? draft = null;
+        if (request.DraftId is { } draftId)
+        {
+            draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.CreatedByUserId == actor.UserId, cancellationToken);
+            if (draft is null)
+                return FieldErrors.Reject(this, "draftId", new FieldError("draft_not_found"), "No draft of yours with this id exists.");
+            if (draft.Status != DraftStatus.Open)
+                return FieldErrors.Reject(this, "draftId", new FieldError("draft_closed"), "This draft was already submitted or discarded.");
+        }
+
         var application = request.ToDomain(now, actor, client);
         var submitter = await db.Users.SingleAsync(u => u.Id == actor.UserId, cancellationToken);
         if (application.AssignTo(submitter) is not Changed)
@@ -46,6 +56,8 @@ public class ApplicationsController(
         application.ShadowScores.AddRange(evaluation.ShadowScores);
 
         db.Applications.Add(application);
+        if (draft is not null && draft.MarkSubmitted(application.Id, now) is not Changed)
+            throw new InvalidOperationException("an open draft could not be marked as submitted");
         await db.SaveChangesAsync(CancellationToken.None);
 
         return CreatedAtAction(nameof(Get), new { id = application.Id }, ApplicationResponse.From(application));
@@ -140,11 +152,8 @@ public class ApplicationsController(
             $"SELECT 1 FROM credit_applications WHERE id = {id} FOR UPDATE",
             CancellationToken.None);
 
-    private ConflictObjectResult RescoreConflict(string message) => Conflict(new ProblemDetails
-    {
-        Status = StatusCodes.Status409Conflict,
-        Title = message,
-    });
+    private ObjectResult RescoreConflict(string message) =>
+        ApiProblems.Create(this, StatusCodes.Status409Conflict, ApiProblems.Conflict, message);
 
     [HttpGet("{id:guid}/shadow-scores")]
     [Authorize(Policy = Permissions.StatsRead)]
@@ -336,11 +345,8 @@ public class ApplicationsController(
         }
     }
 
-    private ConflictObjectResult AlreadyDecidedConflict() => Conflict(new ProblemDetails
-    {
-        Status = StatusCodes.Status409Conflict,
-        Title = "A decision is already recorded for this application.",
-    });
+    private ObjectResult AlreadyDecidedConflict() =>
+        ApiProblems.Create(this, StatusCodes.Status409Conflict, ApiProblems.Conflict, "A decision is already recorded for this application.");
 
     [HttpGet]
     [Authorize(Policy = Permissions.ApplicationsRead)]

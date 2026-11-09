@@ -298,7 +298,8 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
 
         var response = await Decide(created.Id, FinalDecision.Reject, "changed");
 
-        var conflict = Assert.IsType<ConflictObjectResult>(response.Result);
+        var conflict = Assert.IsAssignableFrom<ObjectResult>(response.Result);
+        Assert.Equal((409, "conflict"), (conflict.StatusCode, Assert.IsType<ProblemDetails>(conflict.Value).Extensions["code"]));
         Assert.Equal(409, Assert.IsType<ProblemDetails>(conflict.Value).Status);
         await using var db = database.CreateContext();
         Assert.Equal(FinalDecision.Approve, (await db.OfficerDecisions.SingleAsync()).Outcome);
@@ -459,7 +460,8 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
 
         var response = await Rescore(created.Id);
 
-        var conflict = Assert.IsType<ConflictObjectResult>(response.Result);
+        var conflict = Assert.IsAssignableFrom<ObjectResult>(response.Result);
+        Assert.Equal((409, "conflict"), (conflict.StatusCode, Assert.IsType<ProblemDetails>(conflict.Value).Extensions["code"]));
         Assert.Equal("This application already has a score.", Assert.IsType<ProblemDetails>(conflict.Value).Title);
         await using var db = database.CreateContext();
         Assert.Equal(0.1, (await db.Decisions.SingleAsync()).PBad);
@@ -475,7 +477,7 @@ public sealed class ApplicationsControllerTests(DatabaseFixture database) : IAsy
 
         var response = await Rescore(created.Id);
 
-        Assert.IsType<ConflictObjectResult>(response.Result);
+        Assert.Equal(409, Assert.IsAssignableFrom<ObjectResult>(response.Result).StatusCode);
         await using var db = database.CreateContext();
         Assert.Equal(DecisionStatus.ScoringUnavailable, (await db.Decisions.SingleAsync()).Status);
     }

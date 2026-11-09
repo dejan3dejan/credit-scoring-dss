@@ -26,6 +26,66 @@ namespace CreditScoring.Api.Data.Migrations
 
             modelBuilder.HasSequence("client_number_seq");
 
+            modelBuilder.Entity("CreditScoring.Api.Domain.ApplicationDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Answers")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("answers");
+
+                    b.Property<Guid?>("ApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("application_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("CreatedByUserId", "Status");
+
+                    b.ToTable("application_drafts", (string)null);
+                });
+
             modelBuilder.Entity("CreditScoring.Api.Domain.ApplicationNote", b =>
                 {
                     b.Property<Guid>("Id")
@@ -967,6 +1027,34 @@ namespace CreditScoring.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_users_preferred_language", "preferred_language IN ('en', 'sr')");
                         });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ApplicationDraft", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CreditScoring.Api.Domain.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("CreditScoring.Api.Domain.ApplicationNote", b =>

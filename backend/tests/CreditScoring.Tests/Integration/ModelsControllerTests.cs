@@ -91,7 +91,8 @@ public sealed class ModelsControllerTests(DatabaseFixture database) : IAsyncLife
     {
         await Register();
 
-        Assert.IsType<ConflictObjectResult>((await Register()).Result);
+        var conflict = Assert.IsAssignableFrom<ObjectResult>((await Register()).Result);
+        Assert.Equal((409, "conflict"), (conflict.StatusCode, Assert.IsType<ProblemDetails>(conflict.Value).Extensions["code"]));
     }
 
     [Fact]
@@ -102,6 +103,7 @@ public sealed class ModelsControllerTests(DatabaseFixture database) : IAsyncLife
         var result = Assert.IsType<ObjectResult>((await Register()).Result);
 
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, result.StatusCode);
+        Assert.Equal("inference_unavailable", Assert.IsType<ProblemDetails>(result.Value).Extensions["code"]);
     }
 
     [Fact]

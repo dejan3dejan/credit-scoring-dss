@@ -13,6 +13,7 @@ public static class ApiProblems
     public const string Conflict = "conflict";
     public const string InvalidCredentials = "invalid_credentials";
     public const string LockedOut = "locked_out";
+    public const string InferenceUnavailable = "inference_unavailable";
 
     public static void Configure(ProblemDetailsOptions options) => options.CustomizeProblemDetails = AddDefaultCode;
 

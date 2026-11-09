@@ -41,6 +41,7 @@ public class CreditScoringDbContext : DbContext
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<SignOffRequest> SignOffRequests => Set<SignOffRequest>();
     public DbSet<ApplicationNote> Notes => Set<ApplicationNote>();
+    public DbSet<ApplicationDraft> Drafts => Set<ApplicationDraft>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -191,6 +192,20 @@ public class CreditScoringDbContext : DbContext
             request.HasIndex(r => r.CreditApplicationId).IsUnique().HasFilter("status = 'Pending'");
             request.HasOne<User>().WithMany().HasForeignKey(r => r.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
             request.HasOne<User>().WithMany().HasForeignKey(r => r.ReviewedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ApplicationDraft>(draft =>
+        {
+            draft.ToTable("application_drafts");
+            draft.Property(d => d.Id).ValueGeneratedNever();
+            draft.Property(d => d.Answers).HasColumnType("jsonb");
+            draft.Property(d => d.CreatedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            draft.HasIndex(d => new { d.CreatedByUserId, d.Status });
+            draft.HasOne(d => d.Client).WithMany().HasForeignKey(d => d.ClientId).OnDelete(DeleteBehavior.Restrict);
+            draft.HasOne<Branch>().WithMany().HasForeignKey(d => d.BranchId).OnDelete(DeleteBehavior.Restrict);
+            draft.HasOne<User>().WithMany().HasForeignKey(d => d.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            draft.HasOne<CreditApplication>().WithMany().HasForeignKey(d => d.ApplicationId).OnDelete(DeleteBehavior.Restrict);
+            draft.HasQueryFilter(d => ScopeBranchId == null || d.BranchId == ScopeBranchId);
         });
 
         modelBuilder.Entity<ApplicationNote>(note =>

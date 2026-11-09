@@ -11,7 +11,7 @@ public class ApplicationInputsTests
     public static TheoryData<string> Inputs() =>
         new(typeof(CreateApplicationRequest).GetProperties()
             .Select(p => p.Name)
-            .Where(n => n != nameof(CreateApplicationRequest.ClientId)));
+            .Where(n => n is not nameof(CreateApplicationRequest.ClientId) and not nameof(CreateApplicationRequest.DraftId)));
 
     [Theory]
     [InlineData(nameof(CreditApplication.LoanAmount), "Loan amount", "12,000 USD")]

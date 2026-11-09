@@ -145,15 +145,10 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
         }
     }
 
-    private ConflictObjectResult Changed(string title) => Conflict(new ProblemDetails
-    {
-        Status = StatusCodes.Status409Conflict,
-        Title = title,
-    });
+    private ObjectResult Changed(string title) =>
+        ApiProblems.Create(this, StatusCodes.Status409Conflict, ApiProblems.Conflict, title);
 
-    private ObjectResult CatalogUnavailable() => StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
-    {
-        Status = StatusCodes.Status503ServiceUnavailable,
-        Title = "The inference service could not list its models.",
-    });
+    private ObjectResult CatalogUnavailable() =>
+        ApiProblems.Create(this, StatusCodes.Status503ServiceUnavailable, ApiProblems.InferenceUnavailable,
+            "The inference service could not list its models.");
 }

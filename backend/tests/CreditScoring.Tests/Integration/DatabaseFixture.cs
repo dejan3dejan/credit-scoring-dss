@@ -50,6 +50,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     {
         await using var db = CreateContext();
         await db.AuditEntries.ExecuteDeleteAsync();
+        await db.Drafts.ExecuteDeleteAsync();
         await db.Applications.ExecuteDeleteAsync();
         await db.Clients.ExecuteDeleteAsync();
         await db.ModelEvents.ExecuteDeleteAsync();
