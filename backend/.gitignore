@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# React SPA build output, produced by the frontend build
+src/CreditScoring.Api/wwwroot/app/

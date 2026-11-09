@@ -91,5 +91,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapRazorPages();
+SpaHosting.Map(app);
 
 app.Run();
