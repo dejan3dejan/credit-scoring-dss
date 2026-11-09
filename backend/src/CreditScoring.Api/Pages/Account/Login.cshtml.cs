@@ -1,15 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using CreditScoring.Api.Auth;
-using CreditScoring.Api.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 
 namespace CreditScoring.Api.Pages.Account;
 
-public class LoginModel(CreditScoringDbContext db) : PageModel
+public class LoginModel(SignInService signIn) : PageModel
 {
     [BindProperty, Required, Display(Name = "User name")]
     public string? UserName { get; set; }
@@ -29,16 +27,23 @@ public class LoginModel(CreditScoringDbContext db) : PageModel
         if (!ModelState.IsValid)
             return Page();
 
-        var name = UserName!.Trim().ToLowerInvariant();
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserName == name, cancellationToken);
-        if (user is null || !Credentials.Verify(user, Password!))
+        switch (await signIn.SignInAsync(UserName!, Password!, cancellationToken))
         {
-            ModelState.AddModelError("", "The user name or password is not correct.");
-            return Page();
-        }
+            case SignedIn signedIn:
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, Credentials.PrincipalFor(signedIn.User));
+                return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/");
 
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, Credentials.PrincipalFor(user));
-        return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/");
+            case LockedOut lockedOut:
+                ModelState.AddModelError("", $"This account is locked after too many wrong passwords. Try again after {lockedOut.Until:HH:mm} UTC.");
+                return Page();
+
+            case InvalidCredentials:
+                ModelState.AddModelError("", "The user name or password is not correct.");
+                return Page();
+
+            case var other:
+                throw new InvalidOperationException($"unhandled sign-in result {other.GetType().Name}");
+        }
     }
 
     public async Task<IActionResult> OnPostLogoutAsync()

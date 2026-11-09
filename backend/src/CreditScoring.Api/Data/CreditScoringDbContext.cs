@@ -161,9 +161,16 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
 
         modelBuilder.Entity<User>(user =>
         {
-            user.ToTable("users");
+            user.ToTable("users", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_users_preferred_language",
+                    $"preferred_language IN ({string.Join(", ", Languages.All.Select(l => $"'{l}'"))})");
+                table.HasCheckConstraint("ck_users_failed_sign_in_count", "failed_sign_in_count >= 0");
+            });
             user.Property(u => u.UserName).HasMaxLength(BusinessLimits.UserNameMaxLength);
             user.Property(u => u.DisplayName).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            user.Property(u => u.PreferredLanguage).HasMaxLength(8).HasDefaultValue(Languages.English);
             user.HasIndex(u => u.UserName).IsUnique();
         });
 

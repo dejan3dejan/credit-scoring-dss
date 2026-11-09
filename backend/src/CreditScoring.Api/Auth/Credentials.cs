@@ -15,10 +15,19 @@ public static class Credentials
         return Hasher.HashPassword(user, password);
     }
 
+    private static readonly Lazy<User> Nobody = new(() =>
+    {
+        var user = User.Create("nobody", "Nobody", UserRole.Officer, DateTimeOffset.UnixEpoch);
+        user.SetPasswordHash(Hasher.HashPassword(user, Guid.NewGuid().ToString()));
+        return user;
+    });
+
     public static bool Verify(User user, string password) =>
         !string.IsNullOrEmpty(user.PasswordHash)
         && !string.IsNullOrEmpty(password)
         && Hasher.VerifyHashedPassword(user, user.PasswordHash, password) != PasswordVerificationResult.Failed;
+
+    public static void VerifyAgainstNobody(string password) => Verify(Nobody.Value, password);
 
     public static ClaimsPrincipal PrincipalFor(User user)
     {

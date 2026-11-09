@@ -35,11 +35,13 @@ builder.Services.AddScoped<ICreditDecisionService, CreditDecisionService>();
 builder.Services.AddControllers(options =>
         options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))
     .AddJsonOptions(options => ApiJson.Configure(options.JsonSerializerOptions));
+builder.Services.AddProblemDetails(ApiProblems.Configure);
 builder.Services.AddOpenApi();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(CookieSetup.Configure);
 builder.Services.AddAuthorization(Policies.Configure);
+builder.Services.AddScoped<SignInService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<CookieForwardingHandler>();
 
