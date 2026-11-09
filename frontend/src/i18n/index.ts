@@ -3,7 +3,7 @@ import { initReactI18next, useTranslation } from "react-i18next";
 import type { Language } from "@/api/types";
 import { ApiError } from "@/api/client";
 import type { FieldError } from "@/api/types";
-import { formatDateTime } from "@/i18n/format";
+import { formatDateTime, formatNumber } from "@/i18n/format";
 import en from "@/i18n/en.json";
 import sr from "@/i18n/sr.json";
 
@@ -63,7 +63,16 @@ export function errorMessage(error: unknown): string {
 }
 
 export function fieldErrorMessage(error: FieldError): string {
+  const language: Language = i18n.language === "sr" ? "sr" : "en";
   const code = error.code === "length" && error.minimum === 0 ? "length_max" : error.code;
   const key = `fieldErrors.${code}`;
-  return i18n.exists(key) ? i18n.t(key, error) : i18n.t("fieldErrors.invalid_value");
+  if (!i18n.exists(key)) return i18n.t("fieldErrors.invalid_value");
+  const values: Record<string, unknown> = { ...error };
+  for (const name of ["minimum", "maximum"])
+    if (typeof error[name] === "number") values[name] = formatNumber(error[name] as number, language, 2);
+  if (typeof error.other === "string") {
+    const field = error.other[0].toUpperCase() + error.other.slice(1);
+    values.other = i18n.t(`fields.${field}`, { defaultValue: error.other });
+  }
+  return i18n.t(key, values);
 }
