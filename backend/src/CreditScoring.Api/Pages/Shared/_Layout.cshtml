@@ -5,8 +5,8 @@
     var current = ViewContext.RouteData.Values["page"] as string;
     var bare = ViewData["Bare"] is true;
     var signedIn = User.Identity?.IsAuthenticated == true;
-    var canDecide = signedIn && (await Authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
-    var canSeeStats = signedIn && (await Authorization.AuthorizeAsync(User, Policies.CanSeeStats)).Succeeded;
+    var canDecide = signedIn && (await Authorization.AuthorizeAsync(User, Permissions.ApplicationsWrite)).Succeeded;
+    var canSeeStats = signedIn && (await Authorization.AuthorizeAsync(User, Permissions.StatsRead)).Succeeded;
     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 }
 <!DOCTYPE html>

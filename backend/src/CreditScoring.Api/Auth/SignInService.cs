@@ -20,7 +20,7 @@ public class SignInService(CreditScoringDbContext db, TimeProvider time)
         var user = await db.Users.FirstOrDefaultAsync(u => u.UserName == name, cancellationToken);
         var now = time.GetUtcNow();
 
-        if (user is null)
+        if (user is null || !user.IsActive)
         {
             Credentials.VerifyAgainstNobody(password);
             return new InvalidCredentials();

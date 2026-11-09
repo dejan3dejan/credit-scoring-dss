@@ -26,5 +26,9 @@ public static class BusinessLimits
     public const int DecisionReasonMaxLength = 500;
     public const int UserNameMaxLength = 64;
     public const int PasswordMaxLength = 256;
+    public const int PasswordMinLength = 10;
+    public const int DisplayNameMaxLength = SubmittedByMaxLength;
+    public const int EmailMaxLength = 254;
+    public const string UserNamePattern = @"^\s*[A-Za-z0-9._-]+\s*$";
     public const int ModelIdMaxLength = 100;
 }

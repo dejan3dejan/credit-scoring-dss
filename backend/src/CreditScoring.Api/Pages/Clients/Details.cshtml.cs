@@ -19,7 +19,7 @@ public class DetailsModel(ApplicationsApi api, IAuthorizationService authorizati
             return NotFound();
 
         Client = client;
-        CanDecide = (await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
+        CanDecide = (await authorization.AuthorizeAsync(User, Permissions.ApplicationsWrite)).Succeeded;
         return Page();
     }
 }

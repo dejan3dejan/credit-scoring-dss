@@ -8,7 +8,7 @@
     var r = Model.Result;
     var first = r.TotalCount == 0 ? 0 : (r.Page - 1) * r.PageSize + 1;
     var last = Math.Min(r.Page * r.PageSize, r.TotalCount);
-    var canDecide = (await Authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
+    var canDecide = (await Authorization.AuthorizeAsync(User, Permissions.ApplicationsWrite)).Succeeded;
     var outcomes = new (HistoryOutcome? Value, string Label)[]
     {
         (null, "All"),

@@ -5,6 +5,7 @@ public enum UserRole
     Officer = 1,
     Manager = 2,
     Risk = 3,
+    Admin = 4,
 }
 
 public sealed record Actor(Guid UserId, string Name);
@@ -26,6 +27,10 @@ public class User
     public int FailedSignInCount { get; private set; }
     public DateTimeOffset? LockedUntil { get; private set; }
     public DateTimeOffset? LastSignedInAt { get; private set; }
+    public string? Email { get; private set; }
+    public bool IsActive { get; private set; } = true;
+    public bool MustChangePassword { get; private set; }
+    public Guid SecurityStamp { get; private set; }
 
     public static string NormalizeUserName(string userName) => userName.Trim().ToLowerInvariant();
 
@@ -43,6 +48,7 @@ public class User
             DisplayName = displayName.Trim(),
             Role = role,
             CreatedAt = createdAt,
+            SecurityStamp = Guid.NewGuid(),
         };
     }
 
@@ -75,6 +81,60 @@ public class User
         FailedSignInCount = 0;
         LockedUntil = null;
         LastSignedInAt = now;
+    }
+
+    public void Edit(string displayName, string? email, UserRole role, string preferredLanguage)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        if (!Enum.IsDefined(role))
+            throw new ArgumentOutOfRangeException(nameof(role), role, "unknown role");
+        SetPreferredLanguage(preferredLanguage);
+
+        DisplayName = displayName.Trim();
+        Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+        Role = role;
+    }
+
+    public void SetPreferredLanguage(string language)
+    {
+        if (!Languages.All.Contains(language))
+            throw new ArgumentOutOfRangeException(nameof(language), language, "unsupported language");
+        PreferredLanguage = language;
+    }
+
+    public void Deactivate()
+    {
+        if (!IsActive)
+            return;
+        IsActive = false;
+        SecurityStamp = Guid.NewGuid();
+    }
+
+    public void Reactivate()
+    {
+        IsActive = true;
+        Unlock();
+    }
+
+    public void ResetPassword(string passwordHash)
+    {
+        SetPasswordHash(passwordHash);
+        MustChangePassword = true;
+        Unlock();
+        SecurityStamp = Guid.NewGuid();
+    }
+
+    public void ChangePassword(string passwordHash)
+    {
+        SetPasswordHash(passwordHash);
+        MustChangePassword = false;
+        SecurityStamp = Guid.NewGuid();
+    }
+
+    private void Unlock()
+    {
+        FailedSignInCount = 0;
+        LockedUntil = null;
     }
 
     public Actor AsActor() => new(Id, DisplayName);

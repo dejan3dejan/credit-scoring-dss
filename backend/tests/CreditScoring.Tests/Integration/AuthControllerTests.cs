@@ -193,4 +193,88 @@ public sealed class AuthControllerTests(DatabaseFixture database) : IAsyncLifeti
         Problem(response, 401, "unauthenticated");
         Assert.Equal(1, authentication.SignOuts);
     }
+
+    private async Task<User> Deactivated()
+    {
+        var user = await NewUser();
+        await using var db = database.CreateContext();
+        var tracked = await db.Users.SingleAsync(u => u.Id == user.Id);
+        tracked.Deactivate();
+        await db.SaveChangesAsync();
+        return tracked;
+    }
+
+    [Fact]
+    public async Task A_deactivated_user_gets_the_wrong_password_answer_without_a_failure_counted()
+    {
+        var user = await Deactivated();
+
+        var response = await Login(user.UserName, Password);
+
+        Problem(response, 401, "invalid_credentials");
+        Assert.Null(authentication.SignedIn);
+        Assert.Equal(0, (await Reload(user)).FailedSignInCount);
+    }
+
+    [Fact]
+    public async Task Me_says_whether_the_password_must_be_changed()
+    {
+        var user = await NewUser();
+        await using (var db = database.CreateContext())
+        {
+            (await db.Users.SingleAsync(u => u.Id == user.Id)).ResetPassword(Credentials.Hash(user, Password));
+            await db.SaveChangesAsync();
+        }
+        var fresh = await Reload(user);
+
+        var response = await WithAuth(c => c.Me(CancellationToken.None), Credentials.PrincipalFor(fresh));
+
+        Assert.True(response.Value!.MustChangePassword);
+    }
+
+    [Fact]
+    public async Task Changing_the_password_needs_the_current_one()
+    {
+        var user = await NewUser();
+
+        var response = await WithAuth(
+            c => c.ChangePassword(new ChangePasswordRequest { CurrentPassword = "wrong", NewPassword = "a new password 1" }, CancellationToken.None),
+            Credentials.PrincipalFor(user));
+
+        var problem = Assert.IsType<ValidationProblemDetails>(Assert.IsType<BadRequestObjectResult>(response).Value);
+        Assert.Equal(["wrong_password"], TestServices.FieldCodes(problem, "currentPassword"));
+        Assert.Equal(0, (await Reload(user)).FailedSignInCount);
+        Assert.True(Credentials.Verify(await Reload(user), Password));
+    }
+
+    [Fact]
+    public async Task Changing_the_password_keeps_this_session_and_ends_the_others()
+    {
+        var user = await NewUser();
+
+        var response = await WithAuth(
+            c => c.ChangePassword(new ChangePasswordRequest { CurrentPassword = Password, NewPassword = "a new password 1" }, CancellationToken.None),
+            Credentials.PrincipalFor(user));
+
+        Assert.IsType<NoContentResult>(response);
+        var stored = await Reload(user);
+        Assert.True(Credentials.Verify(stored, "a new password 1"));
+        Assert.False(stored.MustChangePassword);
+        Assert.NotEqual(user.SecurityStamp, stored.SecurityStamp);
+        Assert.Equal(SessionCheck.Valid, Credentials.Check(authentication.SignedIn!, stored));
+        Assert.Equal(SessionCheck.Reject, Credentials.Check(Credentials.PrincipalFor(user), stored));
+    }
+
+    [Fact]
+    public async Task Users_set_their_own_language()
+    {
+        var user = await NewUser();
+
+        var response = await WithAuth(
+            c => c.SetLanguage(new LanguageRequest { Language = Languages.Serbian }, CancellationToken.None),
+            Credentials.PrincipalFor(user));
+
+        Assert.Equal("sr", response.Value!.PreferredLanguage);
+        Assert.Equal("sr", (await Reload(user)).PreferredLanguage);
+    }
 }

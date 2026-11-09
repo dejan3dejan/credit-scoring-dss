@@ -11,7 +11,7 @@ namespace CreditScoring.Api.Controllers;
 
 [ApiController]
 [Route("api/stats")]
-[Authorize(Policy = Policies.CanSeeStats)]
+[Authorize(Policy = Permissions.StatsRead)]
 public class StatsController(CreditScoringDbContext db) : ControllerBase
 {
     [HttpGet]

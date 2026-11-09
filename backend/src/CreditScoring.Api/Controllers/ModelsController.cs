@@ -17,6 +17,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
     private const int EventLimit = 50;
 
     [HttpGet]
+    [Authorize(Policy = Permissions.ModelsRead)]
     [ProducesResponseType<IReadOnlyList<ScoringModelResponse>>(StatusCodes.Status200OK)]
     public async Task<IReadOnlyList<ScoringModelResponse>> List(CancellationToken cancellationToken)
     {
@@ -29,7 +30,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
     }
 
     [HttpGet("available")]
-    [Authorize(Policy = Policies.CanManageModels)]
+    [Authorize(Policy = Permissions.ModelsManage)]
     [ProducesResponseType<IReadOnlyList<AvailableModelResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
     public async Task<ActionResult<IReadOnlyList<AvailableModelResponse>>> Available(CancellationToken cancellationToken)
@@ -45,7 +46,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
     }
 
     [HttpPost]
-    [Authorize(Policy = Policies.CanManageModels)]
+    [Authorize(Policy = Permissions.ModelsManage)]
     [ProducesResponseType<ScoringModelResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -77,7 +78,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
     }
 
     [HttpPost("{modelId}/promote")]
-    [Authorize(Policy = Policies.CanManageModels)]
+    [Authorize(Policy = Permissions.ModelsManage)]
     [ProducesResponseType<IReadOnlyList<ScoringModelResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -89,7 +90,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
         ChangeAsync(models => ModelRegistry.Promote(models, modelId, request.Reason, Credentials.ActorOf(User), time.GetUtcNow()), cancellationToken);
 
     [HttpPost("{modelId}/retire")]
-    [Authorize(Policy = Policies.CanManageModels)]
+    [Authorize(Policy = Permissions.ModelsManage)]
     [ProducesResponseType<IReadOnlyList<ScoringModelResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -101,7 +102,7 @@ public class ModelsController(CreditScoringDbContext db, IMlClient ml, TimeProvi
         ChangeAsync(models => ModelRegistry.Retire(models, modelId, request.Reason, Credentials.ActorOf(User), time.GetUtcNow()), cancellationToken);
 
     [HttpGet("events")]
-    [Authorize(Policy = Policies.CanManageModels)]
+    [Authorize(Policy = Permissions.ModelsManage)]
     [ProducesResponseType<IReadOnlyList<ModelEventResponse>>(StatusCodes.Status200OK)]
     public async Task<IReadOnlyList<ModelEventResponse>> Events(CancellationToken cancellationToken)
     {

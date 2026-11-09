@@ -18,7 +18,7 @@ public class ApplicationsController(
     TimeProvider time) : ControllerBase
 {
     [HttpPost]
-    [Authorize(Policy = Policies.CanDecide)]
+    [Authorize(Policy = Permissions.ApplicationsWrite)]
     [ProducesResponseType<ApplicationResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApplicationResponse>> Create(
@@ -60,6 +60,7 @@ public class ApplicationsController(
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = Permissions.ApplicationsRead)]
     [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApplicationResponse>> Get(Guid id, CancellationToken cancellationToken)
@@ -71,7 +72,7 @@ public class ApplicationsController(
     }
 
     [HttpPost("{id:guid}/rescore")]
-    [Authorize(Policy = Policies.CanDecide)]
+    [Authorize(Policy = Permissions.ApplicationsWrite)]
     [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -138,7 +139,7 @@ public class ApplicationsController(
     });
 
     [HttpGet("{id:guid}/shadow-scores")]
-    [Authorize(Policy = Policies.CanSeeStats)]
+    [Authorize(Policy = Permissions.StatsRead)]
     [ProducesResponseType<IReadOnlyList<ShadowScoreResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyList<ShadowScoreResponse>>> ShadowScores(Guid id, CancellationToken cancellationToken)
@@ -155,7 +156,7 @@ public class ApplicationsController(
     }
 
     [HttpPost("{id:guid}/decision")]
-    [Authorize(Policy = Policies.CanDecide)]
+    [Authorize(Policy = Permissions.ApplicationsDecide)]
     [ProducesResponseType<ApplicationResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -205,6 +206,7 @@ public class ApplicationsController(
     });
 
     [HttpGet]
+    [Authorize(Policy = Permissions.ApplicationsRead)]
     [ProducesResponseType<PagedResult<ApplicationSummary>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PagedResult<ApplicationSummary>>> List(

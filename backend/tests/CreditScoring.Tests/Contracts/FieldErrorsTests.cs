@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text.Json;
 using CreditScoring.Api.Contracts;
+using CreditScoring.Api.Domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -57,6 +58,40 @@ public class FieldErrorsTests
             (range.GetProperty("code").GetString(), range.GetProperty("minimum").GetInt32(), range.GetProperty("maximum").GetInt32()));
         var cross = Single(problem, "openAccounts");
         Assert.Equal(("not_greater_than", "totalAccounts"), (cross.GetProperty("code").GetString(), cross.GetProperty("other").GetString()));
+    }
+
+    [Fact]
+    public void Email_format_and_allowed_values_have_codes()
+    {
+        var problem = Validate(new CreateUserRequest
+        {
+            UserName = "ana jovanović",
+            DisplayName = "Ana",
+            Email = "not-an-address",
+            Role = UserRole.Officer,
+            PreferredLanguage = "de",
+            TemporaryPassword = "long enough password",
+        });
+
+        Assert.Equal(["email"], TestServices.FieldCodes(problem, "email"));
+        Assert.Equal(["format"], TestServices.FieldCodes(problem, "userName"));
+        var oneOf = Single(problem, "preferredLanguage");
+        Assert.Equal("one_of", oneOf.GetProperty("code").GetString());
+        Assert.Equal(["en", "sr"], oneOf.GetProperty("values").EnumerateArray().Select(v => v.GetString()));
+    }
+
+    [Fact]
+    public void A_missing_optional_language_is_allowed()
+    {
+        var problem = Validate(new CreateUserRequest
+        {
+            UserName = "Ana.J-1",
+            DisplayName = "Ana",
+            Role = UserRole.Officer,
+            TemporaryPassword = "long enough password",
+        });
+
+        Assert.Empty(problem.Errors);
     }
 
     [Fact]
@@ -118,6 +153,6 @@ public class FieldErrorsTests
     [Fact]
     public void An_attribute_without_a_code_fails_loudly()
     {
-        Assert.Throws<InvalidOperationException>(() => FieldErrors.For(new EmailAddressAttribute()));
+        Assert.Throws<InvalidOperationException>(() => FieldErrors.For(new UrlAttribute()));
     }
 }

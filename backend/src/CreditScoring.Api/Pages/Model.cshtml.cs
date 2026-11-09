@@ -42,7 +42,7 @@ public class ModelModel(ApplicationsApi api, IAuthorizationService authorization
 
     private async Task<IActionResult> ChangeAsync(Func<Task<SubmitResult>> change, CancellationToken cancellationToken)
     {
-        if (!(await authorization.AuthorizeAsync(User, Policies.CanManageModels)).Succeeded)
+        if (!(await authorization.AuthorizeAsync(User, Permissions.ModelsManage)).Succeeded)
             return Forbid();
 
         ModelState.Clear();
@@ -71,7 +71,7 @@ public class ModelModel(ApplicationsApi api, IAuthorizationService authorization
     private async Task LoadAsync(CancellationToken cancellationToken)
     {
         Models = await api.ListModelsAsync(cancellationToken);
-        CanManage = (await authorization.AuthorizeAsync(User, Policies.CanManageModels)).Succeeded;
+        CanManage = (await authorization.AuthorizeAsync(User, Permissions.ModelsManage)).Succeeded;
         if (CanManage)
         {
             Available = await api.ListAvailableModelsAsync(cancellationToken);

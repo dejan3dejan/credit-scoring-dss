@@ -33,7 +33,7 @@ public class DetailsModel(ApplicationsApi api, IAuthorizationService authorizati
 
     public async Task<IActionResult> OnPostAsync(Guid id, CancellationToken cancellationToken)
     {
-        if (!(await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded)
+        if (!(await authorization.AuthorizeAsync(User, Permissions.ApplicationsDecide)).Succeeded)
             return Forbid();
 
         ModelState.Clear();
@@ -56,7 +56,7 @@ public class DetailsModel(ApplicationsApi api, IAuthorizationService authorizati
 
     public async Task<IActionResult> OnPostRescoreAsync(Guid id, CancellationToken cancellationToken)
     {
-        if (!(await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded)
+        if (!(await authorization.AuthorizeAsync(User, Permissions.ApplicationsWrite)).Succeeded)
             return Forbid();
 
         switch (await api.RescoreAsync(id, cancellationToken))
@@ -81,8 +81,8 @@ public class DetailsModel(ApplicationsApi api, IAuthorizationService authorizati
             return false;
 
         Application = application;
-        CanDecide = (await authorization.AuthorizeAsync(User, Policies.CanDecide)).Succeeded;
-        if ((await authorization.AuthorizeAsync(User, Policies.CanSeeStats)).Succeeded)
+        CanDecide = (await authorization.AuthorizeAsync(User, Permissions.ApplicationsDecide)).Succeeded;
+        if ((await authorization.AuthorizeAsync(User, Permissions.StatsRead)).Succeeded)
             ShadowScores = await api.GetShadowScoresAsync(id, cancellationToken);
         return true;
     }

@@ -10,6 +10,9 @@ public sealed record FieldError(string Code, IReadOnlyDictionary<string, object>
     public const string Length = "length";
     public const string Range = "range";
     public const string NotGreaterThan = "not_greater_than";
+    public const string Email = "email";
+    public const string Format = "format";
+    public const string OneOf = "one_of";
     public const string InvalidValue = "invalid_value";
 
     public Dictionary<string, object> ToJson()
@@ -46,6 +49,12 @@ public static class FieldErrors
         NotGreaterThanAttribute notGreater => new(FieldError.NotGreaterThan, new Dictionary<string, object>
         {
             ["other"] = JsonNamingPolicy.CamelCase.ConvertName(notGreater.OtherProperty),
+        }),
+        EmailAddressAttribute => new(FieldError.Email),
+        RegularExpressionAttribute => new(FieldError.Format),
+        AllowedValuesAttribute allowed => new(FieldError.OneOf, new Dictionary<string, object>
+        {
+            ["values"] = allowed.Values.OfType<object>().ToArray(),
         }),
         EnumDataTypeAttribute => new(FieldError.InvalidValue),
         DataTypeAttribute hint when hint.GetType() == typeof(DataTypeAttribute) => new(FieldError.InvalidValue),

@@ -16,7 +16,12 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("CreditScoring")
     ?? throw new InvalidOperationException("Connection string 'CreditScoring' is not configured.");
 
-builder.Services.AddDbContext<CreditScoringDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuditContext, HttpAuditContext>();
+builder.Services.AddScoped<AuditInterceptor>();
+builder.Services.AddDbContext<CreditScoringDbContext>((services, options) => options
+    .UseNpgsql(connectionString)
+    .AddInterceptors(services.GetRequiredService<AuditInterceptor>()));
 
 builder.Services.AddOptions<MlServiceOptions>()
     .Bind(builder.Configuration.GetSection(MlServiceOptions.SectionName))
@@ -40,7 +45,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(CookieSetup.Configure);
 builder.Services.AddAuthorization(Policies.Configure);
 builder.Services.AddScoped<SignInService>();
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<CookieForwardingHandler>();
 
 builder.Services.AddOptions<UiOptions>()
@@ -53,9 +57,12 @@ builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AllowAnonymousToPage("/Account/Login");
     options.Conventions.AllowAnonymousToPage("/Error");
-    options.Conventions.AuthorizePage("/Applications/New", Policies.CanDecide);
-    options.Conventions.AuthorizePage("/Clients/New", Policies.CanDecide);
-    options.Conventions.AuthorizePage("/Dashboard", Policies.CanSeeStats);
+    options.Conventions.AuthorizeFolder("/Applications", Permissions.ApplicationsRead);
+    options.Conventions.AuthorizeFolder("/Clients", Permissions.ClientsRead);
+    options.Conventions.AuthorizePage("/Model", Permissions.ModelsRead);
+    options.Conventions.AuthorizePage("/Applications/New", Permissions.ApplicationsWrite);
+    options.Conventions.AuthorizePage("/Clients/New", Permissions.ClientsWrite);
+    options.Conventions.AuthorizePage("/Dashboard", Permissions.StatsRead);
 });
 
 var app = builder.Build();

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CreditScoring.Api.Auth;
 using CreditScoring.Api.Contracts;
+using CreditScoring.Api.Data;
 using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Domain;
 using CreditScoring.Api.Ml;
@@ -45,6 +46,8 @@ internal sealed class FakeMlClient : IMlClient
 
     public Task<MlCatalogResult> ListModelsAsync(CancellationToken cancellationToken) => Task.FromResult(Catalog);
 }
+
+internal sealed record FixedAuditContext(Actor? Actor, string? TraceId) : IAuditContext;
 
 internal sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider
 {

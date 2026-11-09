@@ -12,8 +12,13 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public static readonly string ConnectionString =
         Environment.GetEnvironmentVariable("CREDITSCORING_TEST_DB") ?? DefaultConnectionString;
 
-    public CreditScoringDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<CreditScoringDbContext>().UseNpgsql(ConnectionString).Options);
+    public const string TraceId = "test-trace";
+
+    public CreditScoringDbContext CreateContext(Actor? actor = null) =>
+        new(new DbContextOptionsBuilder<CreditScoringDbContext>()
+            .UseNpgsql(ConnectionString)
+            .AddInterceptors(new AuditInterceptor(TimeProvider.System, new FixedAuditContext(actor, TraceId)))
+            .Options);
 
     public User Officer { get; private set; } = null!;
 
@@ -31,6 +36,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public async Task ResetAsync()
     {
         await using var db = CreateContext();
+        await db.AuditEntries.ExecuteDeleteAsync();
         await db.Applications.ExecuteDeleteAsync();
         await db.Clients.ExecuteDeleteAsync();
         await db.ModelEvents.ExecuteDeleteAsync();

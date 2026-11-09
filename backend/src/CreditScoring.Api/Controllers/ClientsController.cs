@@ -13,7 +13,7 @@ namespace CreditScoring.Api.Controllers;
 public class ClientsController(CreditScoringDbContext db, TimeProvider time) : ControllerBase
 {
     [HttpPost]
-    [Authorize(Policy = Policies.CanDecide)]
+    [Authorize(Policy = Permissions.ClientsWrite)]
     [ProducesResponseType<ClientResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ClientResponse>> Create(CreateClientRequest request, CancellationToken cancellationToken)
@@ -30,6 +30,7 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
     }
 
     [HttpGet]
+    [Authorize(Policy = Permissions.ClientsRead)]
     [ProducesResponseType<PagedResult<ClientSummary>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PagedResult<ClientSummary>>> List([FromQuery] ClientQuery query, CancellationToken cancellationToken)
@@ -61,6 +62,7 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = Permissions.ClientsRead)]
     [ProducesResponseType<ClientDetail>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ClientDetail>> Get(Guid id, CancellationToken cancellationToken)

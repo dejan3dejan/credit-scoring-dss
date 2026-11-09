@@ -5,8 +5,27 @@ using Microsoft.AspNetCore.Identity;
 
 namespace CreditScoring.Api.Auth;
 
+public enum SessionCheck
+{
+    Valid = 1,
+    Refresh = 2,
+    Reject = 3,
+}
+
 public static class Credentials
 {
+    public const string StampClaim = "security_stamp";
+
+    public static SessionCheck Check(ClaimsPrincipal principal, User? user)
+    {
+        if (user is null || !user.IsActive || principal.FindFirstValue(StampClaim) != user.SecurityStamp.ToString())
+            return SessionCheck.Reject;
+
+        var current = principal.FindFirstValue(ClaimTypes.Role) == user.Role.ToString()
+            && principal.FindFirstValue(ClaimTypes.Name) == user.DisplayName;
+        return current ? SessionCheck.Valid : SessionCheck.Refresh;
+    }
+
     private static readonly PasswordHasher<User> Hasher = new();
 
     public static string Hash(User user, string password)
@@ -36,6 +55,7 @@ public static class Credentials
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.DisplayName),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
+                new Claim(StampClaim, user.SecurityStamp.ToString()),
             ],
             CookieAuthenticationDefaults.AuthenticationScheme);
         return new ClaimsPrincipal(identity);

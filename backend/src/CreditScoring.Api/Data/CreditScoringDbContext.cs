@@ -17,6 +17,7 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
     public DbSet<ShadowScore> ShadowScores => Set<ShadowScore>();
     public DbSet<ScoringFailure> ScoringFailures => Set<ScoringFailure>();
     public DbSet<ScoreFactor> ScoreFactors => Set<ScoreFactor>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -171,7 +172,24 @@ public class CreditScoringDbContext(DbContextOptions<CreditScoringDbContext> opt
             user.Property(u => u.UserName).HasMaxLength(BusinessLimits.UserNameMaxLength);
             user.Property(u => u.DisplayName).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
             user.Property(u => u.PreferredLanguage).HasMaxLength(8).HasDefaultValue(Languages.English);
+            user.Property(u => u.Email).HasMaxLength(BusinessLimits.EmailMaxLength);
+            user.Property(u => u.MustChangePassword).HasDefaultValue(false);
+            user.Property(u => u.SecurityStamp).HasDefaultValueSql("gen_random_uuid()");
             user.HasIndex(u => u.UserName).IsUnique();
+        });
+
+        modelBuilder.Entity<AuditEntry>(entry =>
+        {
+            entry.ToTable("audit_entries");
+            entry.Property(e => e.Id).ValueGeneratedNever();
+            entry.Property(e => e.UserName).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            entry.Property(e => e.Entity).HasMaxLength(AuditEntry.EntityMaxLength);
+            entry.Property(e => e.EntityId).HasMaxLength(AuditEntry.EntityIdMaxLength);
+            entry.Property(e => e.TraceId).HasMaxLength(AuditEntry.TraceIdMaxLength);
+            entry.Property(e => e.Changes).HasColumnType("jsonb");
+            entry.HasIndex(e => e.At);
+            entry.HasIndex(e => new { e.Entity, e.EntityId });
+            entry.HasIndex(e => e.UserId);
         });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())

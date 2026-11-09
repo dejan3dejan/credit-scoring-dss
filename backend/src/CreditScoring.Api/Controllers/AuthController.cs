@@ -50,16 +50,51 @@ public class AuthController(SignInService signIn, CreditScoringDbContext db) : C
         return NoContent();
     }
 
+    [HttpPost("password")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (await SignedInUser(cancellationToken) is not { } user)
+            return await Gone();
+        if (!Credentials.Verify(user, request.CurrentPassword!))
+            return FieldErrors.Reject(this, "currentPassword", new FieldError("wrong_password"), "The current password is not correct.");
+
+        user.ChangePassword(Credentials.Hash(user, request.NewPassword!));
+        await db.SaveChangesAsync(CancellationToken.None);
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, Credentials.PrincipalFor(user));
+        return NoContent();
+    }
+
+    [HttpPut("me/language")]
+    [ProducesResponseType<MeResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<MeResponse>> SetLanguage(LanguageRequest request, CancellationToken cancellationToken)
+    {
+        if (await SignedInUser(cancellationToken) is not { } user)
+            return await Gone();
+
+        user.SetPreferredLanguage(request.Language!);
+        await db.SaveChangesAsync(CancellationToken.None);
+        return MeResponse.From(user);
+    }
+
     [HttpGet("me")]
     [ProducesResponseType<MeResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<MeResponse>> Me(CancellationToken cancellationToken)
+    public async Task<ActionResult<MeResponse>> Me(CancellationToken cancellationToken) =>
+        await SignedInUser(cancellationToken) is { } user ? MeResponse.From(user) : await Gone();
+
+    private Task<Domain.User?> SignedInUser(CancellationToken cancellationToken)
     {
         var actor = Credentials.ActorOf(User);
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == actor.UserId, cancellationToken);
-        if (user is not null)
-            return MeResponse.From(user);
+        return db.Users.FirstOrDefaultAsync(u => u.Id == actor.UserId, cancellationToken);
+    }
 
+    private async Task<ObjectResult> Gone()
+    {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return ApiProblems.Create(this, StatusCodes.Status401Unauthorized, ApiProblems.Unauthenticated,
             "The signed-in user no longer exists.");
