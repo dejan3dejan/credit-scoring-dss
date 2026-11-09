@@ -55,3 +55,13 @@ def top_factors(model, X, features, n=TOP_N):
 
 def _plain(value):
     return value.item() if isinstance(value, np.generic) else value
+
+
+def global_importance(contribs):
+    return contribs.abs().mean().sort_values(ascending=False, kind="stable")
+
+
+def effect_by_group(groups, contribution, target):
+    frame = pd.DataFrame({"group": groups, "contribution": contribution, "target": target})
+    return frame.groupby("group", sort=True).agg(
+        loans=("target", "size"), mean_contribution=("contribution", "mean"), bad_rate=("target", "mean"))
