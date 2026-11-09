@@ -81,9 +81,20 @@ export function DecisionText({ outcome }: { outcome: FinalDecision }) {
   );
 }
 
-export function Facts({ items }: { items: { label: string; value: ReactNode }[] }) {
+export function Facts({ items, stacked = false }: { items: { label: string; value: ReactNode }[]; stacked?: boolean }) {
+  if (stacked)
+    return (
+      <dl className="grid content-start gap-3">
+        {items.map((item) => (
+          <div key={item.label}>
+            <dt className="text-xs text-muted-foreground">{item.label}</dt>
+            <dd className="mt-0.5 break-all">{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+    );
   return (
-    <dl className="grid content-start grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2">
+    <dl className="grid content-start grid-cols-[minmax(8rem,max-content)_minmax(0,1fr)] gap-x-6 gap-y-2">
       {items.map((item) => (
         <div key={item.label} className="contents">
           <dt className="text-muted-foreground">{item.label}</dt>

@@ -22,6 +22,7 @@ import { ApplicationDetailsPage } from "@/pages/application-details";
 import { ApplicationsListPage } from "@/pages/applications-list";
 import { ClientDetailsPage, ClientsListPage, NewClientPage } from "@/pages/clients";
 import { NewApplicationPage } from "@/pages/new-application";
+import { ModelsPage } from "@/pages/models";
 import type { ClientFilters } from "@/api/clients";
 import { validateApplicationFilters } from "@/lib/filters";
 
@@ -168,7 +169,7 @@ const routeTree = rootRoute.addChildren([
     newClientRoute,
     clientRoute,
     page("dashboard", "nav.dashboard", "stats.read"),
-    page("models", "nav.models", "models.read"),
+    createRoute({ getParentRoute: () => authedRoute, path: "models", beforeLoad: requires("models.read"), component: ModelsPage }),
     page("users", "nav.users", "users.manage"),
     page("branches", "nav.branches", "branches.manage"),
     page("audit", "nav.audit", "audit.read"),

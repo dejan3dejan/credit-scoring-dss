@@ -110,7 +110,7 @@ function RiskPanel({ application: a }: { application: ApplicationResponse }) {
     };
     return (
       <Card>
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_220px]">
           <div className="grid gap-4">
             <div>
               <div className="text-xs text-muted-foreground">{t("details.risk")}</div>
@@ -123,6 +123,7 @@ function RiskPanel({ application: a }: { application: ApplicationResponse }) {
             <RiskScale pBad={d.pBad} reviewFrom={d.reviewFromUsed} threshold={d.thresholdUsed} />
           </div>
           <Facts
+            stacked
             items={[
               { label: t("details.model"), value: <span className="font-mono text-xs">{d.modelId}</span> },
               { label: t("details.scored"), value: formatDateTime(d.evaluatedAt, language) },
@@ -137,7 +138,7 @@ function RiskPanel({ application: a }: { application: ApplicationResponse }) {
   const code = d?.errorCode ?? null;
   return (
     <Card>
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
         <div className="grid gap-2">
           <div className="flex items-center gap-3">
             <StatusBadge recommendation={null} />
@@ -157,6 +158,7 @@ function RiskPanel({ application: a }: { application: ApplicationResponse }) {
           )}
         </div>
         <Facts
+          stacked
           items={[
             { label: t("details.errorCode"), value: <span className="font-mono text-xs">{code ?? "–"}</span> },
             { label: t("details.attempted"), value: d ? formatDateTime(d.evaluatedAt, language) : "–" },
