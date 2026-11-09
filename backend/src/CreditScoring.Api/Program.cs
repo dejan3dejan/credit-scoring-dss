@@ -66,7 +66,7 @@ if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var seed = app.Configuration.GetSection(SeedOptions.SectionName).Get<SeedOptions>() ?? new SeedOptions();
-    await UserSeeder.SeedAsync(scope.ServiceProvider.GetRequiredService<CreditScoringDbContext>(), seed.Users, TimeProvider.System.GetUtcNow());
+    await DevelopmentDatabase.PrepareAsync(scope.ServiceProvider.GetRequiredService<CreditScoringDbContext>(), seed.Users, TimeProvider.System.GetUtcNow());
 
     app.MapOpenApi().AllowAnonymous();
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Credit scoring API v1"));
