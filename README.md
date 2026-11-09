@@ -8,7 +8,8 @@ Undergraduate thesis project, Faculty of Technical Sciences, University of Novi 
 
 | Folder | What it is |
 |---|---|
-| `backend/` | ASP.NET Core 9: Razor Pages UI, REST API, business rules, PostgreSQL through EF Core |
+| `frontend/` | React app (Vite, TypeScript), in English and Serbian, served by the backend under `/app` |
+| `backend/` | ASP.NET Core 9: REST API, business rules, PostgreSQL through EF Core; the older Razor Pages UI stays until the React app replaces it |
 | `inference/` | FastAPI service that turns 18 application inputs into P(bad) and its top factors. No business rules |
 | `ml/` | Offline data work, experiments and model training (Python, scikit-learn, XGBoost) |
 | `architecture/` | Diagrams of the whole system: context, components, classes, database, flows, ML pipeline |
@@ -23,19 +24,20 @@ Needs Docker Desktop.
 docker compose up --build
 ```
 
-Then open http://localhost:8080. The first start builds two images and takes a few minutes; later starts take seconds.
+Then open http://localhost:8080/app for the React app (the older Razor Pages UI is still at http://localhost:8080). The first start builds two images and takes a few minutes; later starts take seconds.
 
 - `db`: PostgreSQL 17, also reachable on port 5433
 - `inference`: http://localhost:8000 (`/health`, `/v3/models`)
 - `web`: http://localhost:8080, Swagger UI at `/swagger`
 
-The database is created and migrated on start. Three demo users are seeded, one per role: `officer`, `manager` and `risk`. Their passwords are in `backend/src/CreditScoring.Api/appsettings.Development.json`. These are development settings only; the compose file is a local demo, not a production setup.
+The database is created and migrated on start. Five demo users are seeded: `admin`, `officer` and `manager` (head office), `officer.bg` (Beograd centar branch) and `risk`. Their passwords are in `backend/src/CreditScoring.Api/appsettings.Development.json`. These are development settings only; the compose file is a local demo, not a production setup.
 
 | Role | Can |
 |---|---|
-| Officer | create clients and applications, record decisions, search history |
-| Manager | everything the officer can, plus the dashboard |
-| Risk | history, dashboard, and the model registry (register, promote, retire) |
+| Officer | create clients and applications, save drafts, record decisions; sees only their own branch |
+| Manager | everything the officer can in their branch, plus assigning work, signing off risky approvals and the dashboard |
+| Risk | read all applications, record loan outcomes, the dashboard, the model registry and the audit log |
+| Admin | users, branches and the audit log; no access to clients or applications |
 
 The served model `ml/models/credit_lc_xgb_isotonic_v1.joblib` is committed, so nothing has to be trained to run the app.
 
@@ -56,7 +58,13 @@ uvicorn app.main:app --port 8000
 dotnet run --project backend/src/CreditScoring.Api --launch-profile http
 ```
 
-The app is then at http://localhost:5276.
+The app is then at http://localhost:5276. For the React app with live reload, run the Vite dev server next to it; it forwards `/api` to port 5276:
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+and open http://localhost:5173/app. `npm run build` writes the production build into `backend/src/CreditScoring.Api/wwwroot/app`, where the backend serves it.
 
 ## Tests
 
@@ -72,6 +80,10 @@ cd ml && python -m pytest -q
 
 ```bash
 cd inference && python -m pytest -q
+```
+
+```bash
+cd frontend && npm run lint && npm test && npm run build
 ```
 
 ## Training the model again

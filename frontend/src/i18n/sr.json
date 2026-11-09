@@ -1,0 +1,102 @@
+{
+  "app": {
+    "name": "Kredo",
+    "tagline": "Podrška odlučivanju o kreditima"
+  },
+  "nav": {
+    "main": "Glavni meni",
+    "myWork": "Moj rad",
+    "overview": "Pregled",
+    "administration": "Administracija",
+    "applications": "Zahtevi",
+    "clients": "Klijenti",
+    "dashboard": "Kontrolna tabla",
+    "models": "Modeli",
+    "users": "Korisnici",
+    "branches": "Filijale",
+    "audit": "Dnevnik izmena"
+  },
+  "roles": {
+    "Admin": "Administrator",
+    "Officer": "Službenik",
+    "Manager": "Menadžer",
+    "Risk": "Rizik"
+  },
+  "user": {
+    "menu": "Nalog",
+    "changePassword": "Promena lozinke",
+    "logout": "Odjavi se"
+  },
+  "language": {
+    "label": "Jezik"
+  },
+  "login": {
+    "title": "Prijava",
+    "userName": "Korisničko ime",
+    "password": "Lozinka",
+    "submit": "Prijavi se"
+  },
+  "home": {
+    "newApplication": "Novi zahtev",
+    "emptyTitle": "Još nema ničega za prikaz",
+    "emptyText": "Red poslova koji čekaju na vas dodaje se u sledećem koraku."
+  },
+  "pages": {
+    "newApplication": "Novi zahtev",
+    "notBuiltTitle": "Još nije u novoj aplikaciji",
+    "notBuiltText": "Ova stranica se pravi iznova. Do tada koristite trenutnu verziju aplikacije."
+  },
+  "noAccess": {
+    "title": "Nemate pristup",
+    "text": "Vaša uloga ne dozvoljava ovu stranicu. Obratite se administratoru ako vam je potrebna.",
+    "back": "Na početnu stranu"
+  },
+  "notFound": {
+    "title": "Stranica nije pronađena",
+    "text": "Adresa ne odgovara nijednoj stranici.",
+    "back": "Na početnu stranu"
+  },
+  "password": {
+    "title": "Promena lozinke",
+    "current": "Trenutna lozinka",
+    "new": "Nova lozinka",
+    "hint": "Najmanje 10 znakova.",
+    "submit": "Promeni lozinku",
+    "required": "Lozinku vam je postavio administrator. Izaberite svoju pre nego što nastavite.",
+    "done": "Lozinka je promenjena."
+  },
+  "recommendation": {
+    "Approve": "Odobriti",
+    "Review": "Detaljna provera",
+    "Reject": "Odbiti",
+    "none": "Nema ocene"
+  },
+  "states": {
+    "loading": "Učitavanje",
+    "errorTitle": "Ovo nije moglo da se učita",
+    "retry": "Pokušaj ponovo"
+  },
+  "errors": {
+    "unauthenticated": "Sesija je istekla. Prijavite se ponovo.",
+    "forbidden": "Vaša uloga ne dozvoljava ovu radnju.",
+    "not_found": "Nije pronađeno.",
+    "conflict": "Ovo je u međuvremenu izmenjeno. Osvežite stranicu i pokušajte ponovo.",
+    "validation_failed": "Proverite označena polja.",
+    "invalid_credentials": "Pogrešno korisničko ime ili lozinka.",
+    "locked_out": "Previše pogrešnih lozinki. Pokušajte ponovo posle {{time}}.",
+    "network": "Server nije dostupan. Proverite vezu i pokušajte ponovo.",
+    "unexpected": "Nešto nije u redu. Pokušajte ponovo; ako se ponavlja, javite administratoru."
+  },
+  "fieldErrors": {
+    "required": "Ovo polje je obavezno.",
+    "length": "Unesite od {{minimum}} do {{maximum}} znakova.",
+    "length_max": "Unesite najviše {{maximum}} znakova.",
+    "range": "Unesite vrednost od {{minimum}} do {{maximum}}.",
+    "not_greater_than": "Ne sme biti veće od polja {{other}}.",
+    "email": "Unesite e-mail adresu.",
+    "format": "Koristite samo dozvoljene znakove.",
+    "one_of": "Izaberite jednu od dozvoljenih vrednosti.",
+    "invalid_value": "Ova vrednost nije mogla da se pročita.",
+    "wrong_password": "Trenutna lozinka nije tačna."
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "app": {
+    "name": "Kredo",
+    "tagline": "Credit decision support"
+  },
+  "nav": {
+    "main": "Main",
+    "myWork": "My work",
+    "overview": "Overview",
+    "administration": "Administration",
+    "applications": "Applications",
+    "clients": "Clients",
+    "dashboard": "Dashboard",
+    "models": "Models",
+    "users": "Users",
+    "branches": "Branches",
+    "audit": "Audit log"
+  },
+  "roles": {
+    "Admin": "Admin",
+    "Officer": "Officer",
+    "Manager": "Manager",
+    "Risk": "Risk"
+  },
+  "user": {
+    "menu": "Account",
+    "changePassword": "Change password",
+    "logout": "Log out"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "login": {
+    "title": "Sign in",
+    "userName": "User name",
+    "password": "Password",
+    "submit": "Sign in"
+  },
+  "home": {
+    "newApplication": "New application",
+    "emptyTitle": "Nothing to show yet",
+    "emptyText": "The queue of work waiting for you is added in the next step."
+  },
+  "pages": {
+    "newApplication": "New application",
+    "notBuiltTitle": "Not in the new app yet",
+    "notBuiltText": "This page is being rebuilt. Until then, use the current version of the app."
+  },
+  "noAccess": {
+    "title": "No access",
+    "text": "Your role does not allow this page. Ask an administrator if you need it.",
+    "back": "Go to the start page"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "text": "The address does not match any page.",
+    "back": "Go to the start page"
+  },
+  "password": {
+    "title": "Change password",
+    "current": "Current password",
+    "new": "New password",
+    "hint": "At least 10 characters.",
+    "submit": "Change password",
+    "required": "Your password was set by an administrator. Choose your own before you continue.",
+    "done": "Password changed."
+  },
+  "recommendation": {
+    "Approve": "Approve",
+    "Review": "Review closely",
+    "Reject": "Reject",
+    "none": "No score"
+  },
+  "states": {
+    "loading": "Loading",
+    "errorTitle": "This could not be loaded",
+    "retry": "Try again"
+  },
+  "errors": {
+    "unauthenticated": "Your session has ended. Sign in again.",
+    "forbidden": "Your role does not allow this action.",
+    "not_found": "Not found.",
+    "conflict": "This was changed in the meantime. Reload and try again.",
+    "validation_failed": "Check the highlighted fields.",
+    "invalid_credentials": "Wrong user name or password.",
+    "locked_out": "Too many wrong passwords. Try again after {{time}}.",
+    "network": "The server cannot be reached. Check the connection and try again.",
+    "unexpected": "Something went wrong. Try again; if it keeps happening, tell an administrator."
+  },
+  "fieldErrors": {
+    "required": "This field is required.",
+    "length": "Use {{minimum}} to {{maximum}} characters.",
+    "length_max": "Use at most {{maximum}} characters.",
+    "range": "Enter a value from {{minimum}} to {{maximum}}.",
+    "not_greater_than": "Must not be larger than {{other}}.",
+    "email": "Enter an e-mail address.",
+    "format": "Use only the allowed characters.",
+    "one_of": "Choose one of the allowed values.",
+    "invalid_value": "This value could not be read.",
+    "wrong_password": "The current password is wrong."
+  }
+}
