@@ -190,10 +190,12 @@ def create_app(model_path=None, models_dir=None) -> FastAPI:
     def health(request: Request, response: Response):
         metadata = request.app.state.metadata
         loaded_ids = sorted([*request.app.state.models, *request.app.state.lc_models])
-        if request.app.state.model is None:
+        default_loaded = request.app.state.model is not None
+        if not default_loaded and not loaded_ids:
             response.status_code = 503
             return Health(status="degraded", model_loaded=False, model_id=None, models_loaded=loaded_ids)
-        return Health(status="ok", model_loaded=True, model_id=metadata["model_id"], models_loaded=loaded_ids)
+        return Health(status="ok", model_loaded=default_loaded,
+                      model_id=metadata["model_id"] if default_loaded else None, models_loaded=loaded_ids)
 
     return app
 

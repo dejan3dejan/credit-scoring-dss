@@ -24,9 +24,11 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-The model artifact is produced by `ml/scripts/train_final_model.py` and is
-not committed. Default path: `../ml/models/credit_rf_isotonic_v1.joblib`;
-override with `MODEL_PATH`.
+Models are read from `MODELS_DIR` (default: the folder of `MODEL_PATH`,
+`../ml/models/`). The served Lending Club model, `credit_lc_xgb_isotonic_v1`,
+is committed there; the German Credit models are produced by
+`ml/scripts/train_final_model.py` and are not. `/health` is `200` while any
+model can score.
 
 ## Run
 

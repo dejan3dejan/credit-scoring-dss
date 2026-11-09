@@ -210,7 +210,7 @@ def test_v1_still_serves_the_german_default_model(v3_client):
 REAL_LC_MODEL = Path(__file__).resolve().parents[2] / "ml" / "models" / "credit_lc_xgb_isotonic_v1.joblib"
 
 
-@pytest.mark.skipif(not REAL_LC_MODEL.exists(), reason="served Lending Club artifact not present (gitignored)")
+@pytest.mark.skipif(not REAL_LC_MODEL.exists(), reason="served Lending Club artifact not present")
 def test_real_lending_club_artifact_scores_like_direct_predict_proba():
     model, metadata = load_artifact(REAL_LC_MODEL)
     requests = [
@@ -264,3 +264,15 @@ def test_factor_values_are_the_request_values_not_the_float_frame(v3_client, mon
         {"feature": "fico", "value": 697.0, "contribution": 0.1},
     ]
     assert type(resp.json()["top_factors"][0]["value"]) is int
+
+
+def test_health_is_ok_with_only_a_lending_club_model(tmp_path):
+    make_lc_artifact(tmp_path, "test_lc_only_v1")
+    app = create_app(tmp_path / "no_default.joblib", models_dir=tmp_path)
+    with TestClient(app, raise_server_exceptions=False) as c:
+        resp = c.get("/health")
+        scored = c.post("/v3/models/test_lc_only_v1/predict", json=LC_REQUEST)
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok", "model_loaded": False, "model_id": None,
+                           "models_loaded": ["test_lc_only_v1"]}
+    assert scored.status_code == 200
