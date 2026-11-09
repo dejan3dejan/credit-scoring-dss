@@ -1,8 +1,11 @@
 import numpy as np
+import pandas as pd
 from sklearn.base import clone
 from sklearn.metrics import (
+    brier_score_loss,
     confusion_matrix,
     f1_score,
+    log_loss,
     precision_score,
     recall_score,
     roc_auc_score,
@@ -82,3 +85,18 @@ def evaluate_holdout(pipeline, X_train, y_train, X_test, y_test, threshold=0.5):
         "expected_cost": expected_cost(cm),
         "confusion_matrix": cm,
     }
+
+
+def fold_metrics(y_true, oof, folds, threshold, cost_fn, cost_fp):
+    y_true, oof = np.asarray(y_true), np.asarray(oof)
+    rows = []
+    for _, val_idx in folds:
+        y, p = y_true[val_idx], oof[val_idx]
+        cm = confusion_matrix(y, (p >= threshold).astype(int), labels=[0, 1])
+        rows.append({
+            "roc_auc": roc_auc_score(y, p),
+            "log_loss": log_loss(y, p),
+            "brier": brier_score_loss(y, p),
+            "expected_cost": expected_cost(cm, cost_fn, cost_fp),
+        })
+    return pd.DataFrame(rows)
