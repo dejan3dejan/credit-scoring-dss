@@ -9,13 +9,14 @@ flowchart TB
         appsApi["ApplicationsApi<br/>typed HttpClient to /api"]
         fwd["CookieForwardingHandler<br/>copies the sign-in cookie"]
         helpers["Labels, FormErrors,<br/>ApplicationInputs, HistoryFilter"]
+        spaHost["SpaHosting<br/>serves the React build<br/>under /app"]
         pagesC --> appsApi --> fwd
         pagesC --> helpers
     end
 
     subgraph controllers["Controllers (REST API)"]
-        appsCtl["ApplicationsController<br/>/api/applications"]
-        clientsCtl["ClientsController<br/>/api/clients"]
+        appsCtl["Applications, Drafts,<br/>Work, Search, Clients<br/>/api/applications, ..."]
+        adminCtl["Auth, Users,<br/>Branches, Audit<br/>/api/auth, /api/users, ..."]
         modelsCtl["ModelsController<br/>/api/models"]
         statsCtl["StatsController<br/>/api/stats"]
     end
@@ -31,7 +32,7 @@ flowchart TB
     end
 
     subgraph domain["Domain"]
-        entities["CreditApplication, Client, User,<br/>CreditDecision, ScoreFactor,<br/>OfficerDecision, ScoringModel,<br/>ModelEvent, ShadowScore"]
+        entities["CreditApplication, Client, Branch, User,<br/>CreditDecision, ScoreFactor, OfficerDecision,<br/>SignOff, ApplicationNote, ApplicationDraft,<br/>LoanOutcome, ScoringModel, ModelEvent,<br/>ShadowScore, AuditEntry"]
         registry["ModelRegistry<br/>promote, retire"]
     end
 
@@ -46,12 +47,14 @@ flowchart TB
     end
 
     subgraph data["Data"]
-        dbctx["CreditScoringDbContext<br/>EF Core + migrations"]
+        dbctx["CreditScoringDbContext<br/>EF Core + migrations,<br/>branch query filter"]
+        auditI["AuditInterceptor<br/>records every write"]
+        dbctx --> auditI
     end
 
     subgraph auth["Auth"]
-        policies["Policies<br/>CanDecide, CanSeeStats,<br/>CanManageModels"]
-        cookie["CookieSetup, Credentials,<br/>UserSeeder"]
+        policies["Permissions + Policies<br/>one policy per permission"]
+        cookie["CookieSetup, Credentials,<br/>SignInService (lockout), Seeder"]
     end
 
     fwd -- HTTP --> controllers

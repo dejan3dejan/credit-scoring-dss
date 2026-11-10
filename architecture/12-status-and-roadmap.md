@@ -1,6 +1,6 @@
 # 12. Status and roadmap
 
-Where the system is on 2026-11-09 and what is planned next. Solid boxes are built and tested; dashed ones are planned.
+Where the system is on 2026-11-10 and what is planned next. Solid boxes are built and tested; dashed ones are planned.
 
 ```mermaid
 flowchart LR
@@ -8,15 +8,14 @@ flowchart LR
         direction TB
         l1["Decision report and CSV export"]
         l2["Model monitoring over time"]
-        l3["Four-eyes sign-off"]
-        l4["User management page"]
-        l5["Browser tests"]
+        l3["Security headers, HTTPS"]
     end
 
     subgraph next["Planned, in order"]
         direction TB
-        n3["Loan outcome tracking:<br/>repaid or defaulted"]
-        n4["Security basics:<br/>lockout, headers, HTTPS"]
+        n1["React pages for drafts, notes,<br/>withdrawal, assignment, outcomes"]
+        n2["React admin pages:<br/>users, branches, audit log"]
+        n3["Browser tests on React<br/>(QA session), then remove<br/>the Razor pages"]
     end
 
     subgraph done["Built"]
@@ -24,7 +23,7 @@ flowchart LR
         d1["Application form, validation,<br/>scoring, recommendation"]
         d2["Officer decision with<br/>reason rules"]
         d3["Searchable history"]
-        d4["Sign-in, three roles"]
+        d4["Sign-in with lockout,<br/>four roles, permissions"]
         d5["Clients and their<br/>application timeline"]
         d6["Model registry,<br/>champion and challenger"]
         d7["Dashboard"]
@@ -32,10 +31,12 @@ flowchart LR
         d9["ML: Lending Club model,<br/>LC-01 to LC-11"]
         d10["One-command start<br/>(Docker Compose) + README"]
         d11["CI: tests on every push"]
+        d12["React app, English and Serbian:<br/>applications, clients, home queue,<br/>models, dashboard"]
+        d13["API: branches, audit log, drafts,<br/>sign-off, notes, loan outcomes"]
     end
 
     classDef plan stroke-dasharray: 5 5
-    class n3,n4,l1,l2,l3,l4,l5 plan
+    class n1,n2,n3,l1,l2,l3 plan
 ```
 
 ## What changes when outcome tracking lands
