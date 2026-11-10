@@ -38,6 +38,9 @@ export type FinalDecision = "Approve" | "Reject";
 export type ApplicationStage = "Submitted" | "AwaitingSignOff" | "Decided" | "Withdrawn";
 export type LoanOutcomeKind = "Repaid" | "Defaulted";
 export type ReviewFilter = "Pending" | "Approved" | "Rejected" | "Override";
+export type LoanOutcomeFilter = "Pending" | "Repaid" | "Defaulted";
+
+export type Note = { id: string; text: string; author: string; createdAt: string };
 export type SignOffReason = "OverridesReject" | "LargeAmount";
 export type SignOffStatus = "Pending" | "Approved" | "Returned";
 export type ModelRole = "Active" | "Shadow" | "Retired";

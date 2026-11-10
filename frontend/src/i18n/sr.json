@@ -109,7 +109,8 @@
     "not_assignable": "Ovaj zahtev više ne može da se preraspodeli.",
     "client_anonymised": "Ovaj klijent je anonimizovan i ne može da se menja.",
     "no_loan": "Za ovaj zahtev kredit nije isplaćen.",
-    "outcome_recorded": "Ishod za ovaj kredit je već zabeležen."
+    "outcome_recorded": "Ishod za ovaj kredit je već zabeležen.",
+    "assignee_not_found": "Ta osoba nije aktivni službenik ili menadžer ove filijale."
   },
   "fieldErrors": {
     "required": "Ovo polje je obavezno.",
@@ -138,7 +139,8 @@
     "model_is_active": "Aktivni model ne može da se povuče; prvo aktivirajte drugi.",
     "model_already_retired": "Ovaj model je već povučen.",
     "draft_not_found": "Ovaj nacrt ne postoji.",
-    "draft_closed": "Ovaj nacrt je već podnet ili odbačen."
+    "draft_closed": "Ovaj nacrt je već podnet ili odbačen.",
+    "assignee_not_found": "Izaberite aktivnog službenika ili menadžera ove filijale."
   },
   "enums": {
     "LoanPurpose": {
@@ -205,6 +207,15 @@
       "Approved": "Odobreno",
       "Rejected": "Odbijeno",
       "Override": "Odstupanja od modela"
+    },
+    "LoanOutcomeKind": {
+      "Repaid": "Vraćen",
+      "Defaulted": "Neizmiren"
+    },
+    "LoanOutcomeFilter": {
+      "Pending": "Ishod nije zabeležen",
+      "Repaid": "Vraćen",
+      "Defaulted": "Neizmiren"
     }
   },
   "fields": {
@@ -292,7 +303,8 @@
     "noResultsText": "Nijedan zahtev ne odgovara ovim filterima.",
     "range": "{{from}}–{{to}} od {{total}}",
     "previous": "Prethodna",
-    "next": "Sledeća"
+    "next": "Sledeća",
+    "loanOutcome": "Ishod kredita"
   },
   "details": {
     "back": "Zahtevi",
@@ -588,5 +600,35 @@
     "noOutcomes": "Još nema zabeleženih ishoda kredita, pa kalibracija ne može da se prikaže.",
     "showTable": "Prikaži kao tabelu",
     "keyNumbers": "Ključni brojevi"
+  },
+  "actions": {
+    "notesTitle": "Beleške",
+    "notesEmpty": "Još nema beležaka.",
+    "noteLabel": "Dodaj belešku",
+    "notePlaceholder": "Šta ste proverili, pitali ili dogovorili",
+    "noteHint": "Beleške ostaju kako su napisane; ne mogu se menjati ni brisati.",
+    "addNote": "Dodaj belešku",
+    "noteAdded": "Beleška je dodata.",
+    "assignTitle": "Dodeljeno",
+    "assignNobody": "Nikome",
+    "assignTo": "Dodeli korisniku",
+    "assign": "Dodeli",
+    "assigned": "Zahtev je dodeljen korisniku {{name}}.",
+    "withdrawTitle": "Povlačenje",
+    "withdrawText": "Povucite zahtev ako klijent više ne želi kredit. Povučen zahtev se ne može odlučiti niti ponovo oceniti.",
+    "withdrawReason": "Razlog povlačenja",
+    "withdraw": "Povuci zahtev",
+    "withdrawConfirm": "Povuci",
+    "cancel": "Otkaži",
+    "withdrawnToast": "Zahtev je povučen.",
+    "outcomeTitle": "Ishod kredita",
+    "outcomeText": "Zabeležite šta se desilo sa kreditom kada je vraćen ili neizmiren. Ishod se kasnije ne može menjati.",
+    "outcome": "Ishod",
+    "outcomeNote": "Napomena",
+    "recordOutcome": "Zabeleži ishod",
+    "outcomeRecorded": "Ishod je zabeležen.",
+    "outcomeShown": "{{outcome}}, zabeležio/la {{name}}, {{date}}.",
+    "tlOutcome": "Kredit: {{outcome}}, zabeležio/la {{name}}",
+    "tlNote": "Beleška, {{name}}"
   }
 }

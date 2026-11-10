@@ -5,7 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
 import { listApplications, type ApplicationFilters } from "@/api/applications";
 import type { ApplicationSummary } from "@/api/types";
-import { isoDate, oneOf, recommendations, reviewFilters, stages } from "@/lib/filters";
+import { isoDate, loanOutcomes, oneOf, recommendations, reviewFilters, stages } from "@/lib/filters";
+import { can, useMe } from "@/auth/session";
 import { EmptyState, ErrorState, Loading, PageHeader } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge";
 import { DecisionText, SelectField, Table, Tag, Td, Th } from "@/components/surface";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 export function ApplicationsListPage({ filters }: { filters: ApplicationFilters }) {
   const { t } = useTranslation();
+  const me = useMe();
   const navigate = useNavigate();
   const [name, setName] = useState(filters.applicantName ?? "");
   const applications = useQuery({ queryKey: ["applications", filters], queryFn: () => listApplications(filters) });
@@ -73,6 +75,17 @@ export function ApplicationsListPage({ filters }: { filters: ApplicationFilters 
               onChange={(event) => update({ stage: oneOf(event.target.value, stages) })}
             />
           </div>
+          {can(me, "outcomes.record") && (
+            <div className="w-52">
+              <SelectField
+                label={t("list.loanOutcome")}
+                value={filters.loanOutcome ?? ""}
+                placeholder={t("list.all")}
+                options={loanOutcomes.map((value) => ({ value, label: t(`enums.LoanOutcomeFilter.${value}`) }))}
+                onChange={(event) => update({ loanOutcome: oneOf(event.target.value, loanOutcomes) })}
+              />
+            </div>
+          )}
           <DateFilter label={t("list.from")} value={filters.from} onChange={(from) => update({ from })} />
           <DateFilter label={t("list.to")} value={filters.to} onChange={(to) => update({ to })} />
         </div>

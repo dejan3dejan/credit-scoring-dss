@@ -109,7 +109,8 @@
     "not_assignable": "This application can no longer be reassigned.",
     "client_anonymised": "This client was anonymised and cannot be changed.",
     "no_loan": "No loan was issued for this application.",
-    "outcome_recorded": "An outcome is already recorded for this loan."
+    "outcome_recorded": "An outcome is already recorded for this loan.",
+    "assignee_not_found": "That person is not an active officer or manager of this branch."
   },
   "fieldErrors": {
     "required": "This field is required.",
@@ -138,7 +139,8 @@
     "model_is_active": "The active model cannot be retired; promote another one first.",
     "model_already_retired": "This model is already retired.",
     "draft_not_found": "This draft does not exist.",
-    "draft_closed": "This draft was already submitted or discarded."
+    "draft_closed": "This draft was already submitted or discarded.",
+    "assignee_not_found": "Choose an active officer or manager of this branch."
   },
   "enums": {
     "LoanPurpose": {
@@ -205,6 +207,15 @@
       "Approved": "Approved",
       "Rejected": "Rejected",
       "Override": "Overrides"
+    },
+    "LoanOutcomeKind": {
+      "Repaid": "Repaid",
+      "Defaulted": "Defaulted"
+    },
+    "LoanOutcomeFilter": {
+      "Pending": "Outcome not recorded",
+      "Repaid": "Repaid",
+      "Defaulted": "Defaulted"
     }
   },
   "fields": {
@@ -292,7 +303,8 @@
     "noResultsText": "No application matches these filters.",
     "range": "{{from}}–{{to}} of {{total}}",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "loanOutcome": "Loan outcome"
   },
   "details": {
     "back": "Applications",
@@ -588,5 +600,35 @@
     "noOutcomes": "No loan outcomes are recorded yet, so calibration cannot be shown.",
     "showTable": "Show as table",
     "keyNumbers": "Key numbers"
+  },
+  "actions": {
+    "notesTitle": "Notes",
+    "notesEmpty": "No notes yet.",
+    "noteLabel": "Add a note",
+    "notePlaceholder": "What you checked, asked or agreed",
+    "noteHint": "Notes are kept as written; they cannot be edited or deleted.",
+    "addNote": "Add note",
+    "noteAdded": "Note added.",
+    "assignTitle": "Assigned to",
+    "assignNobody": "Nobody",
+    "assignTo": "Assign to",
+    "assign": "Assign",
+    "assigned": "The application was assigned to {{name}}.",
+    "withdrawTitle": "Withdraw",
+    "withdrawText": "Withdraw the application if the client no longer wants the loan. A withdrawn application cannot be decided or scored again.",
+    "withdrawReason": "Reason for withdrawing",
+    "withdraw": "Withdraw application",
+    "withdrawConfirm": "Withdraw",
+    "cancel": "Cancel",
+    "withdrawnToast": "The application was withdrawn.",
+    "outcomeTitle": "Loan outcome",
+    "outcomeText": "Record what happened to the loan once it is repaid or has defaulted. An outcome cannot be changed later.",
+    "outcome": "Outcome",
+    "outcomeNote": "Note",
+    "recordOutcome": "Record outcome",
+    "outcomeRecorded": "Outcome recorded.",
+    "outcomeShown": "{{outcome}}, recorded by {{name}} on {{date}}.",
+    "tlOutcome": "Loan {{outcome}}, recorded by {{name}}",
+    "tlNote": "Note by {{name}}"
   }
 }

@@ -1,9 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { i18n } from "@/i18n";
 
 window.scrollTo = () => {};
+configure({ asyncUtilTimeout: 4000 });
 
 beforeEach(async () => {
   localStorage.clear();

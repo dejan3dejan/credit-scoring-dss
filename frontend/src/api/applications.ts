@@ -5,6 +5,9 @@ import type {
   ApplicationStage,
   ApplicationSummary,
   FinalDecision,
+  LoanOutcomeFilter,
+  LoanOutcomeKind,
+  Note,
   Paged,
   Recommendation,
   ReviewFilter,
@@ -16,6 +19,7 @@ export type ApplicationFilters = {
   review?: ReviewFilter;
   recommendation?: Recommendation;
   stage?: ApplicationStage;
+  loanOutcome?: LoanOutcomeFilter;
   from?: string;
   to?: string;
   page?: number;
@@ -37,6 +41,7 @@ export function applicationsQuery(filters: ApplicationFilters): string {
   if (filters.review) params.set("review", filters.review);
   if (filters.recommendation) params.set("recommendation", filters.recommendation);
   if (filters.stage) params.set("stage", filters.stage);
+  if (filters.loanOutcome) params.set("loanOutcome", filters.loanOutcome);
   if (filters.from) params.set("from", startOfDay(filters.from));
   if (filters.to) params.set("to", startOfNextDay(filters.to));
   if (filters.page && filters.page > 1) params.set("page", String(filters.page));
@@ -62,6 +67,21 @@ export type NewApplication = { clientId: string } & { [K in keyof ApplicationAns
 
 export const createApplication = (application: NewApplication) =>
   request<ApplicationResponse>("/api/applications", { method: "POST", body: application });
+
+export const notesKey = (id: string) => ["notes", id] as const;
+
+export const listNotes = (id: string) => request<Note[]>(`/api/applications/${id}/notes`);
+
+export const addNote = (id: string, text: string) => request<Note>(`/api/applications/${id}/notes`, { method: "POST", body: { text } });
+
+export const withdraw = (id: string, reason: string) =>
+  request<ApplicationResponse>(`/api/applications/${id}/withdraw`, { method: "POST", body: { reason } });
+
+export const assign = (id: string, userId: string) =>
+  request<ApplicationResponse>(`/api/applications/${id}/assign`, { method: "POST", body: { userId } });
+
+export const recordOutcome = (id: string, outcome: LoanOutcomeKind | null, note: string | null) =>
+  request<ApplicationResponse>(`/api/applications/${id}/outcome`, { method: "POST", body: { outcome, note } });
 
 export const signOff = (id: string, approve: boolean, note: string | null) =>
   request<ApplicationResponse>(`/api/applications/${id}/sign-off`, { method: "POST", body: { approve, note } });

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { errorMessage, useLanguage } from "@/i18n";
 import { formatAmount, formatDateTime, formatPercent } from "@/i18n/format";
 import { checklist, describeInput } from "@/lib/application-inputs";
+import { ApplicationActions } from "@/pages/application-actions";
 import { cn } from "@/lib/utils";
 
 export function ApplicationDetailsPage({ id }: { id: string }) {
@@ -65,6 +66,7 @@ function ApplicationView({ application: a }: { application: ApplicationResponse 
         </div>
         <div className="grid gap-5 xl:col-start-2 xl:row-span-2 xl:row-start-1">
           <DecisionPanel application={a} me={me} />
+          <ApplicationActions application={a} me={me} />
           <Timeline application={a} />
         </div>
         <div className="grid min-w-0 gap-5 xl:row-start-2">
@@ -443,6 +445,12 @@ function Timeline({ application: a }: { application: ApplicationResponse }) {
         name: od.decidedBy,
       }),
       tone: "done",
+    });
+  if (a.loanOutcome)
+    entries.push({
+      at: a.loanOutcome.recordedAt,
+      text: t("actions.tlOutcome", { outcome: t(`enums.LoanOutcomeKind.${a.loanOutcome.outcome}`).toLowerCase(), name: a.loanOutcome.recordedBy }),
+      tone: a.loanOutcome.outcome === "Repaid" ? "done" : "failed",
     });
   if (a.withdrawal) entries.push({ at: a.withdrawal.at, text: t("details.tlWithdrawn", { name: a.withdrawal.by }), tone: "failed" });
   if (a.stage === "Submitted") entries.push({ at: null, text: t("details.tlAwaiting"), tone: "pending" });
