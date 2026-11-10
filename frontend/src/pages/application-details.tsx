@@ -2,11 +2,11 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Info } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { applicationKey, getApplication, getShadowScores, recordDecision, rescore, signOff } from "@/api/applications";
 import { ApiError } from "@/api/client";
-import type { ApplicationResponse, FinalDecision, MeResponse, Recommendation, SignOffResponse } from "@/api/types";
+import type { ApplicationResponse, FinalDecision, MeResponse, SignOffResponse } from "@/api/types";
 import { can, useMe } from "@/auth/session";
 import { ErrorState, Loading } from "@/components/page";
 import { FactorList, RiskScale } from "@/components/risk";
@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { errorMessage, useLanguage } from "@/i18n";
 import { formatAmount, formatDateTime, formatPercent } from "@/i18n/format";
 import { checklist, describeInput } from "@/lib/application-inputs";
-import { ApplicationActions } from "@/pages/application-actions";
+import { canWithdraw } from "@/lib/application-rules";
+import { ApplicationActions, WithdrawAction } from "@/pages/application-actions";
 import { cn } from "@/lib/utils";
 
 export function ApplicationDetailsPage({ id }: { id: string }) {
@@ -75,12 +76,6 @@ function ApplicationView({ application: a }: { application: ApplicationResponse 
               <FactorList application={a} factors={a.decision.factors} />
             </Card>
           )}
-          <div className="flex gap-3 rounded-md border bg-card px-4 py-3 text-muted-foreground">
-            <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <p>
-              <strong className="font-semibold text-foreground">{t("details.supportTitle")}</strong> {t("details.supportText")}
-            </p>
-          </div>
           {can(me, "stats.read") && <ShadowScores application={a} />}
           <AsSubmitted application={a} />
         </div>
@@ -105,13 +100,8 @@ function RiskPanel({ application: a }: { application: ApplicationResponse }) {
   });
 
   if (d && d.status === "Scored" && d.pBad !== null && d.thresholdUsed !== null && d.recommendation) {
-    const explain: Record<Recommendation, string> = {
-      Approve: d.reviewFromUsed !== null ? t("details.explainApprove") : t("details.explainApproveNoBand"),
-      Review: t("details.explainReview"),
-      Reject: t("details.explainReject"),
-    };
     return (
-      <Card>
+      <Card footer={t("details.support")}>
         <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_220px]">
           <div className="grid gap-4">
             <div>
@@ -120,7 +110,6 @@ function RiskPanel({ application: a }: { application: ApplicationResponse }) {
                 <span className="text-[28px] leading-none font-semibold">{formatPercent(d.pBad, language)}</span>
                 <StatusBadge recommendation={d.recommendation} />
               </div>
-              <p className="mt-2 max-w-prose text-muted-foreground">{explain[d.recommendation]}</p>
             </div>
             <RiskScale pBad={d.pBad} reviewFrom={d.reviewFromUsed} threshold={d.thresholdUsed} />
           </div>
@@ -229,7 +218,10 @@ function DecisionPanel({ application: a, me }: { application: ApplicationRespons
 
   return (
     <Card title={t("details.decisionTitle")}>
-      <div className="grid gap-3">{body}</div>
+      <div className="grid gap-3">
+        {body}
+        {canWithdraw(a, me) && <WithdrawAction application={a} />}
+      </div>
     </Card>
   );
 }
@@ -267,11 +259,9 @@ function DecisionForm({ application: a, me }: { application: ApplicationResponse
 
   return (
     <form onSubmit={submit} noValidate className="grid gap-4">
-      <p className="text-muted-foreground">{t("details.decisionIntro")}</p>
       {prompts.length > 0 && (
         <div className="rounded border border-review/30 bg-review-tint/60 px-3 py-2.5">
           <p className="font-semibold">{t("details.checklistTitle")}</p>
-          <p className="mt-0.5 text-muted-foreground">{t("details.checklistIntro")}</p>
           <ChecklistItems application={a} inputs={prompts} />
         </div>
       )}

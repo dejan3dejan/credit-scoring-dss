@@ -12,6 +12,7 @@ import { Alert, Card, FieldErrors, SelectField, TextareaField } from "@/componen
 import { Button } from "@/components/ui/button";
 import { errorMessage, useLanguage } from "@/i18n";
 import { formatDateTime } from "@/i18n/format";
+import { isOpen } from "@/lib/application-rules";
 import { cn } from "@/lib/utils";
 
 function useApplicationUpdate(id: string) {
@@ -32,15 +33,12 @@ function GeneralError({ error }: { error: unknown }) {
   return <Alert>{errorMessage(error)}</Alert>;
 }
 
-const open = (a: ApplicationResponse) => a.stage === "Submitted" || a.stage === "AwaitingSignOff";
 
 export function ApplicationActions({ application: a, me }: { application: ApplicationResponse; me: MeResponse }) {
-  const mayWithdraw = can(me, "applications.write") && open(a) && (a.assignedTo?.id === me.id || can(me, "applications.assign"));
   const loanIssued = a.stage === "Decided" && a.officerDecision?.outcome === "Approve";
   return (
     <>
-      {can(me, "applications.assign") && open(a) && <AssignCard application={a} />}
-      {mayWithdraw && <WithdrawCard application={a} />}
+      {can(me, "applications.assign") && isOpen(a) && <AssignCard application={a} />}
       {loanIssued && (a.loanOutcome || can(me, "outcomes.record")) && <OutcomeCard application={a} />}
       <NotesCard application={a} canWrite={can(me, "applications.write")} />
     </>
@@ -100,7 +98,7 @@ function AssignCard({ application: a }: { application: ApplicationResponse }) {
   );
 }
 
-function WithdrawCard({ application: a }: { application: ApplicationResponse }) {
+export function WithdrawAction({ application: a }: { application: ApplicationResponse }) {
   const { t } = useTranslation();
   const update = useApplicationUpdate(a.id);
   const [confirming, setConfirming] = useState(false);
@@ -119,7 +117,7 @@ function WithdrawCard({ application: a }: { application: ApplicationResponse }) 
   }
 
   return (
-    <Card title={t("actions.withdrawTitle")}>
+    <div className="border-t pt-3">
       {confirming ? (
         <form onSubmit={submit} noValidate className="grid gap-3">
           <TextareaField
@@ -142,16 +140,11 @@ function WithdrawCard({ application: a }: { application: ApplicationResponse }) 
           </div>
         </form>
       ) : (
-        <div className="grid gap-3">
-          <p className="text-muted-foreground">{t("actions.withdrawText")}</p>
-          <div>
-            <Button variant="outline" onClick={() => setConfirming(true)}>
-              {t("actions.withdraw")}
-            </Button>
-          </div>
-        </div>
+        <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" onClick={() => setConfirming(true)}>
+          {t("actions.withdraw")}
+        </Button>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -194,7 +187,6 @@ function OutcomeCard({ application: a }: { application: ApplicationResponse }) {
           change.mutate();
         }}
       >
-        <p className="text-muted-foreground">{t("actions.outcomeText")}</p>
         <fieldset className="grid gap-1.5">
           <legend className="mb-1.5 text-sm font-medium">{t("actions.outcome")}</legend>
           <div className="grid grid-cols-2 gap-2">
@@ -287,7 +279,6 @@ function NotesCard({ application: a, canWrite }: { application: ApplicationRespo
             <TextareaField
               label={t("actions.noteLabel")}
               placeholder={t("actions.notePlaceholder")}
-              hint={t("actions.noteHint")}
               value={text}
               onChange={(event) => setText(event.target.value)}
               maxLength={2000}

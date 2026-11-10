@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Plus, Search } from "lucide-react";
@@ -34,7 +34,7 @@ export function ClientsListPage({ filters }: { filters: ClientFilters }) {
   const me = useMe();
   const navigate = useNavigate();
   const [text, setText] = useState(filters.search ?? "");
-  const clients = useQuery({ queryKey: ["clients", filters], queryFn: () => listClients(filters) });
+  const clients = useQuery({ queryKey: ["clients", filters], queryFn: () => listClients(filters), placeholderData: keepPreviousData });
 
   function search(event: FormEvent) {
     event.preventDefault();

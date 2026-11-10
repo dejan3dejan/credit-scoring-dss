@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
@@ -21,7 +21,7 @@ export function ApplicationsListPage({ filters }: { filters: ApplicationFilters 
   const me = useMe();
   const navigate = useNavigate();
   const [name, setName] = useState(filters.applicantName ?? "");
-  const applications = useQuery({ queryKey: ["applications", filters], queryFn: () => listApplications(filters) });
+  const applications = useQuery({ queryKey: ["applications", filters], queryFn: () => listApplications(filters), placeholderData: keepPreviousData });
   const filtered = Object.entries(filters).some(([key, value]) => key !== "page" && value !== undefined);
 
   function update(change: Partial<ApplicationFilters>) {

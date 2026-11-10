@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -42,13 +42,13 @@ export function DashboardPage({ search }: { search: DashboardSearch }) {
   const me = useMe();
   const navigate = useNavigate();
   const filters = { ...rangeFilters(search.range, new Date()), branchId: search.branchId };
-  const stats = useQuery({ queryKey: ["stats", filters], queryFn: () => getStats(filters) });
+  const stats = useQuery({ queryKey: ["stats", filters], queryFn: () => getStats(filters), placeholderData: keepPreviousData });
   const crossBranch = !me.branch;
   const branches = useQuery({ queryKey: ["branches"], queryFn: listBranches, enabled: crossBranch });
 
   return (
     <>
-      <PageHeader title={t("dashboard.title")} description={t("dashboard.intro")} />
+      <PageHeader title={t("dashboard.title")} />
       <div className="flex flex-wrap items-end gap-3">
         <div role="group" aria-label={t("dashboard.range")} className="flex overflow-hidden rounded-md border bg-card">
           {(["30", "90", "all"] as const).map((range) => (
@@ -109,7 +109,6 @@ function Numbers({ stats, showBranches }: { stats: DashboardStats; showBranches:
       label: t("dashboard.overrideRate"),
       value: percent(stats.overrideRate),
       previous: previous && percent(previous.overrideRate),
-      note: t("dashboard.overrideSides", { high: percent(stats.highSideOverrideRate), low: percent(stats.lowSideOverrideRate) }),
     },
     { label: t("dashboard.reviewShare"), value: percent(reviewShare), previous: previous && percent(previous.reviewShare) },
     { label: t("dashboard.unavailableRate"), value: percent(stats.unavailableRate), previous: previous && percent(previous.unavailableRate) },
@@ -303,7 +302,6 @@ function Histogram({ stats }: { stats: DashboardStats }) {
   return (
     <ChartCard
       title={title}
-      note={active ? t("dashboard.histogramNote") : undefined}
       table={
         <Table label={title}>
           <thead>
@@ -472,7 +470,7 @@ function Shadows({ stats }: { stats: DashboardStats }) {
   const language = useLanguage();
   const title = t("dashboard.shadowTitle");
   return (
-    <Card title={title} footer={t("dashboard.shadowNote")}>
+    <Card title={title}>
       {stats.shadowAgreement.length === 0 ? (
         <p className="text-muted-foreground">{t("dashboard.noShadows")}</p>
       ) : (

@@ -25,7 +25,7 @@ export function ModelsPage() {
 
   return (
     <>
-      <PageHeader title={t("models.title")} description={t("models.intro")} />
+      <PageHeader title={t("models.title")} />
       {models.isPending ? (
         <Loading />
       ) : models.isError ? (

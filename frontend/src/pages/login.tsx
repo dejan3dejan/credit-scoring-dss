@@ -42,12 +42,9 @@ export function LoginPage({ redirect }: { redirect?: string }) {
       </header>
       <main className="flex flex-1 items-start justify-center px-4 pt-[12vh]">
         <div className="w-full max-w-sm">
-          <div className="mb-6 flex items-center gap-2.5">
-            <BrandMark size={28} />
-            <div>
-              <div className="text-lg leading-tight font-semibold">{t("app.name")}</div>
-              <div className="text-xs text-muted-foreground">{t("app.tagline")}</div>
-            </div>
+          <div className="mb-8 flex items-center gap-3">
+            <BrandMark size={40} />
+            <span className="text-[32px] leading-none font-semibold tracking-tight">{t("app.name")}</span>
           </div>
           <form onSubmit={submit} noValidate className="grid gap-4 rounded-md border bg-card p-6">
             <h1 className="text-lg font-semibold">{t("login.title")}</h1>

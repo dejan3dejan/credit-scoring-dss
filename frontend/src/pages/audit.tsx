@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { listAudit, type AuditEntry, type AuditFilters } from "@/api/audit";
@@ -15,7 +15,7 @@ import { auditActions, auditEntities, isoDate, oneOf } from "@/lib/filters";
 export function AuditPage({ filters }: { filters: AuditFilters }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const audit = useQuery({ queryKey: ["audit", filters], queryFn: () => listAudit(filters) });
+  const audit = useQuery({ queryKey: ["audit", filters], queryFn: () => listAudit(filters), placeholderData: keepPreviousData });
   const [entityId, setEntityId] = useState(filters.entityId ?? "");
   const filtered = Object.entries(filters).some(([key, value]) => key !== "page" && value !== undefined);
 
@@ -30,7 +30,7 @@ export function AuditPage({ filters }: { filters: AuditFilters }) {
 
   return (
     <>
-      <PageHeader title={t("audit.title")} description={t("audit.intro")} />
+      <PageHeader title={t("audit.title")} />
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-48">
           <SelectField
@@ -122,9 +122,9 @@ function AuditTable({ entries, filters }: { entries: AuditEntry[]; filters: Audi
       </thead>
       <tbody>
         {entries.map((entry) => (
-          <tr key={entry.id} className="group align-top">
-            <Td className="whitespace-nowrap text-muted-foreground">{formatDateTime(entry.at, language)}</Td>
-            <Td className="whitespace-nowrap">
+          <tr key={entry.id} className="group">
+            <Td className="align-top whitespace-nowrap text-muted-foreground">{formatDateTime(entry.at, language)}</Td>
+            <Td className="align-top whitespace-nowrap">
               {entry.userId && entry.userName ? (
                 <Link
                   to="/audit"
@@ -138,12 +138,12 @@ function AuditTable({ entries, filters }: { entries: AuditEntry[]; filters: Audi
                 <span className="text-muted-foreground">{t("audit.system")}</span>
               )}
             </Td>
-            <Td>{t(`audit.actions.${entry.action}`)}</Td>
-            <Td>
+            <Td className="align-top">{t(`audit.actions.${entry.action}`)}</Td>
+            <Td className="max-w-48 align-top">
               <div>{t(`audit.entities.${entry.entity}`, { defaultValue: entry.entity })}</div>
               <RecordLink entity={entry.entity} id={entry.entityId} />
             </Td>
-            <Td>
+            <Td className="align-top">
               <Changes changes={entry.changes} />
             </Td>
           </tr>
@@ -155,30 +155,55 @@ function AuditTable({ entries, filters }: { entries: AuditEntry[]; filters: Audi
 
 function RecordLink({ entity, id }: { entity: string; id: string }) {
   const me = useMe();
-  const className = "font-mono text-[11px] break-all";
+  const className = "font-mono text-[11px]";
+  const short = id.length > 12 ? `${id.slice(0, 8)}…` : id;
   if (entity === "CreditApplication" && can(me, "applications.read"))
     return (
-      <Link to="/applications/$id" params={{ id }} className={`${className} text-primary underline-offset-4 hover:underline`}>
-        {id}
+      <Link to="/applications/$id" params={{ id }} aria-label={id} title={id} className={`${className} text-primary underline-offset-4 hover:underline`}>
+        {short}
       </Link>
     );
   if (entity === "Client" && can(me, "clients.read"))
     return (
-      <Link to="/clients/$id" params={{ id }} className={`${className} text-primary underline-offset-4 hover:underline`}>
-        {id}
+      <Link to="/clients/$id" params={{ id }} aria-label={id} title={id} className={`${className} text-primary underline-offset-4 hover:underline`}>
+        {short}
       </Link>
     );
   if (entity === "User" && can(me, "users.manage"))
     return (
-      <Link to="/users/$id" params={{ id }} className={`${className} text-primary underline-offset-4 hover:underline`}>
-        {id}
+      <Link to="/users/$id" params={{ id }} aria-label={id} title={id} className={`${className} text-primary underline-offset-4 hover:underline`}>
+        {short}
       </Link>
     );
-  return <span className={`${className} text-muted-foreground`}>{id}</span>;
+  return (
+    <span title={id} className={`${className} text-muted-foreground`}>
+      {short}
+    </span>
+  );
 }
 
+const shownValues = 4;
+
 function Changes({ changes }: { changes: AuditEntry["changes"] }) {
+  const { t } = useTranslation();
   const entries = Object.entries(changes);
+  const rest = entries.slice(shownValues);
+  return (
+    <>
+      <ChangeList entries={entries.slice(0, shownValues)} />
+      {rest.length > 0 && (
+        <details className="mt-1 text-xs">
+          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t("audit.more", { count: rest.length })}</summary>
+          <div className="mt-1">
+            <ChangeList entries={rest} />
+          </div>
+        </details>
+      )}
+    </>
+  );
+}
+
+function ChangeList({ entries }: { entries: [string, AuditEntry["changes"][string]][] }) {
   return (
     <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
       {entries.map(([property, change]) => (

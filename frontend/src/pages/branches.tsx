@@ -21,7 +21,7 @@ export function BranchesPage() {
 
   return (
     <>
-      <PageHeader title={t("branches.title")} description={t("branches.note")} />
+      <PageHeader title={t("branches.title")} />
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         {branches.isPending ? (
           <Loading />

@@ -156,7 +156,6 @@ function ClientPicker() {
   return (
     <Card title={t("newApplication.pickClient")}>
       <div className="grid gap-4">
-        <p className="text-muted-foreground">{t("newApplication.pickClientText")}</p>
         <div className="flex flex-wrap items-end gap-2">
           <form onSubmit={submit} className="grid gap-1.5" role="search">
             <label htmlFor="client-search" className="text-sm font-medium">

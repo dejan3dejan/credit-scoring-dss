@@ -123,7 +123,7 @@ export function TextareaField({ label, hint, errors, className, ...props }: Text
   const invalid = !!errors?.length;
   const describedBy = [hint && `${id}-hint`, invalid && `${id}-error`].filter(Boolean).join(" ") || undefined;
   return (
-    <div className="grid gap-1.5">
+    <div className="grid content-start gap-1.5">
       <Label htmlFor={id}>{label}</Label>
       <textarea
         id={id}
@@ -157,7 +157,7 @@ export function SelectField({ label, options, placeholder, errors, hideLabel, cl
   const id = useId();
   const invalid = !!errors?.length;
   return (
-    <div className="grid gap-1.5">
+    <div className="grid content-start gap-1.5">
       <Label htmlFor={id} className={cn(hideLabel && "sr-only")}>
         {label}
       </Label>
