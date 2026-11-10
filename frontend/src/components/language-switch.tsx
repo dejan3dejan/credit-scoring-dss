@@ -20,29 +20,34 @@ export function LanguageSwitch({ saveOnAccount }: { saveOnAccount: boolean }) {
     },
   });
 
-  function choose(language: Language) {
-    if (language === current) return;
-    void applyLanguage(language);
-    if (saveOnAccount) save.mutate(language);
+  function flip() {
+    const next: Language = current === "en" ? "sr" : "en";
+    void applyLanguage(next);
+    if (saveOnAccount) save.mutate(next);
   }
 
   return (
-    <div role="group" aria-label={t("language.label")} className="flex overflow-hidden rounded border text-xs font-semibold">
+    <button
+      type="button"
+      onClick={flip}
+      disabled={save.isPending}
+      aria-label={t("language.current")}
+      title={t("language.switch")}
+      className="flex rounded border bg-card p-0.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
       {languages.map((language) => (
-        <button
+        <span
           key={language}
-          type="button"
           lang={language}
-          aria-pressed={language === current}
-          onClick={() => choose(language)}
+          aria-hidden="true"
           className={cn(
-            "px-2.5 py-1.5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
-            language === current ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground",
+            "rounded-sm px-2 py-1",
+            language === current ? "bg-primary text-primary-foreground" : "text-muted-foreground",
           )}
         >
           {language.toUpperCase()}
-        </button>
+        </span>
       ))}
-    </div>
+    </button>
   );
 }

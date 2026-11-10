@@ -27,7 +27,9 @@
     "logout": "Log out"
   },
   "language": {
-    "label": "Language"
+    "label": "Language",
+    "current": "Language: English",
+    "switch": "Switch to Serbian"
   },
   "login": {
     "title": "Sign in",
@@ -421,7 +423,12 @@
     "select": "Select",
     "submit": "Get recommendation",
     "submitted": "Application {{reference}} was submitted.",
-    "inactiveClient": "This client is deactivated and cannot get new applications."
+    "inactiveClient": "This client is deactivated and cannot get new applications.",
+    "review": "Review",
+    "reviewTitle": "Check the application",
+    "backToForm": "Back to the form",
+    "notEntered": "Not entered",
+    "missingAnswers": "Missing answers: {{count}}"
   },
   "clients": {
     "title": "Clients",
@@ -632,19 +639,19 @@
     "tlNote": "Note by {{name}}"
   },
   "drafts": {
-    "save": "Save draft",
-    "saved": "Draft saved.",
     "discard": "Discard draft",
     "discardConfirm": "Discard",
     "discarded": "Draft discarded.",
-    "editing": "Draft, last saved {{date}}. Answers are checked only when you submit.",
     "closedSubmitted": "This draft was already submitted.",
     "closedDiscarded": "This draft was discarded.",
     "openApplication": "Open the application",
     "title": "Drafts",
     "client": "Client",
     "updated": "Last saved",
-    "continue": "Continue"
+    "continue": "Continue",
+    "saving": "Saving…",
+    "savedAt": "Saved {{time}}",
+    "notSaved": "Not saved"
   },
   "admin": {
     "users": "Users",

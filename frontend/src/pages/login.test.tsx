@@ -63,7 +63,7 @@ describe("login page", () => {
     stubApi({ "GET /api/auth/me": unauthenticated });
     renderApp("/login");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "SR" }));
+    await user.click(await screen.findByRole("button", { name: "Language: English" }));
     expect(await screen.findByLabelText("Korisničko ime")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Prijavi se" })).toBeInTheDocument();
   });

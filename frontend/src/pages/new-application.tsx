@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { applicationKey, createApplication, getApplication, type NewApplication } from "@/api/applications";
 import { ApiError } from "@/api/client";
 import { clientKey, getClient, listClients } from "@/api/clients";
-import { createDraft, discardDraft, draftKey, getDraft, updateDraft, type DraftResponse } from "@/api/drafts";
+import { discardDraft, draftKey, getDraft, type DraftResponse } from "@/api/drafts";
 import {
   employmentLengths,
   homeOwnerships,
@@ -21,14 +21,17 @@ import {
 } from "@/api/types";
 import { can, useMe } from "@/auth/session";
 import { EmptyState, ErrorState, Loading, PageHeader } from "@/components/page";
-import { Alert, Card, FieldErrors, SelectField } from "@/components/surface";
+import { Alert, Card, Facts, FieldErrors, SelectField } from "@/components/surface";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { errorMessage, useLanguage } from "@/i18n";
-import { formatDateTime, formatShortDate } from "@/i18n/format";
+import { formatDateTime, formatShortDate, formatTime } from "@/i18n/format";
+import { formatAnswer } from "@/lib/application-inputs";
 import { clientName } from "@/lib/client-name";
 import { parseNumber } from "@/lib/numbers";
+import { useDraftAutosave, type AutosaveState } from "@/lib/use-draft-autosave";
 import { cn } from "@/lib/utils";
 
 type Answers = Record<keyof ApplicationAnswers, string>;
@@ -70,6 +73,21 @@ const emptyAnswers: Answers = {
   mortgageAccounts: "",
 };
 
+const reviewSections: { title: string; fields: (keyof ApplicationAnswers)[] }[] = [
+  { title: "newApplication.sectionLoan", fields: ["loanAmount", "purpose"] },
+  {
+    title: "newApplication.sectionIncome",
+    fields: ["annualIncome", "incomeVerification", "debtToIncomePercent", "employmentLength", "homeOwnership", "mortgageAccounts"],
+  },
+  {
+    title: "newApplication.sectionReport",
+    fields: ["creditScore", "earliestCreditLine", "inquiriesLast6Months", "delinquenciesLast2Years", "publicRecords", "bankruptcies"],
+  },
+  { title: "newApplication.sectionAccounts", fields: ["revolvingBalance", "revolvingUtilizationPercent", "openAccounts", "totalAccounts"] },
+];
+
+const pascal = (name: string) => name[0].toUpperCase() + name.slice(1);
+
 function answersFrom(application: ApplicationResponse): Answers {
   const answers = { ...emptyAnswers };
   for (const key of Object.keys(emptyAnswers) as (keyof ApplicationAnswers)[]) answers[key] = String(application[key]);
@@ -100,23 +118,30 @@ export function NewApplicationPage({ clientId, from, draftId }: { clientId?: str
   return (
     <>
       <PageHeader title={t("newApplication.title")} />
-      {draftId ? <FromDraft draftId={draftId} /> : clientId ? <WithClient clientId={clientId} from={from} /> : <ClientPicker />}
+      {clientId || draftId ? <FormLoader clientId={clientId} from={from} draftId={draftId} /> : <ClientPicker />}
     </>
   );
 }
 
-function FromDraft({ draftId }: { draftId: string }) {
+function FormLoader({ clientId, from, draftId }: { clientId?: string; from?: string; draftId?: string }) {
   const { t } = useTranslation();
-  const draft = useQuery({ queryKey: draftKey(draftId), queryFn: () => getDraft(draftId) });
+  const draft = useQuery({ queryKey: draftKey(draftId ?? ""), queryFn: () => getDraft(draftId!), enabled: !!draftId });
+  const closed = !!draft.data && draft.data.status !== "Open";
+  const resolvedClientId = clientId ?? draft.data?.clientId;
   const client = useQuery({
-    queryKey: clientKey(draft.data?.clientId ?? ""),
-    queryFn: () => getClient(draft.data!.clientId),
-    enabled: draft.data?.status === "Open",
+    queryKey: clientKey(resolvedClientId ?? ""),
+    queryFn: () => getClient(resolvedClientId!),
+    enabled: !!resolvedClientId && !closed,
+  });
+  const previous = useQuery({
+    queryKey: applicationKey(from ?? ""),
+    queryFn: () => getApplication(from!),
+    enabled: !!from,
   });
 
-  if (draft.isPending) return <Loading />;
-  if (draft.isError) return <ErrorState error={draft.error} onRetry={() => void draft.refetch()} />;
-  if (draft.data.status !== "Open")
+  if (draftId && draft.isPending) return <Loading />;
+  if (draftId && draft.isError) return <ErrorState error={draft.error} onRetry={() => void draft.refetch()} />;
+  if (draft.data && closed)
     return (
       <EmptyState
         title={t(draft.data.status === "Submitted" ? "drafts.closedSubmitted" : "drafts.closedDiscarded")}
@@ -131,9 +156,11 @@ function FromDraft({ draftId }: { draftId: string }) {
         }
       />
     );
-  if (client.isPending) return <Loading />;
+  if (client.isPending || (from && previous.isPending)) return <Loading />;
   if (client.isError) return <ErrorState error={client.error} onRetry={() => void client.refetch()} />;
-  return <ApplicationForm client={client.data} draft={draft.data} />;
+  if (from && previous.isError) return <ErrorState error={previous.error} onRetry={() => void previous.refetch()} />;
+  const prefill = !draft.data && from && previous.data?.clientId === client.data.id ? previous.data : undefined;
+  return <ApplicationForm client={client.data} draft={draft.data} prefill={prefill} />;
 }
 
 function ClientPicker() {
@@ -222,21 +249,6 @@ function ClientPicker() {
   );
 }
 
-function WithClient({ clientId, from }: { clientId: string; from?: string }) {
-  const client = useQuery({ queryKey: clientKey(clientId), queryFn: () => getClient(clientId) });
-  const previous = useQuery({
-    queryKey: applicationKey(from ?? ""),
-    queryFn: () => getApplication(from!),
-    enabled: !!from,
-  });
-
-  if (client.isPending || (from && previous.isPending)) return <Loading />;
-  if (client.isError) return <ErrorState error={client.error} onRetry={() => void client.refetch()} />;
-  if (from && previous.isError) return <ErrorState error={previous.error} onRetry={() => void previous.refetch()} />;
-  const prefill = from && previous.data?.clientId === clientId ? previous.data : undefined;
-  return <ApplicationForm key={prefill?.id ?? "empty"} client={client.data} prefill={prefill} />;
-}
-
 function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; prefill?: ApplicationResponse; draft?: DraftResponse }) {
   const { t } = useTranslation();
   const language = useLanguage();
@@ -246,52 +258,65 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
     draft ? answersFromDraft(draft) : prefill ? answersFrom(prefill) : emptyAnswers,
   );
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
 
-  const save = useMutation({
-    mutationFn: () => {
-      const body = toRequest(client.id, answers, language);
-      return draft ? updateDraft(draft.id, body) : createDraft(body);
-    },
-    onSuccess: async (saved) => {
-      queryClient.setQueryData(draftKey(saved.id), saved);
-      void queryClient.invalidateQueries({ queryKey: ["work"] });
-      toast.success(t("drafts.saved"));
-      if (!draft) await navigate({ to: "/applications/new", search: { draftId: saved.id }, replace: true });
-    },
+  const autosave = useDraftAutosave(draft, (saved) => {
+    void navigate({ to: "/applications/new", search: (current: { clientId?: string; from?: string }) => ({ ...current, draftId: saved.id }), replace: true });
   });
 
   const discard = useMutation({
-    mutationFn: () => discardDraft(draft!.id),
+    mutationFn: async () => {
+      const draftId = await autosave.beforeSubmit();
+      return discardDraft(draftId!);
+    },
     onSuccess: async () => {
+      autosave.submitted();
       void queryClient.invalidateQueries({ queryKey: ["work"] });
       toast.success(t("drafts.discarded"));
       await navigate({ to: "/" });
     },
+    onError: () => autosave.resume(),
   });
 
   const submit = useMutation({
-    mutationFn: () => createApplication({ ...toRequest(client.id, answers, language), ...(draft ? { draftId: draft.id } : {}) }),
+    mutationFn: async () => {
+      const draftId = await autosave.beforeSubmit();
+      return createApplication({ ...toRequest(client.id, answers, language), ...(draftId ? { draftId } : {}) });
+    },
     onSuccess: async (created) => {
+      autosave.submitted();
       queryClient.setQueryData(applicationKey(created.id), created);
       void queryClient.invalidateQueries({ queryKey: ["applications"] });
+      void queryClient.invalidateQueries({ queryKey: ["work"] });
       void queryClient.invalidateQueries({ queryKey: clientKey(client.id) });
       toast.success(t("newApplication.submitted", { reference: created.reference }));
       await navigate({ to: "/applications/$id", params: { id: created.id } });
     },
+    onError: () => {
+      setReviewing(false);
+      autosave.resume();
+    },
   });
 
-  const lastError = submit.error ?? save.error ?? discard.error;
-  const errors = lastError instanceof ApiError ? lastError.fieldErrors : {};
+  const saveError = autosave.state.status === "failed" ? autosave.state.error : null;
+  const lastError = submit.error ?? discard.error;
+  const errorSource = lastError ?? saveError;
+  const errors = errorSource instanceof ApiError ? errorSource.fieldErrors : {};
   const fieldErrors = (name: string): FieldError[] | undefined => {
     const list = [...(errors[name] ?? []), ...(errors[`$.${name}`] ?? [])];
     return list.length ? list : undefined;
   };
   const generalError = lastError && Object.keys(errors).length === 0;
-  const set = (name: keyof Answers) => (value: string) => setAnswers((current) => ({ ...current, [name]: value }));
+
+  const set = (name: keyof Answers) => (value: string) => {
+    const next = { ...answers, [name]: value };
+    setAnswers(next);
+    if (client.isActive) autosave.schedule(toRequest(client.id, next, language));
+  };
 
   const text = (name: keyof Answers, props: { suffix?: string; hint?: string; inputMode?: "numeric" | "decimal" } = {}) => (
     <TextField
-      label={t(`fields.${name[0].toUpperCase()}${name.slice(1)}`)}
+      label={t(`fields.${pascal(name)}`)}
       value={answers[name]}
       onChange={(event) => set(name)(event.target.value)}
       inputMode={props.inputMode ?? "numeric"}
@@ -304,7 +329,7 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
 
   const select = (name: keyof Answers, enumName: string, values: readonly string[]) => (
     <SelectField
-      label={t(`fields.${name[0].toUpperCase()}${name.slice(1)}`)}
+      label={t(`fields.${pascal(name)}`)}
       value={answers[name]}
       onChange={(event) => set(name)(event.target.value)}
       placeholder={t("newApplication.select")}
@@ -315,7 +340,7 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    submit.mutate();
+    setReviewing(true);
   }
 
   return (
@@ -340,11 +365,6 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
       {prefill && (
         <p className="rounded border border-review/30 bg-review-tint px-3 py-2">
           {t("newApplication.prefilled", { reference: prefill.reference })}
-        </p>
-      )}
-      {draft && (
-        <p className="rounded border bg-card px-3 py-2 text-muted-foreground">
-          {t("drafts.editing", { date: formatDateTime(draft.updatedAt, language) })}
         </p>
       )}
       {generalError && <Alert>{errorMessage(lastError)}</Alert>}
@@ -414,12 +434,10 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
 
       <div className="sticky bottom-0 -mx-6 flex items-center gap-3 border-t bg-card px-6 py-3">
         <Button type="submit" disabled={submit.isPending || !client.isActive}>
-          {t("newApplication.submit")}
+          {t("newApplication.review")}
         </Button>
-        <Button type="button" variant="outline" onClick={() => save.mutate()} disabled={save.isPending || !client.isActive}>
-          {t("drafts.save")}
-        </Button>
-        {draft &&
+        <SaveStatus state={autosave.state} onRetry={() => void autosave.retry()} />
+        {autosave.draftId &&
           (confirmDiscard ? (
             <span className="ml-auto flex gap-2">
               <Button
@@ -441,7 +459,90 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
             </Button>
           ))}
       </div>
+
+      <Dialog open={reviewing} onOpenChange={setReviewing}>
+        <DialogContent aria-describedby={undefined}>
+          <Review client={client} request={toRequest(client.id, answers, language)} />
+          <div className="flex flex-wrap gap-3 border-t pt-4">
+            <Button type="button" onClick={() => submit.mutate()} disabled={submit.isPending}>
+              {t("newApplication.submit")}
+            </Button>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                {t("newApplication.backToForm")}
+              </Button>
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
     </form>
+  );
+}
+
+function Review({ client, request }: { client: ClientDetail; request: NewApplication }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  const value = (name: keyof ApplicationAnswers) => request[name] as unknown;
+  const missing = reviewSections.flatMap((section) => section.fields).filter((name) => value(name) === null).length;
+
+  return (
+    <>
+      <DialogTitle>{t("newApplication.reviewTitle")}</DialogTitle>
+      <div>
+        <div className="font-semibold">{clientName(client, t)}</div>
+        <div className="font-mono text-xs text-muted-foreground">{client.clientNumber}</div>
+      </div>
+      {missing > 0 && <Alert>{t("newApplication.missingAnswers", { count: missing })}</Alert>}
+      <div className="-mx-6 grid min-h-0 flex-1 gap-4 overflow-y-auto px-6">
+        {reviewSections.map((section) => (
+          <section key={section.title} className="grid gap-2">
+            <h3 className="text-sm font-semibold">{t(section.title)}</h3>
+            <Facts
+              items={section.fields.map((name) => ({
+                label: t(`fields.${pascal(name)}`),
+                value:
+                  value(name) === null ? (
+                    <span className="text-reject">{t("newApplication.notEntered")}</span>
+                  ) : (
+                    formatAnswer(pascal(name), value(name), t, language)
+                  ),
+              }))}
+            />
+          </section>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function SaveStatus({ state, onRetry }: { state: AutosaveState; onRetry: () => void }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  if (state.status === "idle") return null;
+  if (state.status === "saving")
+    return (
+      <span role="status" className="text-xs text-muted-foreground">
+        {t("drafts.saving")}
+      </span>
+    );
+  if (state.status === "failed")
+    return (
+      <span role="status" className="flex items-center gap-2 text-xs text-reject">
+        <span>{t("drafts.notSaved")}</span>
+        {state.error instanceof ApiError && state.error.status === 409 ? (
+          <span>{errorMessage(state.error)}</span>
+        ) : (
+          <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onRetry}>
+            {t("states.retry")}
+          </Button>
+        )}
+      </span>
+    );
+  const sameDay = new Date(state.savedAt).toDateString() === new Date().toDateString();
+  return (
+    <span role="status" className="text-xs text-muted-foreground">
+      {t("drafts.savedAt", { time: sameDay ? formatTime(state.savedAt, language) : formatDateTime(state.savedAt, language) })}
+    </span>
   );
 }
 

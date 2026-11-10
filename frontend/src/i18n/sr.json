@@ -27,7 +27,9 @@
     "logout": "Odjavi se"
   },
   "language": {
-    "label": "Jezik"
+    "label": "Jezik",
+    "current": "Jezik: srpski",
+    "switch": "Prebaci na engleski"
   },
   "login": {
     "title": "Prijava",
@@ -421,7 +423,12 @@
     "select": "Izaberite",
     "submit": "Dobij preporuku",
     "submitted": "Zahtev {{reference}} je podnet.",
-    "inactiveClient": "Ovaj klijent je deaktiviran i ne može da dobije nove zahteve."
+    "inactiveClient": "Ovaj klijent je deaktiviran i ne može da dobije nove zahteve.",
+    "review": "Pregled",
+    "reviewTitle": "Provera zahteva",
+    "backToForm": "Nazad na formu",
+    "notEntered": "Nije uneto",
+    "missingAnswers": "Nedostaje odgovora: {{count}}"
   },
   "clients": {
     "title": "Klijenti",
@@ -632,19 +639,19 @@
     "tlNote": "Beleška, {{name}}"
   },
   "drafts": {
-    "save": "Sačuvaj nacrt",
-    "saved": "Nacrt je sačuvan.",
     "discard": "Odbaci nacrt",
     "discardConfirm": "Odbaci",
     "discarded": "Nacrt je odbačen.",
-    "editing": "Nacrt, poslednji put sačuvan {{date}}. Odgovori se proveravaju tek pri podnošenju.",
     "closedSubmitted": "Ovaj nacrt je već podnet.",
     "closedDiscarded": "Ovaj nacrt je odbačen.",
     "openApplication": "Otvori zahtev",
     "title": "Nacrti",
     "client": "Klijent",
     "updated": "Poslednji put sačuvan",
-    "continue": "Nastavi"
+    "continue": "Nastavi",
+    "saving": "Čuvanje…",
+    "savedAt": "Sačuvano {{time}}",
+    "notSaved": "Nije sačuvano"
   },
   "admin": {
     "users": "Korisnici",

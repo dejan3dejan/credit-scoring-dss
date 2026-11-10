@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderApp } from "@/test/render";
-import { signedInAs, stubApi } from "@/test/api";
+import { signedInAs, stubApi, type ApiCall } from "@/test/api";
 import { application, clientDetail } from "@/test/fixtures";
 import type { DraftResponse } from "@/api/drafts";
 
@@ -44,21 +44,133 @@ function draft(overrides: Partial<DraftResponse> = {}): DraftResponse {
 
 const client = { "GET /api/clients/c1": { status: 200, body: clientDetail() } };
 
+function draftCalls(calls: ApiCall[]) {
+  return calls.filter((c) => c.path.startsWith("/api/drafts") && c.method !== "GET");
+}
+
+function typist() {
+  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+}
+
+async function wait(ms: number) {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+}
+
 describe("drafts", () => {
-  it("saves an unfinished form as a draft", async () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("saves the form as a draft two seconds after typing stops", async () => {
+    const saved = draft({ answers: { ...blank, clientId: "c1", loanAmount: 20000 }, updatedAt: "2026-11-10T10:42:00Z" });
     const calls = stubApi({
       ...signedInAs("Officer"),
       ...client,
-      "POST /api/drafts": { status: 201, body: draft({ answers: { ...blank, clientId: "c1", loanAmount: 20000 } }) },
-      "GET /api/drafts/d1": { status: 200, body: draft({ answers: { ...blank, clientId: "c1", loanAmount: 20000 } }) },
+      "POST /api/drafts": { status: 201, body: saved },
+      "GET /api/drafts/d1": { status: 200, body: saved },
+    });
+    const view = renderApp("/applications/new?clientId=c1");
+    const user = typist();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    expect(draftCalls(calls)).toHaveLength(0);
+    await wait(2000);
+    expect(await screen.findByText(/^Saved/)).toBeInTheDocument();
+    expect(draftCalls(calls).map((c) => [c.method, c.path, c.body])).toEqual([
+      ["POST", "/api/drafts", { ...blank, clientId: "c1", loanAmount: 20000 }],
+    ]);
+    expect(view.router.state.location.search).toMatchObject({ clientId: "c1", draftId: "d1" });
+    expect(screen.getByLabelText("Loan amount")).toHaveValue("20000");
+  });
+
+  it("keeps saving later changes into the same draft", async () => {
+    const calls = stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/drafts": { status: 201, body: draft() },
+      "GET /api/drafts/d1": { status: 200, body: draft() },
+      "PUT /api/drafts/d1": { status: 200, body: draft() },
     });
     renderApp("/applications/new?clientId=c1");
-    const user = userEvent.setup();
+    const user = typist();
     await user.type(await screen.findByLabelText("Loan amount"), "20000");
-    await user.click(screen.getByRole("button", { name: "Save draft" }));
-    expect(await screen.findByText("Draft saved.")).toBeInTheDocument();
-    expect(calls.find((c) => c.path === "/api/drafts")?.body).toEqual({ ...blank, clientId: "c1", loanAmount: 20000 });
-    expect(await screen.findByText(/Draft, last saved/)).toBeInTheDocument();
+    await wait(2000);
+    await screen.findByText(/^Saved/);
+    await user.type(screen.getByLabelText("Credit score"), "667");
+    await wait(2000);
+    await vi.waitFor(() => expect(draftCalls(calls).map((c) => c.method)).toEqual(["POST", "PUT"]));
+    expect((draftCalls(calls)[1].body as Record<string, unknown>).creditScore).toBe(667);
+  });
+
+  it("does not save a form nobody has typed in", async () => {
+    const calls = stubApi({ ...signedInAs("Officer"), ...client });
+    renderApp("/applications/new?clientId=c1");
+    await screen.findByLabelText("Loan amount");
+    await wait(3000);
+    expect(draftCalls(calls)).toHaveLength(0);
+  });
+
+  it("has no manual save button", async () => {
+    stubApi({ ...signedInAs("Officer"), ...client });
+    renderApp("/applications/new?clientId=c1");
+    await screen.findByLabelText("Loan amount");
+    expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
+  });
+
+  it("says when saving failed and saves again on request", async () => {
+    let fail = true;
+    const calls = stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/drafts": () => (fail ? { status: 500 } : { status: 201, body: draft() }),
+      "GET /api/drafts/d1": { status: 200, body: draft() },
+    });
+    renderApp("/applications/new?clientId=c1");
+    const user = typist();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    await wait(2000);
+    expect(await screen.findByText("Not saved")).toBeInTheDocument();
+    fail = false;
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText(/^Saved/)).toBeInTheDocument();
+    expect(draftCalls(calls)).toHaveLength(2);
+  });
+
+  it("saves pending changes when the officer leaves the form", async () => {
+    const calls = stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/drafts": { status: 201, body: draft() },
+    });
+    renderApp("/applications/new?clientId=c1");
+    const user = typist();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    await user.click(screen.getByRole("link", { name: "Change client" }));
+    await screen.findByLabelText("Search clients");
+    await vi.waitFor(() => expect(draftCalls(calls).map((c) => c.method)).toEqual(["POST"]));
+  });
+
+  it("never saves a draft once the application is submitted", async () => {
+    const calls = stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/applications": { status: 201, body: application({ id: "a9" }) },
+      "GET /api/applications/a9": { status: 200, body: application({ id: "a9" }) },
+      "GET /api/applications/a9/notes": { status: 200, body: [] },
+    });
+    renderApp("/applications/new?clientId=c1");
+    const user = typist();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("button", { name: "Get recommendation" }));
+    await screen.findByRole("heading", { name: "Milica Testić" });
+    await wait(3000);
+    expect(draftCalls(calls)).toHaveLength(0);
   });
 
   it("continues a draft and submits it with its id", async () => {
@@ -74,8 +186,9 @@ describe("drafts", () => {
     expect(await screen.findByLabelText("Loan amount")).toHaveValue("20000");
     expect(screen.getByLabelText("Purpose")).toHaveValue("SmallBusiness");
     expect(screen.getByLabelText("First credit line opened")).toHaveValue("2012-05");
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Get recommendation" }));
+    const user = typist();
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("button", { name: "Get recommendation" }));
     await screen.findByRole("heading", { name: "Milica Testić" });
     const body = calls.find((c) => c.path === "/api/applications" && c.method === "POST")?.body as Record<string, unknown>;
     expect(body.draftId).toBe("d1");
@@ -90,11 +203,11 @@ describe("drafts", () => {
       "PUT /api/drafts/d1": { status: 200, body: draft() },
     });
     renderApp("/applications/new?draftId=d1");
-    const user = userEvent.setup();
+    const user = typist();
     await user.type(await screen.findByLabelText("Credit score"), "667");
-    await user.click(screen.getByRole("button", { name: "Save draft" }));
-    await screen.findByText("Draft saved.");
-    expect((calls.find((c) => c.method === "PUT")?.body as Record<string, unknown>).creditScore).toBe(667);
+    await wait(2000);
+    await vi.waitFor(() => expect(draftCalls(calls).map((c) => c.method)).toEqual(["PUT"]));
+    expect((draftCalls(calls)[0].body as Record<string, unknown>).creditScore).toBe(667);
   });
 
   it("discards a draft after a confirmation", async () => {
@@ -116,7 +229,7 @@ describe("drafts", () => {
       },
     });
     renderApp("/applications/new?draftId=d1");
-    const user = userEvent.setup();
+    const user = typist();
     await user.click(await screen.findByRole("button", { name: "Discard draft" }));
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(await screen.findByRole("heading", { name: "My work" })).toBeInTheDocument();

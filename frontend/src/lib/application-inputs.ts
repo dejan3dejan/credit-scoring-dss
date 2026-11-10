@@ -26,13 +26,18 @@ function camel(input: string): keyof ApplicationResponse {
   return (input[0].toLowerCase() + input.slice(1)) as keyof ApplicationResponse;
 }
 
+export function formatAnswer(input: string, value: unknown, t: TFunction, language: Language): string {
+  if (input in enumInputs) return t(`enums.${enumInputs[input]}.${value}`);
+  if (moneyInputs.has(input)) return formatAmount(value as number, language);
+  if (percentInputs.has(input)) return `${formatNumber(value as number, language, 2)}%`;
+  if (countInputs.has(input)) return formatNumber(value as number, language);
+  if (input === "EarliestCreditLine") return formatMonthYear(value as string, language);
+  throw new Error(`No format for application input ${input}`);
+}
+
 export function describeInput(application: ApplicationResponse, input: string, t: TFunction, language: Language) {
   const value = application[camel(input)];
   const label = t(`fields.${input}`);
-  if (input in enumInputs) return { label, value: t(`enums.${enumInputs[input]}.${value}`) };
-  if (moneyInputs.has(input)) return { label, value: formatAmount(value as number, language) };
-  if (percentInputs.has(input)) return { label, value: `${formatNumber(value as number, language, 2)}%` };
-  if (countInputs.has(input)) return { label, value: formatNumber(value as number, language) };
   if (input === "EarliestCreditLine")
     return {
       label,
@@ -41,7 +46,7 @@ export function describeInput(application: ApplicationResponse, input: string, t
         years: formatNumber(application.creditHistoryYears, language, 1),
       }),
     };
-  throw new Error(`No description for application input ${input}`);
+  return { label, value: formatAnswer(input, value, t, language) };
 }
 
 export function checklist(factors: ScoreFactor[]): string[] {

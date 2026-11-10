@@ -116,7 +116,7 @@ const newApplicationRoute = createRoute({
   beforeLoad: requires("applications.write"),
   component: function NewApplication() {
     const { clientId, from, draftId } = newApplicationRoute.useSearch();
-    return <NewApplicationPage key={`${clientId}-${from}-${draftId}`} clientId={clientId} from={from} draftId={draftId} />;
+    return <NewApplicationPage key={clientId ? `${clientId}-${from}` : `draft-${draftId}`} clientId={clientId} from={from} draftId={draftId} />;
   },
 });
 

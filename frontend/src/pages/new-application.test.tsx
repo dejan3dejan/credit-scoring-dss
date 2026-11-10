@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderApp } from "@/test/render";
 import { problem, signedInAs, stubApi } from "@/test/api";
@@ -59,7 +59,8 @@ describe("new application", () => {
     renderApp("/applications/new?clientId=c1");
     await screen.findByLabelText("Loan amount");
     const user = await fillForm();
-    await user.click(screen.getByRole("button", { name: "Get recommendation" }));
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("button", { name: "Get recommendation" }));
     expect(await screen.findByRole("heading", { name: "What moved the score" })).toBeInTheDocument();
     expect(calls.find((c) => c.method === "POST")?.body).toEqual({
       clientId: "c1",
@@ -97,10 +98,52 @@ describe("new application", () => {
     });
     renderApp("/applications/new?clientId=c1");
     const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Review" }));
     await user.click(await screen.findByRole("button", { name: "Get recommendation" }));
     expect(await screen.findByText("Enter a value from 1,000 to 35,000.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByLabelText("Loan amount")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("Must not be larger than Credit lines ever opened.")).toBeInTheDocument();
+  });
+
+  it("shows every answer for a last check before submitting", async () => {
+    const calls = stubApi({ ...signedInAs("Officer"), ...client });
+    renderApp("/applications/new?clientId=c1");
+    await screen.findByLabelText("Loan amount");
+    const user = await fillForm();
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    const dialog = await screen.findByRole("dialog", { name: "Check the application" });
+    expect(within(dialog).getByText("Milica Testić")).toBeInTheDocument();
+    expect(within(dialog).getByText("Small business")).toBeInTheDocument();
+    expect(within(dialog).getByText("Source verified")).toBeInTheDocument();
+    expect(within(dialog).getByText(/20,000/)).toBeInTheDocument();
+    expect(within(dialog).getByText("18.4%")).toBeInTheDocument();
+    expect(within(dialog).getByText("May 2012")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Not entered")).toBeNull();
+    expect(calls.some((c) => c.path === "/api/applications")).toBe(false);
+  });
+
+  it("marks missing answers in the check", async () => {
+    stubApi({ ...signedInAs("Officer"), ...client });
+    renderApp("/applications/new?clientId=c1");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    const dialog = await screen.findByRole("dialog", { name: "Check the application" });
+    expect(within(dialog).getByText("Missing answers: 17")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("Not entered")).toHaveLength(17);
+  });
+
+  it("goes back to the form from the check without submitting", async () => {
+    const calls = stubApi({ ...signedInAs("Officer"), ...client });
+    renderApp("/applications/new?clientId=c1");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("button", { name: "Back to the form" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByLabelText("Loan amount")).toHaveValue("20000");
+    expect(calls.some((c) => c.path === "/api/applications")).toBe(false);
   });
 
   it("fills the form from the client's last application", async () => {

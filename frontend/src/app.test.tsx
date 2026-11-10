@@ -113,9 +113,27 @@ describe("user", () => {
     });
     renderApp("/");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "SR" }));
+    await user.click(await screen.findByRole("button", { name: "Language: English" }));
     expect(await screen.findByRole("link", { name: "Klijenti" })).toBeInTheDocument();
     expect(calls.find((c) => c.method === "PUT")?.body).toEqual({ language: "sr" });
+  });
+
+  it("uses one language button that flips between English and Serbian", async () => {
+    let language: "en" | "sr" = "en";
+    const calls = stubApi({
+      "GET /api/auth/me": () => ({ status: 200, body: meFor("Officer", { preferredLanguage: language }) }),
+      "PUT /api/auth/me/language": (body) => {
+        language = (body as { language: "en" | "sr" }).language;
+        return { status: 200, body: meFor("Officer", { preferredLanguage: language }) };
+      },
+    });
+    renderApp("/");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Language: English" }));
+    await user.click(await screen.findByRole("button", { name: "Jezik: srpski" }));
+    expect(await screen.findByRole("link", { name: "Clients" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "SR" })).toBeNull();
+    expect(calls.filter((c) => c.method === "PUT").map((c) => c.body)).toEqual([{ language: "sr" }, { language: "en" }]);
   });
 
   it("logs out and returns to the login page", async () => {
