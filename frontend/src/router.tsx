@@ -23,6 +23,8 @@ import { ApplicationsListPage } from "@/pages/applications-list";
 import { ClientDetailsPage, ClientsListPage, NewClientPage } from "@/pages/clients";
 import { NewApplicationPage } from "@/pages/new-application";
 import { ModelsPage } from "@/pages/models";
+import { LazyDashboard } from "@/pages/dashboard-lazy";
+import { validateDashboardSearch } from "@/lib/dashboard-range";
 import type { ClientFilters } from "@/api/clients";
 import { validateApplicationFilters } from "@/lib/filters";
 
@@ -156,6 +158,16 @@ const clientRoute = createRoute({
   },
 });
 
+const dashboardRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: "dashboard",
+  validateSearch: validateDashboardSearch,
+  beforeLoad: requires("stats.read"),
+  component: function Dashboard() {
+    return <LazyDashboard search={dashboardRoute.useSearch()} />;
+  },
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authedRoute.addChildren([
@@ -168,7 +180,7 @@ const routeTree = rootRoute.addChildren([
     clientsRoute,
     newClientRoute,
     clientRoute,
-    page("dashboard", "nav.dashboard", "stats.read"),
+    dashboardRoute,
     createRoute({ getParentRoute: () => authedRoute, path: "models", beforeLoad: requires("models.read"), component: ModelsPage }),
     page("users", "nav.users", "users.manage"),
     page("branches", "nav.branches", "branches.manage"),

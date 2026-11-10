@@ -12,7 +12,9 @@ export function stubApi(routes: Record<string, StubRoute>) {
     const path = String(input);
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     calls.push({ method, path, body });
-    const route = routes[`${method} ${path}`];
+    const key = `${method} ${path}`;
+    const prefix = Object.keys(routes).find((candidate) => candidate.endsWith("*") && key.startsWith(candidate.slice(0, -1)));
+    const route = routes[key] ?? (prefix ? routes[prefix] : undefined);
     const reply = route === undefined ? notFound : typeof route === "function" ? route(body) : route;
     const contentType = reply.status >= 400 ? "application/problem+json" : "application/json";
     return new Response(reply.body === undefined ? null : JSON.stringify(reply.body), {
