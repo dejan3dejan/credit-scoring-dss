@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import type { ApplicationSummary } from "@/api/types";
+import { branchesKey, listBranches } from "@/api/branches";
+import { listUsers, usersKey } from "@/api/users";
 import { getMyWork, getTeamWork, type MyWork } from "@/api/work";
 import { homeTitleKey } from "@/auth/home";
 import { can, useMe } from "@/auth/session";
@@ -40,6 +42,8 @@ export function HomePage() {
           <MyWorkSection title={title} />
           {can(me, "applications.assign") && <TeamSection />}
         </>
+      ) : can(me, "users.manage") ? (
+        <AdminOverview title={title} />
       ) : (
         <EmptyState title={t("home.emptyTitle")} text={me.role === "Risk" ? t("home.overviewText") : t("home.emptyText")} />
       )}
@@ -142,6 +146,41 @@ function Drafts({ drafts }: { drafts: MyWork["drafts"] }) {
         </tbody>
       </Table>
     </section>
+  );
+}
+
+function AdminOverview({ title }: { title: string }) {
+  const { t } = useTranslation();
+  const users = useQuery({ queryKey: usersKey, queryFn: listUsers });
+  const branches = useQuery({ queryKey: branchesKey, queryFn: listBranches });
+  if (users.isPending || branches.isPending) return <Loading />;
+  if (users.isError) return <ErrorState error={users.error} onRetry={() => void users.refetch()} />;
+  if (branches.isError) return <ErrorState error={branches.error} onRetry={() => void branches.refetch()} />;
+  const active = users.data.filter((user) => user.isActive);
+
+  return (
+    <>
+      <Tiles
+        label={title}
+        items={[
+          { label: t("admin.users"), value: active.length },
+          { label: t("admin.lockedUsers"), value: active.filter((user) => user.lockedUntil).length },
+          { label: t("admin.mustChange"), value: active.filter((user) => user.mustChangePassword).length },
+          { label: t("admin.activeBranches"), value: branches.data.filter((branch) => branch.isActive).length },
+        ]}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link to="/users">{t("admin.openUsers")}</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/branches">{t("admin.openBranches")}</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/audit">{t("admin.openAudit")}</Link>
+        </Button>
+      </div>
+    </>
   );
 }
 

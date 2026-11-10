@@ -23,6 +23,8 @@ import { ApplicationsListPage } from "@/pages/applications-list";
 import { ClientDetailsPage, ClientsListPage, NewClientPage } from "@/pages/clients";
 import { NewApplicationPage } from "@/pages/new-application";
 import { ModelsPage } from "@/pages/models";
+import { NewUserPage, UserDetailsPage, UsersListPage } from "@/pages/users";
+import { BranchesPage } from "@/pages/branches";
 import { LazyDashboard } from "@/pages/dashboard-lazy";
 import { validateDashboardSearch } from "@/lib/dashboard-range";
 import type { ClientFilters } from "@/api/clients";
@@ -169,6 +171,16 @@ const dashboardRoute = createRoute({
   },
 });
 
+const userRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: "users/$id",
+  beforeLoad: requires("users.manage"),
+  component: function User() {
+    const { id } = userRoute.useParams();
+    return <UserDetailsPage id={id} />;
+  },
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authedRoute.addChildren([
@@ -183,8 +195,10 @@ const routeTree = rootRoute.addChildren([
     clientRoute,
     dashboardRoute,
     createRoute({ getParentRoute: () => authedRoute, path: "models", beforeLoad: requires("models.read"), component: ModelsPage }),
-    page("users", "nav.users", "users.manage"),
-    page("branches", "nav.branches", "branches.manage"),
+    createRoute({ getParentRoute: () => authedRoute, path: "users", beforeLoad: requires("users.manage"), component: UsersListPage }),
+    createRoute({ getParentRoute: () => authedRoute, path: "users/new", beforeLoad: requires("users.manage"), component: NewUserPage }),
+    userRoute,
+    createRoute({ getParentRoute: () => authedRoute, path: "branches", beforeLoad: requires("branches.manage"), component: BranchesPage }),
     page("audit", "nav.audit", "audit.read"),
   ]),
 ]);

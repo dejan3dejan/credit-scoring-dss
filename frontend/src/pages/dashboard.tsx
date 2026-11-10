@@ -19,7 +19,8 @@ import {
   ZAxis,
 } from "recharts";
 import { listModels, modelsKey } from "@/api/models";
-import { getStats, listBranches, type DashboardStats } from "@/api/stats";
+import { listBranches } from "@/api/branches";
+import { getStats, type DashboardStats } from "@/api/stats";
 import { useMe } from "@/auth/session";
 import { EmptyState, ErrorState, Loading, PageHeader } from "@/components/page";
 import { Card, SelectField, Table, Td, Th } from "@/components/surface";

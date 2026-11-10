@@ -1,5 +1,5 @@
 import { request } from "@/api/client";
-import type { BranchRef, DecisionPath } from "@/api/types";
+import type { DecisionPath } from "@/api/types";
 
 type MatrixRow = { approved: number; rejected: number; pending: number };
 type Rate = number | null;
@@ -59,7 +59,3 @@ export function statsQuery(filters: StatsFilters): string {
 }
 
 export const getStats = (filters: StatsFilters) => request<DashboardStats>(`/api/stats${statsQuery(filters)}`);
-
-export type Branch = BranchRef & { city: string | null; isActive: boolean; createdAt: string };
-
-export const listBranches = () => request<Branch[]>("/api/branches");
