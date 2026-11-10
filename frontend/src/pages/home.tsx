@@ -234,7 +234,7 @@ function WaitingOutcomes() {
     <section aria-label={title} className="grid gap-2">
       <div className="flex items-baseline gap-3">
         <h2 className="font-semibold">{title}</h2>
-        {waiting.data && <span className="text-[26px] leading-none font-semibold">{waiting.data.totalCount}</span>}
+        {waiting.data && <span className="text-[26px] leading-none font-semibold tabular-nums">{waiting.data.totalCount}</span>}
         <Link
           to="/applications"
           search={{ loanOutcome: "Pending" }}

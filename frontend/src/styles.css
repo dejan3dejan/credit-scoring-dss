@@ -1,8 +1,5 @@
 @import "tailwindcss";
-@import "@fontsource/ibm-plex-sans/400.css";
-@import "@fontsource/ibm-plex-sans/500.css";
-@import "@fontsource/ibm-plex-sans/600.css";
-@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -22,26 +19,27 @@
   --muted-foreground: #5e6762;
   --accent: #e6efea;
   --accent-foreground: #1e4d3e;
-  --destructive: #b42318;
+  --destructive: #9b1c1c;
   --border: #e3e4df;
-  --input: #d5d7d1;
+  --input: #7c837e;
   --ring: #1e4d3e;
   --sidebar: #ffffff;
   --header-row: #fafaf8;
 
-  --status-approve: #1a7f4b;
-  --status-approve-tint: #e8f5ee;
+  --status-approve: #2c5a85;
+  --status-approve-tint: #e8f0f7;
   --status-review: #a15c00;
   --status-review-tint: #fdf3e3;
-  --status-reject: #b42318;
-  --status-reject-tint: #fcebea;
+  --status-reject: #9b1c1c;
+  --status-reject-tint: #fbeaea;
   --status-none: #5f6672;
   --status-none-tint: #eef0f2;
+  --chart-neutral: #7d8782;
 }
 
 @theme inline {
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-mono: var(--font-sans);
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 2px);
@@ -103,8 +101,8 @@
   * {
     @apply border-border outline-ring/50;
   }
-  html {
-    font-variant-numeric: tabular-nums;
+  .font-mono {
+    font-variant-numeric: tabular-nums slashed-zero;
   }
   body {
     @apply bg-background text-foreground font-sans text-sm antialiased;

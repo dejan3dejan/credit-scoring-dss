@@ -1,12 +1,12 @@
-import { CircleCheck, CircleMinus, CircleX, TriangleAlert, type LucideIcon } from "lucide-react";
+import { CircleMinus, SignalHigh, SignalLow, SignalMedium, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Recommendation } from "@/api/types";
 import { cn } from "@/lib/utils";
 
 const styles: Record<Recommendation | "none", { icon: LucideIcon; className: string }> = {
-  Approve: { icon: CircleCheck, className: "bg-approve-tint text-approve" },
-  Review: { icon: TriangleAlert, className: "bg-review-tint text-review" },
-  Reject: { icon: CircleX, className: "bg-reject-tint text-reject" },
+  Approve: { icon: SignalLow, className: "bg-approve-tint text-approve" },
+  Review: { icon: SignalMedium, className: "bg-review-tint text-review" },
+  Reject: { icon: SignalHigh, className: "bg-reject-tint text-reject" },
   none: { icon: CircleMinus, className: "bg-none-tint text-none" },
 };
 

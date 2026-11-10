@@ -10,7 +10,7 @@ export function NumberTiles({ label, items, className }: { label: string; items:
       {items.map((item) => (
         <li key={item.label} className="rounded-md border bg-card px-4 py-3">
           <div className="text-xs text-muted-foreground">{item.label}</div>
-          <div className="mt-1 text-[26px] leading-none font-semibold">{item.value}</div>
+          <div className="mt-1 text-[26px] leading-none font-semibold tabular-nums">{item.value}</div>
           {item.previous !== undefined && (
             <div className="mt-1.5 text-xs text-muted-foreground">{t("dashboard.previous", { value: item.previous })}</div>
           )}

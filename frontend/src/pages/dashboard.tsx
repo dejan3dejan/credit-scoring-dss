@@ -334,7 +334,7 @@ function Histogram({ stats }: { stats: DashboardStats }) {
             }}
             {...tooltipStyle}
           />
-          <Bar isAnimationActive={false} dataKey="count" name={t("dashboard.count")} fill="#7D8782" radius={[3, 3, 0, 0]} barSize={28} />
+          <Bar isAnimationActive={false} dataKey="count" name={t("dashboard.count")} fill="var(--chart-neutral)" radius={[3, 3, 0, 0]} barSize={28} />
           {active?.reviewFrom != null && (
             <ReferenceLine
               x={active.reviewFrom}

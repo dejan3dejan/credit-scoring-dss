@@ -58,7 +58,7 @@ export function Th({ children, align = "left" }: { children?: ReactNode; align?:
 
 export function Td({ children, align = "left", className }: { children?: ReactNode; align?: "left" | "right"; className?: string }) {
   return (
-    <td className={cn("border-b px-4 py-3 align-middle group-last:border-b-0", align === "right" && "text-right", className)}>
+    <td className={cn("border-b px-4 py-3 align-middle group-last:border-b-0", align === "right" && "text-right tabular-nums", className)}>
       {children}
     </td>
   );
@@ -98,7 +98,7 @@ export function Facts({ items, stacked = false }: { items: { label: string; valu
       {items.map((item) => (
         <div key={item.label} className="contents">
           <dt className="text-muted-foreground">{item.label}</dt>
-          <dd className="text-right">{item.value}</dd>
+          <dd className="text-right tabular-nums">{item.value}</dd>
         </div>
       ))}
     </dl>

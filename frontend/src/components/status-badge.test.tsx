@@ -29,8 +29,13 @@ describe("StatusBadge", () => {
     expect(screen.getByText("Odbiti")).toBeInTheDocument();
   });
 
-  it("carries an icon next to the word", () => {
-    const { container } = renderBadge("Approve");
-    expect(container.querySelector("svg")).not.toBeNull();
+  it.each([
+    ["Approve", "lucide-signal-low"],
+    ["Review", "lucide-signal-medium"],
+    ["Reject", "lucide-signal-high"],
+  ] as const)("shows %s with the risk level icon %s, never a check mark", (recommendation, icon) => {
+    const { container } = renderBadge(recommendation);
+    expect(container.querySelector(`svg.${icon}`)).not.toBeNull();
+    expect(container.querySelector("svg.lucide-circle-check, svg.lucide-circle-x, svg.lucide-triangle-alert")).toBeNull();
   });
 });
