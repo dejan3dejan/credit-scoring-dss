@@ -630,5 +630,20 @@
     "outcomeShown": "{{outcome}}, recorded by {{name}} on {{date}}.",
     "tlOutcome": "Loan {{outcome}}, recorded by {{name}}",
     "tlNote": "Note by {{name}}"
+  },
+  "drafts": {
+    "save": "Save draft",
+    "saved": "Draft saved.",
+    "discard": "Discard draft",
+    "discardConfirm": "Discard",
+    "discarded": "Draft discarded.",
+    "editing": "Draft, last saved {{date}}. Answers are checked only when you submit.",
+    "closedSubmitted": "This draft was already submitted.",
+    "closedDiscarded": "This draft was discarded.",
+    "openApplication": "Open the application",
+    "title": "Drafts",
+    "client": "Client",
+    "updated": "Last saved",
+    "continue": "Continue"
   }
 }

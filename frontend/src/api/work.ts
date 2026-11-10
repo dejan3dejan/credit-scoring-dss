@@ -1,8 +1,10 @@
 import { request } from "@/api/client";
+import type { DraftResponse } from "@/api/drafts";
 import type { ApplicationSummary, Role } from "@/api/types";
 
 export type MyWork = {
   counts: { drafts: number; awaitingDecision: number; scoringUnavailable: number; awaitingSignOff: number; decidedLast7Days: number };
+  drafts: DraftResponse[];
   awaitingDecision: ApplicationSummary[];
   scoringUnavailable: ApplicationSummary[];
   awaitingSignOff: ApplicationSummary[];

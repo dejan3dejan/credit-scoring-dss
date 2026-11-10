@@ -630,5 +630,20 @@
     "outcomeShown": "{{outcome}}, zabeležio/la {{name}}, {{date}}.",
     "tlOutcome": "Kredit: {{outcome}}, zabeležio/la {{name}}",
     "tlNote": "Beleška, {{name}}"
+  },
+  "drafts": {
+    "save": "Sačuvaj nacrt",
+    "saved": "Nacrt je sačuvan.",
+    "discard": "Odbaci nacrt",
+    "discardConfirm": "Odbaci",
+    "discarded": "Nacrt je odbačen.",
+    "editing": "Nacrt, poslednji put sačuvan {{date}}. Odgovori se proveravaju tek pri podnošenju.",
+    "closedSubmitted": "Ovaj nacrt je već podnet.",
+    "closedDiscarded": "Ovaj nacrt je odbačen.",
+    "openApplication": "Otvori zahtev",
+    "title": "Nacrti",
+    "client": "Klijent",
+    "updated": "Poslednji put sačuvan",
+    "continue": "Nastavi"
   }
 }

@@ -114,14 +114,15 @@ const applicationRoute = createRoute({
 const newApplicationRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: "applications/new",
-  validateSearch: (search: Record<string, unknown>): { clientId?: string; from?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { clientId?: string; from?: string; draftId?: string } => ({
     clientId: typeof search.clientId === "string" ? search.clientId : undefined,
     from: typeof search.from === "string" ? search.from : undefined,
+    draftId: typeof search.draftId === "string" ? search.draftId : undefined,
   }),
   beforeLoad: requires("applications.write"),
   component: function NewApplication() {
-    const { clientId, from } = newApplicationRoute.useSearch();
-    return <NewApplicationPage key={`${clientId}-${from}`} clientId={clientId} from={from} />;
+    const { clientId, from, draftId } = newApplicationRoute.useSearch();
+    return <NewApplicationPage key={`${clientId}-${from}-${draftId}`} clientId={clientId} from={from} draftId={draftId} />;
   },
 });
 

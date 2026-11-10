@@ -3,14 +3,14 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import type { ApplicationSummary } from "@/api/types";
-import { getMyWork, getTeamWork } from "@/api/work";
+import { getMyWork, getTeamWork, type MyWork } from "@/api/work";
 import { homeTitleKey } from "@/auth/home";
 import { can, useMe } from "@/auth/session";
 import { EmptyState, ErrorState, Loading, PageHeader } from "@/components/page";
 import { Table, Td, Th } from "@/components/surface";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n";
-import { formatDate } from "@/i18n/format";
+import { formatDate, formatDateTime } from "@/i18n/format";
 import { ApplicationsTable } from "@/pages/applications-list";
 
 export function HomePage() {
@@ -97,9 +97,51 @@ function MyWorkSection({ title }: { title: string }) {
           <Queue title={t("home.scoringUnavailable")} items={work.data.scoringUnavailable} />
         </>
       )}
+      <Drafts drafts={work.data.drafts} />
       <Queue title={t("home.awaitingSignOff")} items={work.data.awaitingSignOff} />
       <Queue title={t("home.recentlyDecided")} items={work.data.recentlyDecided} />
     </>
+  );
+}
+
+function Drafts({ drafts }: { drafts: MyWork["drafts"] }) {
+  const { t } = useTranslation();
+  const language = useLanguage();
+  if (drafts.length === 0) return null;
+  return (
+    <section className="grid gap-2">
+      <h2 className="font-semibold">{t("drafts.title")}</h2>
+      <Table label={t("drafts.title")}>
+        <thead>
+          <tr>
+            <Th>{t("drafts.client")}</Th>
+            <Th>{t("drafts.updated")}</Th>
+            <Th />
+          </tr>
+        </thead>
+        <tbody>
+          {drafts.map((draft) => (
+            <tr key={draft.id} className="group">
+              <Td>
+                <span className="font-medium">{draft.clientName}</span>{" "}
+                <span className="font-mono text-xs text-muted-foreground">{draft.clientNumber}</span>
+              </Td>
+              <Td className="text-muted-foreground">{formatDateTime(draft.updatedAt, language)}</Td>
+              <Td align="right">
+                <Link
+                  to="/applications/new"
+                  search={{ draftId: draft.id }}
+                  aria-label={`${t("drafts.continue")} ${draft.clientName}`}
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  {t("drafts.continue")}
+                </Link>
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </section>
   );
 }
 

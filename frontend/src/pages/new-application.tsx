@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { applicationKey, createApplication, getApplication, type NewApplication } from "@/api/applications";
 import { ApiError } from "@/api/client";
 import { clientKey, getClient, listClients } from "@/api/clients";
+import { createDraft, discardDraft, draftKey, getDraft, updateDraft, type DraftResponse } from "@/api/drafts";
 import {
   employmentLengths,
   homeOwnerships,
@@ -25,7 +26,7 @@ import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { errorMessage, useLanguage } from "@/i18n";
-import { formatShortDate } from "@/i18n/format";
+import { formatDateTime, formatShortDate } from "@/i18n/format";
 import { clientName } from "@/lib/client-name";
 import { parseNumber } from "@/lib/numbers";
 import { cn } from "@/lib/utils";
@@ -76,6 +77,16 @@ function answersFrom(application: ApplicationResponse): Answers {
   return answers;
 }
 
+function answersFromDraft(draft: DraftResponse): Answers {
+  const answers = { ...emptyAnswers };
+  for (const key of Object.keys(emptyAnswers) as (keyof ApplicationAnswers)[]) {
+    const value = draft.answers[key];
+    answers[key] = value === null || value === undefined ? "" : String(value);
+  }
+  answers.earliestCreditLine = draft.answers.earliestCreditLine?.slice(0, 7) ?? "";
+  return answers;
+}
+
 function toRequest(clientId: string, answers: Answers, language: Language): NewApplication {
   const request: Record<string, unknown> = { clientId };
   for (const [key, value] of Object.entries(answers)) request[key] = value === "" ? null : value;
@@ -84,14 +95,45 @@ function toRequest(clientId: string, answers: Answers, language: Language): NewA
   return request as NewApplication;
 }
 
-export function NewApplicationPage({ clientId, from }: { clientId?: string; from?: string }) {
+export function NewApplicationPage({ clientId, from, draftId }: { clientId?: string; from?: string; draftId?: string }) {
   const { t } = useTranslation();
   return (
     <>
       <PageHeader title={t("newApplication.title")} />
-      {clientId ? <WithClient clientId={clientId} from={from} /> : <ClientPicker />}
+      {draftId ? <FromDraft draftId={draftId} /> : clientId ? <WithClient clientId={clientId} from={from} /> : <ClientPicker />}
     </>
   );
+}
+
+function FromDraft({ draftId }: { draftId: string }) {
+  const { t } = useTranslation();
+  const draft = useQuery({ queryKey: draftKey(draftId), queryFn: () => getDraft(draftId) });
+  const client = useQuery({
+    queryKey: clientKey(draft.data?.clientId ?? ""),
+    queryFn: () => getClient(draft.data!.clientId),
+    enabled: draft.data?.status === "Open",
+  });
+
+  if (draft.isPending) return <Loading />;
+  if (draft.isError) return <ErrorState error={draft.error} onRetry={() => void draft.refetch()} />;
+  if (draft.data.status !== "Open")
+    return (
+      <EmptyState
+        title={t(draft.data.status === "Submitted" ? "drafts.closedSubmitted" : "drafts.closedDiscarded")}
+        action={
+          draft.data.applicationId && (
+            <Button asChild variant="outline">
+              <Link to="/applications/$id" params={{ id: draft.data.applicationId }}>
+                {t("drafts.openApplication")}
+              </Link>
+            </Button>
+          )
+        }
+      />
+    );
+  if (client.isPending) return <Loading />;
+  if (client.isError) return <ErrorState error={client.error} onRetry={() => void client.refetch()} />;
+  return <ApplicationForm client={client.data} draft={draft.data} />;
 }
 
 function ClientPicker() {
@@ -196,15 +238,40 @@ function WithClient({ clientId, from }: { clientId: string; from?: string }) {
   return <ApplicationForm key={prefill?.id ?? "empty"} client={client.data} prefill={prefill} />;
 }
 
-function ApplicationForm({ client, prefill }: { client: ClientDetail; prefill?: ApplicationResponse }) {
+function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; prefill?: ApplicationResponse; draft?: DraftResponse }) {
   const { t } = useTranslation();
   const language = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [answers, setAnswers] = useState<Answers>(() => (prefill ? answersFrom(prefill) : emptyAnswers));
+  const [answers, setAnswers] = useState<Answers>(() =>
+    draft ? answersFromDraft(draft) : prefill ? answersFrom(prefill) : emptyAnswers,
+  );
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  const save = useMutation({
+    mutationFn: () => {
+      const body = toRequest(client.id, answers, language);
+      return draft ? updateDraft(draft.id, body) : createDraft(body);
+    },
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(draftKey(saved.id), saved);
+      void queryClient.invalidateQueries({ queryKey: ["work"] });
+      toast.success(t("drafts.saved"));
+      if (!draft) await navigate({ to: "/applications/new", search: { draftId: saved.id }, replace: true });
+    },
+  });
+
+  const discard = useMutation({
+    mutationFn: () => discardDraft(draft!.id),
+    onSuccess: async () => {
+      void queryClient.invalidateQueries({ queryKey: ["work"] });
+      toast.success(t("drafts.discarded"));
+      await navigate({ to: "/" });
+    },
+  });
 
   const submit = useMutation({
-    mutationFn: () => createApplication(toRequest(client.id, answers, language)),
+    mutationFn: () => createApplication({ ...toRequest(client.id, answers, language), ...(draft ? { draftId: draft.id } : {}) }),
     onSuccess: async (created) => {
       queryClient.setQueryData(applicationKey(created.id), created);
       void queryClient.invalidateQueries({ queryKey: ["applications"] });
@@ -214,12 +281,13 @@ function ApplicationForm({ client, prefill }: { client: ClientDetail; prefill?: 
     },
   });
 
-  const errors = submit.error instanceof ApiError ? submit.error.fieldErrors : {};
+  const lastError = submit.error ?? save.error ?? discard.error;
+  const errors = lastError instanceof ApiError ? lastError.fieldErrors : {};
   const fieldErrors = (name: string): FieldError[] | undefined => {
     const list = [...(errors[name] ?? []), ...(errors[`$.${name}`] ?? [])];
     return list.length ? list : undefined;
   };
-  const generalError = submit.error && Object.keys(errors).length === 0;
+  const generalError = lastError && Object.keys(errors).length === 0;
   const set = (name: keyof Answers) => (value: string) => setAnswers((current) => ({ ...current, [name]: value }));
 
   const text = (name: keyof Answers, props: { suffix?: string; hint?: string; inputMode?: "numeric" | "decimal" } = {}) => (
@@ -275,7 +343,12 @@ function ApplicationForm({ client, prefill }: { client: ClientDetail; prefill?: 
           {t("newApplication.prefilled", { reference: prefill.reference })}
         </p>
       )}
-      {generalError && <Alert>{errorMessage(submit.error)}</Alert>}
+      {draft && (
+        <p className="rounded border bg-card px-3 py-2 text-muted-foreground">
+          {t("drafts.editing", { date: formatDateTime(draft.updatedAt, language) })}
+        </p>
+      )}
+      {generalError && <Alert>{errorMessage(lastError)}</Alert>}
       <FieldErrors id="client-error" errors={fieldErrors("clientId")} />
 
       <Section title={t("newApplication.sectionLoan")}>
@@ -344,6 +417,30 @@ function ApplicationForm({ client, prefill }: { client: ClientDetail; prefill?: 
         <Button type="submit" disabled={submit.isPending || !client.isActive}>
           {t("newApplication.submit")}
         </Button>
+        <Button type="button" variant="outline" onClick={() => save.mutate()} disabled={save.isPending || !client.isActive}>
+          {t("drafts.save")}
+        </Button>
+        {draft &&
+          (confirmDiscard ? (
+            <span className="ml-auto flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-reject text-reject"
+                onClick={() => discard.mutate()}
+                disabled={discard.isPending}
+              >
+                {t("drafts.discardConfirm")}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setConfirmDiscard(false)}>
+                {t("actions.cancel")}
+              </Button>
+            </span>
+          ) : (
+            <Button type="button" variant="ghost" className="ml-auto" onClick={() => setConfirmDiscard(true)}>
+              {t("drafts.discard")}
+            </Button>
+          ))}
       </div>
     </form>
   );

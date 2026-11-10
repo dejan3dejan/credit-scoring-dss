@@ -65,7 +65,7 @@ export const recordDecision = (id: string, outcome: FinalDecision | null, reason
 
 export type NewApplication = { clientId: string } & { [K in keyof ApplicationAnswers]: ApplicationAnswers[K] | null };
 
-export const createApplication = (application: NewApplication) =>
+export const createApplication = (application: NewApplication & { draftId?: string }) =>
   request<ApplicationResponse>("/api/applications", { method: "POST", body: application });
 
 export const notesKey = (id: string) => ["notes", id] as const;
