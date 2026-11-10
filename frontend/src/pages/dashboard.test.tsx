@@ -158,4 +158,13 @@ describe("dashboard", () => {
     const weekly = await screen.findByRole("table", { name: "Applications per week by recommendation" });
     expect(within(weekly).getByText("9 Nov 2026")).toBeInTheDocument();
   });
+
+  it("names the series of each chart in a legend below it", async () => {
+    stubApi({ ...signedInAs("Manager"), ...common, "GET /api/stats": { status: 200, body: stats() } });
+    renderApp("/dashboard?range=all");
+    const weekly = await screen.findByRole("list", { name: "Applications per week by recommendation" });
+    expect(within(weekly).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Approve", "Review closely", "Reject", "No score"]);
+    const rates = screen.getByRole("list", { name: "Override rate and review share per week" });
+    expect(within(rates).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Override rate", "Review share"]);
+  });
 });

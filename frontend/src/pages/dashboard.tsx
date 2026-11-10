@@ -6,7 +6,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ReferenceLine,
@@ -26,6 +25,7 @@ import { CalibrationTable } from "@/components/calibration-table";
 import { NumberTiles, type NumberTile } from "@/components/number-tiles";
 import { EmptyState, ErrorState, Loading, PageHeader } from "@/components/page";
 import { Card, SelectField, Table, Td, Th } from "@/components/surface";
+import { ChartLegend, ChartTooltipContent, chartAxis, chartCursor, chartGrid, stackTop, type ChartLegendItem } from "@/components/ui/chart";
 import { useLanguage } from "@/i18n";
 import { formatPercent, formatShortDate } from "@/i18n/format";
 import { calibratedBands } from "@/lib/calibration";
@@ -34,9 +34,6 @@ import { cn } from "@/lib/utils";
 
 const ink = "var(--foreground)";
 const muted = "var(--muted-foreground)";
-const grid = "var(--border)";
-const axis = { stroke: grid, tick: { fill: muted, fontSize: 11 }, tickLine: false } as const;
-const tooltipStyle = { contentStyle: { border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 } };
 
 type Rate = number | null;
 
@@ -145,11 +142,24 @@ function Numbers({ stats, showBranches }: { stats: DashboardStats; showBranches:
   );
 }
 
-function ChartCard({ title, note, table, children }: { title: string; note?: string; table: ReactNode; children: ReactNode }) {
+function ChartCard({
+  title,
+  note,
+  table,
+  legend,
+  children,
+}: {
+  title: string;
+  note?: string;
+  table: ReactNode;
+  legend?: ChartLegendItem[];
+  children: ReactNode;
+}) {
   const { t } = useTranslation();
   return (
     <Card title={title} footer={note}>
-      <div className="h-64">{children}</div>
+      <div className="h-60">{children}</div>
+      {legend && <ChartLegend label={title} items={legend} />}
       <details className="mt-3 text-sm">
         <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t("dashboard.showTable")}</summary>
         <div className="mt-2">{table}</div>
@@ -168,11 +178,13 @@ function WeeklyChart({ stats }: { stats: DashboardStats }) {
     { key: "reject", label: t("recommendation.Reject"), color: "var(--status-reject)" },
     { key: "unavailable", label: t("recommendation.none"), color: "var(--status-none)" },
   ] as const;
+  const keys = series.map((s) => s.key);
   const title = t("dashboard.weeklyTitle");
 
   return (
     <ChartCard
       title={title}
+      legend={series.map((s) => ({ label: s.label, color: s.color }))}
       table={
         <Table label={title}>
           <thead>
@@ -201,13 +213,12 @@ function WeeklyChart({ stats }: { stats: DashboardStats }) {
       }
     >
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={stats.weekly} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-          <CartesianGrid vertical={false} stroke={grid} />
-          <XAxis dataKey="weekStart" tickFormatter={week} {...axis} />
-          <YAxis allowDecimals={false} {...axis} />
-          <Tooltip labelFormatter={(value) => week(String(value))} {...tooltipStyle} />
-          <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={(item) => series.findIndex((s) => s.key === item.dataKey)} />
-          {series.map((s, index) => (
+        <BarChart data={stats.weekly} margin={{ top: 8, right: 4, bottom: 0, left: 4 }}>
+          <CartesianGrid {...chartGrid} />
+          <XAxis dataKey="weekStart" tickFormatter={week} {...chartAxis} />
+          <YAxis allowDecimals={false} hide />
+          <Tooltip cursor={chartCursor} content={<ChartTooltipContent labelFormatter={(value) => week(String(value))} />} />
+          {series.map((s) => (
             <Bar
               isAnimationActive={false}
               key={s.key}
@@ -215,9 +226,8 @@ function WeeklyChart({ stats }: { stats: DashboardStats }) {
               name={s.label}
               stackId="week"
               fill={s.color}
-              stroke="var(--card)"
-              strokeWidth={1}
-              radius={index === series.length - 1 ? [3, 3, 0, 0] : undefined}
+              maxBarSize={28}
+              shape={stackTop(keys, s.key)}
             />
           ))}
         </BarChart>
@@ -237,6 +247,10 @@ function RatesChart({ stats }: { stats: DashboardStats }) {
     <ChartCard
       title={title}
       note={t("dashboard.ratesNote")}
+      legend={[
+        { label: t("dashboard.overrideRate"), color: ink },
+        { label: t("dashboard.reviewShare"), color: muted, dashed: true },
+      ]}
       table={
         <Table label={title}>
           <thead>
@@ -260,20 +274,34 @@ function RatesChart({ stats }: { stats: DashboardStats }) {
     >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={stats.weekly} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
-          <CartesianGrid vertical={false} stroke={grid} />
-          <XAxis dataKey="weekStart" tickFormatter={week} {...axis} />
-          <YAxis domain={[0, 1]} tickFormatter={(value: number) => formatPercent(value, language)} {...axis} />
-          <Tooltip labelFormatter={(value) => week(String(value))} formatter={(value) => percent(value as Rate)} {...tooltipStyle} />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Line isAnimationActive={false} dataKey="overrideRate" name={t("dashboard.overrideRate")} stroke={ink} strokeWidth={2} dot={{ r: 4 }} connectNulls={false} />
+          <CartesianGrid {...chartGrid} />
+          <XAxis dataKey="weekStart" tickFormatter={week} {...chartAxis} />
+          <YAxis domain={[0, 1]} ticks={[0, 0.5, 1]} tickFormatter={(value: number) => formatPercent(value, language)} {...chartAxis} />
+          <Tooltip
+            cursor={{ stroke: "var(--border)" }}
+            content={<ChartTooltipContent labelFormatter={(value) => week(String(value))} valueFormatter={(value) => percent(value as Rate)} />}
+          />
+          <Line
+            isAnimationActive={false}
+            dataKey="overrideRate"
+            name={t("dashboard.overrideRate")}
+            stroke={ink}
+            strokeWidth={2}
+            strokeLinecap="round"
+            dot={{ r: 4, fill: ink, stroke: "var(--card)", strokeWidth: 2 }}
+            activeDot={{ r: 5, stroke: "var(--card)", strokeWidth: 2 }}
+            connectNulls={false}
+          />
           <Line
             isAnimationActive={false}
             dataKey="reviewShare"
             name={t("dashboard.reviewShare")}
             stroke={muted}
             strokeWidth={2}
+            strokeLinecap="round"
             strokeDasharray="5 4"
-            dot={{ r: 4, strokeDasharray: "0" }}
+            dot={{ r: 4, fill: muted, stroke: "var(--card)", strokeWidth: 2, strokeDasharray: "0" }}
+            activeDot={{ r: 5, stroke: "var(--card)", strokeWidth: 2, strokeDasharray: "0" }}
             connectNulls={false}
           />
         </LineChart>
@@ -316,25 +344,29 @@ function Histogram({ stats }: { stats: DashboardStats }) {
       }
     >
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 16, right: 12, bottom: 0, left: -16 }} barCategoryGap={2}>
-          <CartesianGrid vertical={false} stroke={grid} />
+        <BarChart data={data} margin={{ top: 16, right: 16, bottom: 0, left: 20 }} barCategoryGap={2}>
+          <CartesianGrid {...chartGrid} />
           <XAxis
             dataKey="middle"
             type="number"
             domain={[0, 1]}
             ticks={[0, 0.2, 0.4, 0.6, 0.8, 1]}
             tickFormatter={(value: number) => formatPercent(value, language)}
-            {...axis}
+            {...chartAxis}
           />
-          <YAxis allowDecimals={false} {...axis} />
+          <YAxis allowDecimals={false} hide />
           <Tooltip
-            labelFormatter={(_, payload) => {
-              const bin = payload?.[0]?.payload as { from: number; to: number } | undefined;
-              return bin ? `${pct(bin.from)} – ${pct(bin.to)}` : "";
-            }}
-            {...tooltipStyle}
+            cursor={chartCursor}
+            content={
+              <ChartTooltipContent
+                labelFormatter={(_, payload) => {
+                  const bin = payload?.[0]?.payload as { from: number; to: number } | undefined;
+                  return bin ? `${pct(bin.from)} – ${pct(bin.to)}` : "";
+                }}
+              />
+            }
           />
-          <Bar isAnimationActive={false} dataKey="count" name={t("dashboard.count")} fill="var(--chart-neutral)" radius={[3, 3, 0, 0]} barSize={28} />
+          <Bar isAnimationActive={false} dataKey="count" name={t("dashboard.count")} fill="var(--chart-neutral)" radius={[4, 4, 0, 0]} barSize={24} />
           {active?.reviewFrom != null && (
             <ReferenceLine
               x={active.reviewFrom}
@@ -545,26 +577,33 @@ function Calibration({ stats }: { stats: DashboardStats }) {
     >
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart margin={{ top: 8, right: 12, bottom: 0, left: -8 }}>
-          <CartesianGrid stroke={grid} />
+          <CartesianGrid {...chartGrid} />
           <XAxis
             type="number"
             dataKey="meanPredicted"
             name={t("dashboard.predicted")}
             domain={[0, 1]}
+            ticks={[0, 0.5, 1]}
             tickFormatter={(value: number) => pct(value)}
-            {...axis}
+            {...chartAxis}
           />
           <YAxis
             type="number"
             dataKey="observedDefaultRate"
             name={t("dashboard.observed")}
             domain={[0, 1]}
+            ticks={[0, 0.5, 1]}
             tickFormatter={(value: number) => pct(value)}
-            {...axis}
+            {...chartAxis}
           />
           <ZAxis type="number" dataKey="loans" range={[60, 260]} name={t("dashboard.loans")} />
           <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }]} stroke={muted} strokeDasharray="4 3" />
-          <Tooltip formatter={(value, name) => (name === t("dashboard.loans") ? value : pct(value as number))} {...tooltipStyle} />
+          <Tooltip
+            cursor={{ stroke: "var(--border)" }}
+            content={
+              <ChartTooltipContent valueFormatter={(value, item) => (item.name === t("dashboard.loans") ? String(value) : pct(value as number))} />
+            }
+          />
           <Scatter isAnimationActive={false} data={bands} fill={ink} stroke="var(--card)" strokeWidth={2} />
         </ScatterChart>
       </ResponsiveContainer>
