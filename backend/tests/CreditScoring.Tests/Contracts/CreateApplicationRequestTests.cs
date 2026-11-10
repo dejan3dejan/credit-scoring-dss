@@ -113,7 +113,6 @@ public class CreateApplicationRequestTests
     [Theory]
     [InlineData(nameof(CreateApplicationRequest.InquiriesLast6Months))]
     [InlineData(nameof(CreateApplicationRequest.DelinquenciesLast2Years))]
-    [InlineData(nameof(CreateApplicationRequest.PublicRecords))]
     [InlineData(nameof(CreateApplicationRequest.Bankruptcies))]
     [InlineData(nameof(CreateApplicationRequest.OpenAccounts))]
     [InlineData(nameof(CreateApplicationRequest.MortgageAccounts))]
@@ -126,11 +125,19 @@ public class CreateApplicationRequestTests
     }
 
     [Fact]
-    public void Negative_total_accounts_is_invalid_and_also_below_the_open_accounts()
+    public void Negative_total_accounts_is_invalid_and_also_below_the_open_and_mortgage_accounts()
     {
         Assert.Equal(
-            [nameof(CreateApplicationRequest.OpenAccounts), nameof(CreateApplicationRequest.TotalAccounts)],
+            [nameof(CreateApplicationRequest.MortgageAccounts), nameof(CreateApplicationRequest.OpenAccounts), nameof(CreateApplicationRequest.TotalAccounts)],
             Errors(Valid() with { TotalAccounts = -1 }).Order().ToList());
+    }
+
+    [Fact]
+    public void Negative_public_records_is_invalid_and_also_below_the_bankruptcies()
+    {
+        Assert.Equal(
+            [nameof(CreateApplicationRequest.Bankruptcies), nameof(CreateApplicationRequest.PublicRecords)],
+            Errors(Valid() with { PublicRecords = -1 }).Order().ToList());
     }
 
     [Fact]

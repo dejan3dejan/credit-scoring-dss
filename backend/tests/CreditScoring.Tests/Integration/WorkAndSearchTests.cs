@@ -63,9 +63,9 @@ public sealed class WorkAndSearchTests(DatabaseFixture database) : IAsyncLifetim
     {
         var client = await NewClient("Ana Petrović", database.Officer);
         var waiting = await Submit(database.Officer, client, new MlScore(0.1, TestData.ModelId));
-        var noScore = await Submit(database.Officer, client, new MlFailure(MlErrorCodes.Timeout, null, "x", []));
-        var large = await Submit(database.Officer, client, new MlScore(0.1, TestData.ModelId), loanAmount: 30_000);
-        var decided = await Submit(database.Officer, client, new MlScore(0.1, TestData.ModelId));
+        var noScore = await Submit(database.Officer, await NewClient("Bojana", database.Officer), new MlFailure(MlErrorCodes.Timeout, null, "x", []));
+        var large = await Submit(database.Officer, await NewClient("Ceca", database.Officer), new MlScore(0.1, TestData.ModelId), loanAmount: 30_000);
+        var decided = await Submit(database.Officer, await NewClient("Dara", database.Officer), new MlScore(0.1, TestData.ModelId));
         await Decide(database.Officer, large.Id, FinalDecision.Approve);
         await Decide(database.Officer, decided.Id, FinalDecision.Approve);
         await using (var scope = Scope(database.Officer))
@@ -78,7 +78,7 @@ public sealed class WorkAndSearchTests(DatabaseFixture database) : IAsyncLifetim
 
         var mine = await Work(database.Officer, c => c.Mine(CancellationToken.None));
 
-        Assert.Equal(new MyWorkCounts(1, 1, 1, 1, 1), mine.Counts);
+        Assert.Equal(new MyWorkCounts(1, 1, 1, 1, 1, 4, 1, 0), mine.Counts);
         Assert.Equal([waiting.Id], mine.AwaitingDecision.Select(a => a.Id));
         Assert.Equal([noScore.Id], mine.ScoringUnavailable.Select(a => a.Id));
         Assert.Equal([large.Id], mine.AwaitingSignOff.Select(a => a.Id));
@@ -105,7 +105,7 @@ public sealed class WorkAndSearchTests(DatabaseFixture database) : IAsyncLifetim
     {
         var client = await NewClient("Ana Petrović", database.Officer);
         await Submit(database.Officer, client, new MlScore(0.1, TestData.ModelId));
-        var large = await Submit(database.Officer, client, new MlScore(0.1, TestData.ModelId), loanAmount: 30_000);
+        var large = await Submit(database.Officer, await NewClient("Ceca", database.Officer), new MlScore(0.1, TestData.ModelId), loanAmount: 30_000);
         await Decide(database.Officer, large.Id, FinalDecision.Approve);
         var otherClient = await NewClient("Marko Ilić", database.OtherOfficer);
         await Submit(database.OtherOfficer, otherClient, new MlScore(0.1, TestData.ModelId));

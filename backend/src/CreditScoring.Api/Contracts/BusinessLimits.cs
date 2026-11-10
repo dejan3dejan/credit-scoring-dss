@@ -16,6 +16,8 @@ public static class BusinessLimits
     public const int MaxCreditScore = 850;
 
     public const int MaxCreditHistoryYears = 80;
+    public const int MinClientAge = 18;
+    public const int MaxClientAge = 100;
     public const int MaxRecentCount = 50;
     public const int MaxOpenAccounts = 100;
     public const int MaxTotalAccounts = 200;

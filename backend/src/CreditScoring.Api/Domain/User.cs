@@ -18,6 +18,7 @@ public class User
     private User() { }
 
     public Guid Id { get; private set; }
+    public uint Version { get; private set; }
     public string UserName { get; private set; } = "";
     public string DisplayName { get; private set; } = "";
     public UserRole Role { get; private set; }

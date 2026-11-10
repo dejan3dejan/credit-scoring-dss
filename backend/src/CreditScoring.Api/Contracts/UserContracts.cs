@@ -43,6 +43,9 @@ public sealed record UpdateUserRequest
 
     [Required, AllowedValues(Languages.English, Languages.Serbian, null), Display(Name = "Language")]
     public string? PreferredLanguage { get; init; }
+
+    [Required, Display(Name = "Version")]
+    public uint? Version { get; init; }
 }
 
 public sealed record ResetPasswordRequest
@@ -63,7 +66,8 @@ public sealed record UserResponse(
     bool MustChangePassword,
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastSignedInAt,
-    DateTimeOffset? LockedUntil)
+    DateTimeOffset? LockedUntil,
+    uint Version)
 {
     public static UserResponse From(User user, Branch? branch, DateTimeOffset now) => new(
         user.Id,
@@ -77,5 +81,6 @@ public sealed record UserResponse(
         user.MustChangePassword,
         user.CreatedAt,
         user.LastSignedInAt,
-        user.IsLockedOut(now) ? user.LockedUntil : null);
+        user.IsLockedOut(now) ? user.LockedUntil : null,
+        user.Version);
 }

@@ -25,7 +25,7 @@ public class DraftsController(CreditScoringDbContext db, TimeProvider time) : Co
             .OrderByDescending(d => d.UpdatedAt)
             .ThenByDescending(d => d.Id)
             .ToListAsync(cancellationToken);
-        return drafts.Select(DraftResponse.From).ToList();
+        return await Responses(db, drafts, time.GetUtcNow(), cancellationToken);
     }
 
     [HttpGet("{id:guid}")]
@@ -34,7 +34,7 @@ public class DraftsController(CreditScoringDbContext db, TimeProvider time) : Co
     public async Task<ActionResult<DraftResponse>> Get(Guid id, CancellationToken cancellationToken)
     {
         var draft = await Own(db.Drafts.AsNoTracking(), id, cancellationToken);
-        return draft is null ? NotFound() : DraftResponse.From(draft);
+        return draft is null ? NotFound() : await DraftAnswer(draft, cancellationToken);
     }
 
     [HttpPost]
@@ -49,7 +49,7 @@ public class DraftsController(CreditScoringDbContext db, TimeProvider time) : Co
         var draft = ApplicationDraft.Start(client!, Serialize(form!), Credentials.ActorOf(User), time.GetUtcNow());
         db.Drafts.Add(draft);
         await db.SaveChangesAsync(CancellationToken.None);
-        return CreatedAtAction(nameof(Get), new { id = draft.Id }, DraftResponse.From(draft));
+        return CreatedAtAction(nameof(Get), new { id = draft.Id }, await DraftAnswer(draft, CancellationToken.None));
     }
 
     [HttpPut("{id:guid}")]
@@ -79,6 +79,23 @@ public class DraftsController(CreditScoringDbContext db, TimeProvider time) : Co
         return draft is null ? NotFound() : await SaveAsync(draft, draft.Discard(time.GetUtcNow()));
     }
 
+    private async Task<DraftResponse> DraftAnswer(ApplicationDraft draft, CancellationToken cancellationToken) =>
+        (await Responses(db, [draft], time.GetUtcNow(), cancellationToken)).Single();
+
+    internal static async Task<IReadOnlyList<DraftResponse>> Responses(
+        CreditScoringDbContext db,
+        IReadOnlyCollection<ApplicationDraft> drafts,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var clientIds = drafts.Where(d => d.Status == DraftStatus.Open).Select(d => d.ClientId).Distinct().ToList();
+        var open = await ApplicationsController.OpenApplications(db)
+            .Where(a => clientIds.Contains(a.ClientId))
+            .Select(a => new { a.ClientId, Open = new OpenApplication(a.Id, a.Reference) })
+            .ToDictionaryAsync(a => a.ClientId, a => a.Open, cancellationToken);
+        return drafts.Select(d => DraftResponse.From(d, open.GetValueOrDefault(d.ClientId), now)).ToList();
+    }
+
     private Task<ApplicationDraft?> Own(IQueryable<ApplicationDraft> drafts, Guid id, CancellationToken cancellationToken)
     {
         var me = Credentials.ActorOf(User).UserId;
@@ -91,7 +108,7 @@ public class DraftsController(CreditScoringDbContext db, TimeProvider time) : Co
         {
             case Changed:
                 await db.SaveChangesAsync(CancellationToken.None);
-                return DraftResponse.From(draft);
+                return await DraftAnswer(draft, CancellationToken.None);
             case Refused refused:
                 return ApiProblems.Create(this, StatusCodes.Status409Conflict, refused.Code, refused.Message);
             default:

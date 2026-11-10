@@ -34,6 +34,8 @@ public class WorkController(CreditScoringDbContext db, TimeProvider time) : Cont
         var recentlyDecided = applications.Where(a => a.OfficerDecision != null
             && a.OfficerDecision.DecidedByUserId == me
             && a.OfficerDecision.DecidedAt >= since);
+        var submitted = applications.Where(a => a.SubmittedByUserId == me && a.SubmittedAt >= since);
+        var draftList = await drafts.OrderByDescending(d => d.UpdatedAt).Take(ListLimit).ToListAsync(cancellationToken);
 
         return new MyWorkResponse(
             new MyWorkCounts(
@@ -41,8 +43,11 @@ public class WorkController(CreditScoringDbContext db, TimeProvider time) : Cont
                 await awaitingDecision.CountAsync(cancellationToken),
                 await scoringUnavailable.CountAsync(cancellationToken),
                 await awaitingSignOff.CountAsync(cancellationToken),
-                await recentlyDecided.CountAsync(cancellationToken)),
-            (await drafts.OrderByDescending(d => d.UpdatedAt).Take(ListLimit).ToListAsync(cancellationToken)).Select(DraftResponse.From).ToList(),
+                await recentlyDecided.CountAsync(cancellationToken),
+                await submitted.CountAsync(cancellationToken),
+                await recentlyDecided.CountAsync(a => a.OfficerDecision!.Outcome == FinalDecision.Approve, cancellationToken),
+                await recentlyDecided.CountAsync(a => a.OfficerDecision!.IsOverride, cancellationToken)),
+            await DraftsController.Responses(db, draftList, time.GetUtcNow(), cancellationToken),
             await Oldest(awaitingDecision, cancellationToken),
             await Oldest(scoringUnavailable, cancellationToken),
             await Oldest(awaitingSignOff, cancellationToken),

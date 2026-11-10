@@ -14,26 +14,37 @@ public sealed record DraftResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     DraftStatus Status,
-    Guid? ApplicationId)
+    Guid? ApplicationId,
+    Dictionary<string, List<Dictionary<string, object>>> FieldErrors)
 {
-    public static DraftResponse From(ApplicationDraft draft)
+    public static DraftResponse From(ApplicationDraft draft, OpenApplication? open, DateTimeOffset now)
     {
         var client = draft.Client ?? throw new InvalidOperationException("the draft's client must be loaded to build a response");
+        var answers = JsonSerializer.Deserialize<CreateApplicationRequest>(draft.Answers, ApiJson.Options)
+            ?? throw new InvalidOperationException("a draft holds an answers object");
         return new DraftResponse(
             draft.Id,
             draft.ClientId,
             client.ClientNumber,
             client.FullName,
-            JsonSerializer.Deserialize<CreateApplicationRequest>(draft.Answers, ApiJson.Options)
-                ?? throw new InvalidOperationException("a draft holds an answers object"),
+            answers,
             draft.CreatedAt,
             draft.UpdatedAt,
             draft.Status,
-            draft.ApplicationId);
+            draft.ApplicationId,
+            draft.Status == DraftStatus.Open ? ApplicationChecks.AsFieldErrors(ApplicationChecks.All(answers, client, open, now)) : []);
     }
 }
 
-public sealed record MyWorkCounts(int Drafts, int AwaitingDecision, int ScoringUnavailable, int AwaitingSignOff, int DecidedLast7Days);
+public sealed record MyWorkCounts(
+    int Drafts,
+    int AwaitingDecision,
+    int ScoringUnavailable,
+    int AwaitingSignOff,
+    int DecidedLast7Days,
+    int SubmittedLast7Days,
+    int ApprovedLast7Days,
+    int OverridesLast7Days);
 
 public sealed record MyWorkResponse(
     MyWorkCounts Counts,

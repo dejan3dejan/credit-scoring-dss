@@ -22,10 +22,13 @@ public sealed record UpdateBranchRequest
 
     [StringLength(BusinessLimits.CityMaxLength), Display(Name = "City")]
     public string? City { get; init; }
+
+    [Required, Display(Name = "Version")]
+    public uint? Version { get; init; }
 }
 
-public sealed record BranchResponse(Guid Id, string Code, string Name, string? City, bool IsActive, DateTimeOffset CreatedAt)
+public sealed record BranchResponse(Guid Id, string Code, string Name, string? City, bool IsActive, DateTimeOffset CreatedAt, uint Version)
 {
     public static BranchResponse From(Branch branch) =>
-        new(branch.Id, branch.Code, branch.Name, branch.City, branch.IsActive, branch.CreatedAt);
+        new(branch.Id, branch.Code, branch.Name, branch.City, branch.IsActive, branch.CreatedAt, branch.Version);
 }

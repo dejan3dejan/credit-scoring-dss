@@ -1,0 +1,1336 @@
+using System;
+using CreditScoring.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+
+#nullable disable
+
+namespace CreditScoring.Api.Data.Migrations
+{
+    [DbContext(typeof(CreditScoringDbContext))]
+    [Migration("20261110132041_AddOneOpenApplicationPerClient")]
+    partial class AddOneOpenApplicationPerClient
+    {
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "9.0.1")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.HasSequence("application_reference_seq");
+
+            modelBuilder.HasSequence("client_number_seq");
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ApplicationDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Answers")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("answers");
+
+                    b.Property<Guid?>("ApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("application_id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("CreatedByUserId", "Status");
+
+                    b.ToTable("application_drafts", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ApplicationNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Author")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("author");
+
+                    b.Property<Guid?>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("CreditApplicationId", "CreatedAt");
+
+                    b.ToTable("application_notes", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.AuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("action");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at");
+
+                    b.Property<string>("Changes")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("changes");
+
+                    b.Property<string>("Entity")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("entity");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("TraceId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("trace_id");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("user_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("At");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Entity", "EntityId");
+
+                    b.ToTable("audit_entries", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.Branch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("branches", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.Client", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("address");
+
+                    b.Property<DateTimeOffset?>("AnonymisedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("anonymised_at");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("ClientNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("client_number")
+                        .HasDefaultValueSql("'C-' || lpad(nextval('client_number_seq')::text, 6, '0')");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date")
+                        .HasColumnName("date_of_birth");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Employer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("employer");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("full_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("phone");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("ClientNumber")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("FullName");
+
+                    b.ToTable("clients", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("AnnualIncome")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("annual_income");
+
+                    b.Property<string>("ApplicantName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("applicant_name");
+
+                    b.Property<Guid?>("AssignedToUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_to_user_id");
+
+                    b.Property<int>("Bankruptcies")
+                        .HasColumnType("integer")
+                        .HasColumnName("bankruptcies");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_id");
+
+                    b.Property<int>("CreditScore")
+                        .HasColumnType("integer")
+                        .HasColumnName("credit_score");
+
+                    b.Property<decimal>("DebtToIncomePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("debt_to_income_percent");
+
+                    b.Property<int>("DelinquenciesLast2Years")
+                        .HasColumnType("integer")
+                        .HasColumnName("delinquencies_last_2_years");
+
+                    b.Property<DateOnly>("EarliestCreditLine")
+                        .HasColumnType("date")
+                        .HasColumnName("earliest_credit_line");
+
+                    b.Property<string>("EmploymentLength")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("employment_length");
+
+                    b.Property<string>("HomeOwnership")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("home_ownership");
+
+                    b.Property<string>("IncomeVerification")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("income_verification");
+
+                    b.Property<int>("InquiriesLast6Months")
+                        .HasColumnType("integer")
+                        .HasColumnName("inquiries_last_6_months");
+
+                    b.Property<int>("LoanAmount")
+                        .HasColumnType("integer")
+                        .HasColumnName("loan_amount");
+
+                    b.Property<int>("MortgageAccounts")
+                        .HasColumnType("integer")
+                        .HasColumnName("mortgage_accounts");
+
+                    b.Property<int>("OpenAccounts")
+                        .HasColumnType("integer")
+                        .HasColumnName("open_accounts");
+
+                    b.Property<int>("PublicRecords")
+                        .HasColumnType("integer")
+                        .HasColumnName("public_records");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("purpose");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("reference")
+                        .HasDefaultValueSql("'A-' || lpad(nextval('application_reference_seq')::text, 6, '0')");
+
+                    b.Property<decimal>("RevolvingBalance")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("revolving_balance");
+
+                    b.Property<decimal>("RevolvingUtilizationPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("revolving_utilization_percent");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("stage");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<string>("SubmittedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("submitted_by");
+
+                    b.Property<Guid?>("SubmittedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("submitted_by_user_id");
+
+                    b.Property<int>("TotalAccounts")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_accounts");
+
+                    b.Property<string>("WithdrawalReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("withdrawal_reason");
+
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("withdrawn_at");
+
+                    b.Property<string>("WithdrawnBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("withdrawn_by");
+
+                    b.Property<Guid?>("WithdrawnByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("withdrawn_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicantName");
+
+                    b.HasIndex("AssignedToUserId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("Reference")
+                        .IsUnique();
+
+                    b.HasIndex("SubmittedAt");
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.HasIndex("WithdrawnByUserId");
+
+                    b.HasIndex("ClientId", "SubmittedAt");
+
+                    b.HasIndex("Stage", "AssignedToUserId");
+
+                    b.HasIndex(new[] { "ClientId" }, "ux_credit_applications_one_open_per_client")
+                        .IsUnique()
+                        .HasFilter("stage IN ('Submitted', 'AwaitingSignOff')");
+
+                    b.ToTable("credit_applications", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.CreditDecision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("error_code");
+
+                    b.Property<DateTimeOffset>("EvaluatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("evaluated_at");
+
+                    b.Property<string>("ModelId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model_id");
+
+                    b.Property<double?>("PBad")
+                        .HasColumnType("double precision")
+                        .HasColumnName("p_bad");
+
+                    b.Property<string>("Recommendation")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("recommendation");
+
+                    b.Property<double?>("ReviewFromUsed")
+                        .HasColumnType("double precision")
+                        .HasColumnName("review_from_used");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("status");
+
+                    b.Property<double?>("ThresholdUsed")
+                        .HasColumnType("double precision")
+                        .HasColumnName("threshold_used");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditApplicationId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "Recommendation");
+
+                    b.ToTable("credit_decisions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_credit_decisions_p_bad_range", "p_bad >= 0 AND p_bad <= 1");
+
+                            t.HasCheckConstraint("ck_credit_decisions_review_band", "(review_from_used IS NULL OR (status = 'Scored' AND review_from_used > 0 AND review_from_used < threshold_used)) AND (recommendation IS DISTINCT FROM 'Review' OR review_from_used IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_credit_decisions_status_fields", "(status = 'Scored' AND p_bad IS NOT NULL AND model_id IS NOT NULL AND threshold_used IS NOT NULL AND recommendation IS NOT NULL AND error_code IS NULL) OR (status = 'ScoringUnavailable' AND error_code IS NOT NULL AND p_bad IS NULL AND model_id IS NULL AND threshold_used IS NULL AND recommendation IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.LoanOutcome", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("outcome");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<string>("RecordedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("recorded_by");
+
+                    b.Property<Guid?>("RecordedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recorded_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditApplicationId")
+                        .IsUnique();
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.ToTable("loan_outcomes", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ModelEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("changed_at");
+
+                    b.Property<string>("ChangedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("changed_by");
+
+                    b.Property<Guid?>("ChangedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("changed_by_user_id");
+
+                    b.Property<string>("FromRole")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("from_role");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("ToRole")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("to_role");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedAt");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("ModelId");
+
+                    b.ToTable("model_events", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.OfficerDecision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<DateTimeOffset>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<string>("DecidedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("decided_by");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<bool>("IsOverride")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_override");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset?>("SignedOffAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("signed_off_at");
+
+                    b.Property<string>("SignedOffBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("signed_off_by");
+
+                    b.Property<Guid?>("SignedOffByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("signed_off_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditApplicationId")
+                        .IsUnique();
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("SignedOffByUserId");
+
+                    b.HasIndex("IsOverride", "Outcome");
+
+                    b.ToTable("officer_decisions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_officer_decisions_override_reason", "is_override = false OR reason IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ScoreFactor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<double>("Contribution")
+                        .HasColumnType("double precision")
+                        .HasColumnName("contribution");
+
+                    b.Property<Guid>("CreditDecisionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_decision_id");
+
+                    b.Property<string>("Input")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("input");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer")
+                        .HasColumnName("rank");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditDecisionId", "Rank")
+                        .IsUnique();
+
+                    b.ToTable("score_factors", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_score_factors_rank", "rank >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ScoringFailure", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AttemptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("attempted_at");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<string>("ErrorCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("error_code");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditApplicationId", "AttemptedAt");
+
+                    b.ToTable("scoring_failures", (string)null);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ScoringModel", b =>
+                {
+                    b.Property<string>("ModelId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model_id");
+
+                    b.Property<string>("Dataset")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("dataset");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("display_name");
+
+                    b.Property<DateTimeOffset>("RegisteredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("registered_at");
+
+                    b.Property<Guid?>("RegisteredByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registered_by_user_id");
+
+                    b.Property<double?>("ReviewFrom")
+                        .HasColumnType("double precision")
+                        .HasColumnName("review_from");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("role");
+
+                    b.Property<double>("Threshold")
+                        .HasColumnType("double precision")
+                        .HasColumnName("threshold");
+
+                    b.HasKey("ModelId");
+
+                    b.HasIndex("RegisteredByUserId");
+
+                    b.ToTable("scoring_models", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_scoring_models_review_from_range", "review_from IS NULL OR (review_from > 0 AND review_from < threshold)");
+
+                            t.HasCheckConstraint("ck_scoring_models_threshold_range", "threshold > 0 AND threshold < 1");
+                        });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ShadowScore", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("error_code");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model_id");
+
+                    b.Property<double?>("PBad")
+                        .HasColumnType("double precision")
+                        .HasColumnName("p_bad");
+
+                    b.Property<string>("Recommendation")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("recommendation");
+
+                    b.Property<double?>("ReviewFromUsed")
+                        .HasColumnType("double precision")
+                        .HasColumnName("review_from_used");
+
+                    b.Property<DateTimeOffset>("ScoredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scored_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("status");
+
+                    b.Property<double?>("ThresholdUsed")
+                        .HasColumnType("double precision")
+                        .HasColumnName("threshold_used");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModelId");
+
+                    b.HasIndex("CreditApplicationId", "ModelId")
+                        .IsUnique();
+
+                    b.ToTable("shadow_scores", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_shadow_scores_p_bad_range", "p_bad >= 0 AND p_bad <= 1");
+
+                            t.HasCheckConstraint("ck_shadow_scores_review_band", "(review_from_used IS NULL OR (status = 'Scored' AND review_from_used > 0 AND review_from_used < threshold_used)) AND (recommendation IS DISTINCT FROM 'Review' OR review_from_used IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_shadow_scores_status_fields", "(status = 'Scored' AND p_bad IS NOT NULL AND threshold_used IS NOT NULL AND recommendation IS NOT NULL AND error_code IS NULL) OR (status = 'ScoringUnavailable' AND error_code IS NOT NULL AND p_bad IS NULL AND threshold_used IS NULL AND recommendation IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.SignOffRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CreditApplicationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credit_application_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("requested_by");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Why")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("why");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditApplicationId")
+                        .IsUnique()
+                        .HasFilter("status = 'Pending'");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.ToTable("sign_off_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_sign_off_requests_review", "(status = 'Pending') = (reviewed_at IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<int>("FailedSignInCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_sign_in_count");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTimeOffset?>("LastSignedInAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_signed_in_at");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_until");
+
+                    b.Property<bool>("MustChangePassword")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("must_change_password");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("PreferredLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasDefaultValue("en")
+                        .HasColumnName("preferred_language");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("SecurityStamp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("security_stamp")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("user_name");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("UserName")
+                        .IsUnique();
+
+                    b.ToTable("users", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_users_branch_for_branch_roles", "(role IN ('Officer', 'Manager')) = (branch_id IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_users_failed_sign_in_count", "failed_sign_in_count >= 0");
+
+                            t.HasCheckConstraint("ck_users_preferred_language", "preferred_language IN ('en', 'sr')");
+                        });
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ApplicationDraft", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CreditScoring.Api.Domain.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ApplicationNote", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithMany()
+                        .HasForeignKey("CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.Client", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.User", "AssignedTo")
+                        .WithMany()
+                        .HasForeignKey("AssignedToUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CreditScoring.Api.Domain.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("WithdrawnByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssignedTo");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.CreditDecision", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithOne("Decision")
+                        .HasForeignKey("CreditScoring.Api.Domain.CreditDecision", "CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.LoanOutcome", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithOne("LoanOutcome")
+                        .HasForeignKey("CreditScoring.Api.Domain.LoanOutcome", "CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ModelEvent", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CreditScoring.Api.Domain.ScoringModel", null)
+                        .WithMany()
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.OfficerDecision", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithOne("OfficerDecision")
+                        .HasForeignKey("CreditScoring.Api.Domain.OfficerDecision", "CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("SignedOffByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ScoreFactor", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditDecision", null)
+                        .WithMany("Factors")
+                        .HasForeignKey("CreditDecisionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ScoringFailure", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithMany("ScoringFailures")
+                        .HasForeignKey("CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ScoringModel", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("RegisteredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.ShadowScore", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithMany("ShadowScores")
+                        .HasForeignKey("CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.ScoringModel", null)
+                        .WithMany()
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.SignOffRequest", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
+                        .WithMany("SignOffs")
+                        .HasForeignKey("CreditApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.User", b =>
+                {
+                    b.HasOne("CreditScoring.Api.Domain.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.CreditApplication", b =>
+                {
+                    b.Navigation("Decision");
+
+                    b.Navigation("LoanOutcome");
+
+                    b.Navigation("OfficerDecision");
+
+                    b.Navigation("ScoringFailures");
+
+                    b.Navigation("ShadowScores");
+
+                    b.Navigation("SignOffs");
+                });
+
+            modelBuilder.Entity("CreditScoring.Api.Domain.CreditDecision", b =>
+                {
+                    b.Navigation("Factors");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}

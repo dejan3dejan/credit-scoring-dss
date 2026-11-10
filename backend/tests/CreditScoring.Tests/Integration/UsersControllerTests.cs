@@ -64,6 +64,7 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
         Role = role ?? user.Role,
         BranchId = user.BranchId,
         PreferredLanguage = user.PreferredLanguage,
+        Version = user.Version,
     };
 
     private static ProblemDetails Problem(IActionResult result, int status, string code)
@@ -162,6 +163,7 @@ public sealed class UsersControllerTests(DatabaseFixture database) : IAsyncLifet
             Role = UserRole.Manager,
             BranchId = database.OtherBranchId,
             PreferredLanguage = Languages.Serbian,
+            Version = user.Version,
         }, CancellationToken.None));
 
         var body = Assert.IsType<UserResponse>(response.Value);

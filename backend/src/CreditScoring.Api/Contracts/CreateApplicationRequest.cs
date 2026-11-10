@@ -47,13 +47,13 @@ public sealed record CreateApplicationRequest
     [Required, Range(0, BusinessLimits.MaxRecentCount), Display(Name = "Derogatory public records")]
     public int? PublicRecords { get; init; }
 
-    [Required, Range(0, BusinessLimits.MaxRecentCount), Display(Name = "Bankruptcies")]
+    [Required, Range(0, BusinessLimits.MaxRecentCount), NotGreaterThan(nameof(PublicRecords)), Display(Name = "Bankruptcies")]
     public int? Bankruptcies { get; init; }
 
     [Required, Range(0, BusinessLimits.MaxRevolvingBalance), Display(Name = "Revolving balance (USD)")]
     public decimal? RevolvingBalance { get; init; }
 
-    [Required, Range(0, BusinessLimits.MaxRevolvingUtilizationPercent), Display(Name = "Revolving utilisation (%)")]
+    [Required, Range(0, BusinessLimits.MaxRevolvingUtilizationPercent), MustBeZeroWhen(nameof(RevolvingBalance)), Display(Name = "Revolving utilisation (%)")]
     public decimal? RevolvingUtilizationPercent { get; init; }
 
     [Required, Range(0, BusinessLimits.MaxOpenAccounts), NotGreaterThan(nameof(TotalAccounts)), Display(Name = "Open credit lines")]
@@ -62,7 +62,7 @@ public sealed record CreateApplicationRequest
     [Required, Range(0, BusinessLimits.MaxTotalAccounts), Display(Name = "Credit lines ever opened")]
     public int? TotalAccounts { get; init; }
 
-    [Required, Range(0, BusinessLimits.MaxRecentCount), Display(Name = "Mortgage accounts")]
+    [Required, Range(0, BusinessLimits.MaxRecentCount), NotGreaterThan(nameof(TotalAccounts)), Display(Name = "Mortgage accounts")]
     public int? MortgageAccounts { get; init; }
 
     public CreditApplication ToDomain(DateTimeOffset submittedAt, Actor submittedBy, Client client) => new()

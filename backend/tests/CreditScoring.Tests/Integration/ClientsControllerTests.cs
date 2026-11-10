@@ -44,7 +44,8 @@ public sealed class ClientsControllerTests(DatabaseFixture database) : IAsyncLif
             ControllerContext = by is null ? SignedIn(database) : TestServices.SignedIn(by),
         };
         var response = await controller.Create(TestData.ValidRequest() with { ClientId = clientId }, CancellationToken.None);
-        Assert.IsType<CreatedAtActionResult>(response.Result);
+        var created = Assert.IsType<ApplicationResponse>(Assert.IsType<CreatedAtActionResult>(response.Result).Value);
+        await controller.Decide(created.Id, new RecordDecisionRequest { Outcome = FinalDecision.Reject, Reason = "closed so the client can apply again" }, CancellationToken.None);
     }
 
     [Fact]
@@ -151,6 +152,7 @@ public sealed class ClientsControllerTests(DatabaseFixture database) : IAsyncLif
         Phone = client.Phone,
         Email = client.Email,
         Employer = client.Employer,
+        Version = client.Version,
     };
 
     private static ProblemDetails Problem(IActionResult result, int status, string code)
@@ -289,7 +291,8 @@ public sealed class ClientsControllerTests(DatabaseFixture database) : IAsyncLif
         await As(admin, c => c.Anonymise(mine.Id, CancellationToken.None));
 
         Problem((await As(admin, c => c.Anonymise(mine.Id, CancellationToken.None))).Result!, 409, "client_anonymised");
-        Problem((await As(database.Officer, c => c.Update(mine.Id, EditOf(mine), CancellationToken.None))).Result!, 409, "client_anonymised");
+        var current = (await As(database.Officer, c => c.Get(mine.Id, CancellationToken.None))).Value!.Version;
+        Problem((await As(database.Officer, c => c.Update(mine.Id, EditOf(mine) with { Version = current }, CancellationToken.None))).Result!, 409, "client_anonymised");
         Problem((await As(database.Officer, c => c.Reactivate(mine.Id, CancellationToken.None))).Result!, 409, "client_anonymised");
     }
 

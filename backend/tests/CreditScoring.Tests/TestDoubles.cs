@@ -20,6 +20,7 @@ internal sealed class FakeMlClient : IMlClient
     public MlScoreResult Result { get; set; } = new MlScore(0.1, TestData.ModelId);
     public Dictionary<string, MlScoreResult> ResultsByModel { get; } = [];
     public HashSet<string> Hanging { get; } = [];
+    public Barrier? Together { get; set; }
     public List<string> ScoredModels { get; } = [];
     public MlPredictRequest? LastRequest { get; private set; }
 
@@ -33,9 +34,21 @@ internal sealed class FakeMlClient : IMlClient
             ScoredModels.Add(modelId);
             LastRequest = request;
         }
+        if (Together is { } together)
+            return MeetAsync(together, ResultsByModel.GetValueOrDefault(modelId, Result));
         return Hanging.Contains(modelId)
             ? HangAsync(cancellationToken)
             : Task.FromResult(ResultsByModel.GetValueOrDefault(modelId, Result));
+    }
+
+    private static async Task<MlScoreResult> MeetAsync(Barrier together, MlScoreResult result)
+    {
+        await Task.Run(() =>
+        {
+            if (!together.SignalAndWait(TimeSpan.FromSeconds(10)))
+                throw new TimeoutException("the other scoring call never arrived");
+        });
+        return result;
     }
 
     private static async Task<MlScoreResult> HangAsync(CancellationToken cancellationToken)

@@ -10,6 +10,7 @@ public sealed record FieldError(string Code, IReadOnlyDictionary<string, object>
     public const string Length = "length";
     public const string Range = "range";
     public const string NotGreaterThan = "not_greater_than";
+    public const string MustBeZero = "must_be_zero";
     public const string Email = "email";
     public const string Format = "format";
     public const string OneOf = "one_of";
@@ -50,6 +51,10 @@ public static class FieldErrors
         {
             ["other"] = JsonNamingPolicy.CamelCase.ConvertName(notGreater.OtherProperty),
         }),
+        MustBeZeroWhenAttribute zeroWhen => new(FieldError.MustBeZero, new Dictionary<string, object>
+        {
+            ["other"] = JsonNamingPolicy.CamelCase.ConvertName(zeroWhen.OtherProperty),
+        }),
         EmailAddressAttribute => new(FieldError.Email),
         RegularExpressionAttribute => new(FieldError.Format),
         AllowedValuesAttribute allowed => new(FieldError.OneOf, new Dictionary<string, object>
@@ -72,10 +77,18 @@ public static class FieldErrors
                 .ToList());
     }
 
-    public static BadRequestObjectResult Reject(ControllerBase controller, string field, FieldError error, string message)
+    public static BadRequestObjectResult Reject(ControllerBase controller, string field, FieldError error, string message) =>
+        RejectAll(controller, [new FieldProblem(field, error, message)]);
+
+    public static BadRequestObjectResult RejectAll(ControllerBase controller, IReadOnlyCollection<FieldProblem> problems)
     {
-        Record(controller.HttpContext, message, error);
-        controller.ModelState.AddModelError(field, message);
+        if (problems.Count == 0)
+            throw new ArgumentException("a rejection needs at least one problem", nameof(problems));
+        foreach (var problem in problems)
+        {
+            Record(controller.HttpContext, problem.Message, problem.Error);
+            controller.ModelState.AddModelError(problem.Field, problem.Message);
+        }
         return controller.BadRequest(
             controller.ProblemDetailsFactory.CreateValidationProblemDetails(controller.HttpContext, controller.ModelState));
     }

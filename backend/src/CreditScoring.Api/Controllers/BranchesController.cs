@@ -63,7 +63,7 @@ public class BranchesController(CreditScoringDbContext db, TimeProvider time) : 
         {
             branch.Edit(request.Name!, request.City);
             return Task.FromResult<ChangeResult>(new Changed());
-        }, cancellationToken);
+        }, cancellationToken, request.Version!.Value);
 
     [HttpPost("{id:guid}/deactivate")]
     [Authorize(Policy = Permissions.BranchesManage)]
@@ -89,16 +89,30 @@ public class BranchesController(CreditScoringDbContext db, TimeProvider time) : 
     private async Task<ActionResult<BranchResponse>> ChangeAsync(
         Guid id,
         Func<Branch, Task<ChangeResult>> change,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        uint? expectedVersion = null)
     {
         var branch = await db.Branches.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (branch is null)
             return NoSuchBranch();
+        if (expectedVersion is { } version)
+        {
+            if (branch.Version != version)
+                return ApiProblems.EditedElsewhereProblem(this);
+            db.Entry(branch).Property(b => b.Version).OriginalValue = version;
+        }
 
         switch (await change(branch))
         {
             case Changed:
-                await db.SaveChangesAsync(CancellationToken.None);
+                try
+                {
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return ApiProblems.EditedElsewhereProblem(this);
+                }
                 return BranchResponse.From(branch);
 
             case Refused refused:

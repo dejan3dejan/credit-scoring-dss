@@ -15,6 +15,7 @@ public class EndpointPermissionsTests
     {
         ["Applications.Create"] = "applications.write",
         ["Applications.Get"] = "applications.read",
+        ["Limits.Get"] = SignedIn,
         ["Applications.List"] = "applications.read",
         ["Applications.Rescore"] = "applications.write",
         ["Applications.ShadowScores"] = "stats.read",

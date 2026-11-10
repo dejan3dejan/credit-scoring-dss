@@ -214,6 +214,12 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
@@ -286,6 +292,12 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("phone");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -464,8 +476,6 @@ namespace CreditScoring.Api.Data.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.HasIndex("ClientId");
-
                     b.HasIndex("Reference")
                         .IsUnique();
 
@@ -475,7 +485,13 @@ namespace CreditScoring.Api.Data.Migrations
 
                     b.HasIndex("WithdrawnByUserId");
 
+                    b.HasIndex("ClientId", "SubmittedAt");
+
                     b.HasIndex("Stage", "AssignedToUserId");
+
+                    b.HasIndex(new[] { "ClientId" }, "ux_credit_applications_one_open_per_client")
+                        .IsUnique()
+                        .HasFilter("stage IN ('Submitted', 'AwaitingSignOff')");
 
                     b.ToTable("credit_applications", (string)null);
                 });
@@ -1056,6 +1072,12 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
                         .HasColumnName("user_name");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 

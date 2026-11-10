@@ -5,6 +5,7 @@ using CreditScoring.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace CreditScoring.Api.Data;
 
@@ -83,6 +84,8 @@ public sealed class AuditInterceptor(TimeProvider time, IAuditContext context) :
         var changes = new SortedDictionary<string, Dictionary<string, object?>>(StringComparer.Ordinal);
         foreach (var property in entry.Properties)
         {
+            if (property.Metadata.IsConcurrencyToken && property.Metadata.ValueGenerated == ValueGenerated.OnAddOrUpdate)
+                continue;
             if (action == AuditAction.Created && GeneratedByTheDatabase(property))
                 continue;
             if (action == AuditAction.Updated && (!property.IsModified || Equals(property.OriginalValue, property.CurrentValue)))

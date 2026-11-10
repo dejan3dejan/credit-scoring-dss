@@ -95,7 +95,7 @@ public sealed class BranchesControllerTests(DatabaseFixture database) : IAsyncLi
     {
         var created = await Create(NewCode());
 
-        var response = await AsAdmin(c => c.Update(created.Id, new UpdateBranchRequest { Name = "Subotica centar", City = null }, CancellationToken.None));
+        var response = await AsAdmin(c => c.Update(created.Id, new UpdateBranchRequest { Name = "Subotica centar", City = null, Version = created.Version }, CancellationToken.None));
 
         var body = Assert.IsType<BranchResponse>(response.Value);
         Assert.Equal((created.Code, "Subotica centar", null), (body.Code, body.Name, body.City));
@@ -105,7 +105,7 @@ public sealed class BranchesControllerTests(DatabaseFixture database) : IAsyncLi
     public async Task Unknown_branch_is_not_found()
     {
         Problem((await AsAdmin(c => c.Get(Guid.NewGuid(), CancellationToken.None))).Result!, 404, "not_found");
-        Problem((await AsAdmin(c => c.Update(Guid.NewGuid(), new UpdateBranchRequest { Name = "X" }, CancellationToken.None))).Result!, 404, "not_found");
+        Problem((await AsAdmin(c => c.Update(Guid.NewGuid(), new UpdateBranchRequest { Name = "X", Version = 0 }, CancellationToken.None))).Result!, 404, "not_found");
         Problem((await AsAdmin(c => c.Deactivate(Guid.NewGuid(), CancellationToken.None))).Result!, 404, "not_found");
     }
 

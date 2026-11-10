@@ -12,6 +12,7 @@ public class Client
     private Client() { }
 
     public Guid Id { get; private set; }
+    public uint Version { get; private set; }
     public string ClientNumber { get; private set; } = "";
     public string FullName { get; private set; } = "";
     public DateOnly? DateOfBirth { get; private set; }

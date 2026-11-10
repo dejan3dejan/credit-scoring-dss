@@ -14,6 +14,11 @@ public static class ApiProblems
     public const string InvalidCredentials = "invalid_credentials";
     public const string LockedOut = "locked_out";
     public const string InferenceUnavailable = "inference_unavailable";
+    public const string EditedElsewhere = "edited_elsewhere";
+
+    public static ObjectResult EditedElsewhereProblem(ControllerBase controller) =>
+        Create(controller, StatusCodes.Status409Conflict, EditedElsewhere,
+            "Someone else changed this record after you opened it. Reload it and make your change again.");
 
     public static void Configure(ProblemDetailsOptions options) => options.CustomizeProblemDetails = AddDefaultCode;
 

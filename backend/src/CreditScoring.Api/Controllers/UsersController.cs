@@ -78,7 +78,7 @@ public class UsersController(CreditScoringDbContext db, TimeProvider time) : Con
 
         return await ChangeAsync(id, user => UserAdministration.Update(
             user, Credentials.ActorOf(User).UserId, request.DisplayName!, request.Email, request.Role!.Value, request.PreferredLanguage!, found.Branch),
-            cancellationToken);
+            cancellationToken, request.Version!.Value);
     }
 
     [HttpPost("{id:guid}/deactivate")]
@@ -113,16 +113,33 @@ public class UsersController(CreditScoringDbContext db, TimeProvider time) : Con
         return NoContent();
     }
 
-    private async Task<ActionResult<UserResponse>> ChangeAsync(Guid id, Func<Domain.User, ChangeResult> change, CancellationToken cancellationToken)
+    private async Task<ActionResult<UserResponse>> ChangeAsync(
+        Guid id,
+        Func<Domain.User, ChangeResult> change,
+        CancellationToken cancellationToken,
+        uint? expectedVersion = null)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
         if (user is null)
             return NoSuchUser();
+        if (expectedVersion is { } version)
+        {
+            if (user.Version != version)
+                return ApiProblems.EditedElsewhereProblem(this);
+            db.Entry(user).Property(u => u.Version).OriginalValue = version;
+        }
 
         switch (change(user))
         {
             case Changed:
-                await db.SaveChangesAsync(CancellationToken.None);
+                try
+                {
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return ApiProblems.EditedElsewhereProblem(this);
+                }
                 return UserResponse.From(user, await BranchOf(user.BranchId, CancellationToken.None), time.GetUtcNow());
 
             case Refused { Field: { } field } refused:

@@ -8,6 +8,7 @@ public class Branch
     private Branch() { }
 
     public Guid Id { get; private set; }
+    public uint Version { get; private set; }
     public string Code { get; private set; } = "";
     public string Name { get; private set; } = "";
     public string? City { get; private set; }

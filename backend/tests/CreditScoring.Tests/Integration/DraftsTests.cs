@@ -157,4 +157,44 @@ public sealed class DraftsTests(DatabaseFixture database) : IAsyncLifetime
         await using var db = database.CreateContext();
         Assert.False(await db.Applications.AnyAsync());
     }
+
+    private string Complete() =>
+        JsonSerializer.Serialize(TestData.ValidRequest() with { ClientId = clientId }, CreditScoring.Api.Contracts.ApiJson.Options);
+
+    [Fact]
+    public async Task A_draft_lists_what_would_stop_its_submission()
+    {
+        var draft = await Start($$"""{ "clientId": "{{clientId}}", "loanAmount": 999999, "publicRecords": 0, "bankruptcies": 1 }""");
+
+        Assert.Equal("range", (string)draft.FieldErrors["loanAmount"].Single()["code"]);
+        Assert.Equal(new Dictionary<string, object> { ["code"] = "not_greater_than", ["other"] = "publicRecords" }, draft.FieldErrors["bankruptcies"].Single());
+        Assert.Equal("required", (string)draft.FieldErrors["creditScore"].Single()["code"]);
+        Assert.False(draft.FieldErrors.ContainsKey("clientId"));
+        Assert.False(draft.FieldErrors.ContainsKey("publicRecords"));
+    }
+
+    [Fact]
+    public async Task A_draft_that_would_pass_has_no_field_errors_in_any_answer()
+    {
+        var draft = await Start(Complete());
+
+        Assert.Empty(draft.FieldErrors);
+        Assert.Empty(Assert.Single(await Drafts(database.Officer, c => c.List(CancellationToken.None))).FieldErrors);
+        Assert.Empty((await Drafts(database.Officer, c => c.Get(draft.Id, CancellationToken.None))).Value!.FieldErrors);
+        Assert.Empty((await Drafts(database.Officer, c => c.Update(draft.Id, Json(Complete()), CancellationToken.None))).Value!.FieldErrors);
+        Assert.Empty((await Drafts(database.Officer, c => c.Discard(draft.Id, CancellationToken.None))).Value!.FieldErrors);
+    }
+
+    [Fact]
+    public async Task A_draft_for_a_client_with_an_open_application_says_which_one()
+    {
+        var open = Assert.IsType<ApplicationResponse>(Assert.IsType<CreatedAtActionResult>(
+            (await Submit(database.Officer, TestData.ValidRequest() with { ClientId = clientId })).Result).Value);
+
+        var draft = await Start(Complete());
+
+        Assert.Equal(
+            new Dictionary<string, object> { ["code"] = "client_has_open_application", ["applicationId"] = open.Id, ["reference"] = open.Reference },
+            draft.FieldErrors["clientId"].Single());
+    }
 }

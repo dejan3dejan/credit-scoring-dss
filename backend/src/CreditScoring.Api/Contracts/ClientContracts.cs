@@ -29,7 +29,11 @@ public record ClientDetailsRequest
 
 public sealed record CreateClientRequest : ClientDetailsRequest;
 
-public sealed record UpdateClientRequest : ClientDetailsRequest;
+public sealed record UpdateClientRequest : ClientDetailsRequest
+{
+    [Required, Display(Name = "Version")]
+    public uint? Version { get; init; }
+}
 
 public sealed record ClientQuery
 {
@@ -58,7 +62,8 @@ public sealed record ClientResponse(
     Guid BranchId,
     bool IsActive,
     DateTimeOffset? AnonymisedAt,
-    DateTimeOffset CreatedAt)
+    DateTimeOffset CreatedAt,
+    uint Version)
 {
     public static ClientResponse From(Client client) => new(
         client.Id,
@@ -72,7 +77,8 @@ public sealed record ClientResponse(
         client.BranchId,
         client.IsActive,
         client.AnonymisedAt,
-        client.CreatedAt);
+        client.CreatedAt,
+        client.Version);
 }
 
 public sealed record ClientSummary(
@@ -99,7 +105,8 @@ public sealed record ClientDetail(
     string? Employer,
     Guid BranchId,
     bool IsActive,
-    DateTimeOffset? AnonymisedAt)
+    DateTimeOffset? AnonymisedAt,
+    uint Version)
 {
     public static ClientDetail From(Client client, IReadOnlyList<ApplicationSummary> applications) => new(
         client.Id,
@@ -114,5 +121,6 @@ public sealed record ClientDetail(
         client.Employer,
         client.BranchId,
         client.IsActive,
-        client.AnonymisedAt);
+        client.AnonymisedAt,
+        client.Version);
 }

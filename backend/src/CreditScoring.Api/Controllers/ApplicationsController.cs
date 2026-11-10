@@ -26,9 +26,6 @@ public class ApplicationsController(
         CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow();
-        if (CreditLineProblem(request.EarliestCreditLine!.Value, now) is { } line)
-            return FieldErrors.Reject(this, "earliestCreditLine", line.Code, line.Message);
-
         var client = await db.Clients.FirstOrDefaultAsync(c => c.Id == request.ClientId, cancellationToken);
         if (client is null)
             return FieldErrors.Reject(this, "clientId", new FieldError("client_not_found"), "No client with this id exists.");
@@ -46,6 +43,11 @@ public class ApplicationsController(
                 return FieldErrors.Reject(this, "draftId", new FieldError("draft_closed"), "This draft was already submitted or discarded.");
         }
 
+        if (await OpenApplicationOf(client.Id, cancellationToken) is { } open)
+            return OpenApplicationConflict(open);
+        if (ApplicationChecks.Business(request, client, now) is { Count: > 0 } problems)
+            return FieldErrors.RejectAll(this, problems);
+
         var application = request.ToDomain(now, actor, client);
         var submitter = await db.Users.SingleAsync(u => u.Id == actor.UserId, cancellationToken);
         if (application.AssignTo(submitter) is not Changed)
@@ -58,24 +60,32 @@ public class ApplicationsController(
         db.Applications.Add(application);
         if (draft is not null && draft.MarkSubmitted(application.Id, now) is not Changed)
             throw new InvalidOperationException("an open draft could not be marked as submitted");
-        await db.SaveChangesAsync(CancellationToken.None);
+        try
+        {
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (DbUpdateException ex) when (Pg.IsUniqueViolation(ex, CreditScoringDbContext.OneOpenApplicationIndex))
+        {
+            var winner = await OpenApplicationOf(client.Id, CancellationToken.None)
+                ?? throw new InvalidOperationException("the open-application index refused a save but no open application exists", ex);
+            return OpenApplicationConflict(winner);
+        }
 
         return CreatedAtAction(nameof(Get), new { id = application.Id }, ApplicationResponse.From(application));
     }
 
-    private static (FieldError Code, string Message)? CreditLineProblem(DateOnly earliestCreditLine, DateTimeOffset now)
-    {
-        var today = DateOnly.FromDateTime(now.UtcDateTime);
-        var thisMonth = new DateOnly(today.Year, today.Month, 1);
-        var line = new DateOnly(earliestCreditLine.Year, earliestCreditLine.Month, 1);
-        if (line > thisMonth)
-            return (new FieldError("after_this_month"), "The first credit line cannot be opened after this month.");
-        if (line < thisMonth.AddYears(-BusinessLimits.MaxCreditHistoryYears))
-            return (
-                new FieldError("too_long_ago", new Dictionary<string, object> { ["maximumYears"] = BusinessLimits.MaxCreditHistoryYears }),
-                $"The first credit line cannot be more than {BusinessLimits.MaxCreditHistoryYears} years ago.");
-        return null;
-    }
+    private Task<OpenApplication?> OpenApplicationOf(Guid clientId, CancellationToken cancellationToken) =>
+        OpenApplications(db).Where(a => a.ClientId == clientId)
+            .Select(a => new OpenApplication(a.Id, a.Reference))
+            .FirstOrDefaultAsync(cancellationToken);
+
+    internal static IQueryable<CreditApplication> OpenApplications(CreditScoringDbContext db) =>
+        db.Applications.AsNoTracking().Where(a => a.Stage == ApplicationStage.Submitted || a.Stage == ApplicationStage.AwaitingSignOff);
+
+    private ObjectResult OpenApplicationConflict(OpenApplication open) =>
+        ApiProblems.Create(this, StatusCodes.Status409Conflict, ApplicationChecks.ClientHasOpenApplication,
+            $"The client already has an open application ({open.Reference}). Decide or withdraw it first.",
+            new Dictionary<string, object?> { ["applicationId"] = open.Id, ["reference"] = open.Reference });
 
     [HttpGet("{id:guid}")]
     [Authorize(Policy = Permissions.ApplicationsRead)]

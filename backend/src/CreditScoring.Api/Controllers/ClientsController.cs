@@ -19,8 +19,8 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
     public async Task<ActionResult<ClientResponse>> Create(CreateClientRequest request, CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow();
-        if (FutureBirthDate(request, now) is { } future)
-            return future;
+        if (ClientChecks.BirthDate(request.DateOfBirth, now) is { } birth)
+            return FieldErrors.Reject(this, birth.Field, birth.Error, birth.Message);
 
         var branchId = Credentials.BranchScopeOf(User)
             ?? throw new InvalidOperationException("Only users who belong to a branch can create clients.");
@@ -99,10 +99,11 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
     public async Task<ActionResult<ClientResponse>> Update(Guid id, UpdateClientRequest request, CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow();
-        if (FutureBirthDate(request, now) is { } future)
-            return future;
+        if (ClientChecks.BirthDate(request.DateOfBirth, now) is { } birth)
+            return FieldErrors.Reject(this, birth.Field, birth.Error, birth.Message);
 
-        return await ChangeAsync(id, client => client.Edit(request.FullName!, request.DateOfBirth, request.Contact(), now), cancellationToken);
+        return await ChangeAsync(id, client => client.Edit(request.FullName!, request.DateOfBirth, request.Contact(), now), cancellationToken,
+            request.Version!.Value);
     }
 
     [HttpPost("{id:guid}/deactivate")]
@@ -131,16 +132,33 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
         return await ChangeAsync(id, client => ClientAnonymisation.Apply(client, applications, time.GetUtcNow()), cancellationToken);
     }
 
-    private async Task<ActionResult<ClientResponse>> ChangeAsync(Guid id, Func<Client, ChangeResult> change, CancellationToken cancellationToken)
+    private async Task<ActionResult<ClientResponse>> ChangeAsync(
+        Guid id,
+        Func<Client, ChangeResult> change,
+        CancellationToken cancellationToken,
+        uint? expectedVersion = null)
     {
         var client = await db.Clients.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         if (client is null)
             return ApiProblems.Create(this, StatusCodes.Status404NotFound, ApiProblems.NotFound, "No client with this id exists.");
+        if (expectedVersion is { } version)
+        {
+            if (client.Version != version)
+                return ApiProblems.EditedElsewhereProblem(this);
+            db.Entry(client).Property(c => c.Version).OriginalValue = version;
+        }
 
         switch (change(client))
         {
             case Changed:
-                await db.SaveChangesAsync(CancellationToken.None);
+                try
+                {
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return ApiProblems.EditedElsewhereProblem(this);
+                }
                 return ClientResponse.From(client);
 
             case Refused refused:
@@ -150,9 +168,4 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
                 throw new InvalidOperationException($"unhandled client change {other.GetType().Name}");
         }
     }
-
-    private BadRequestObjectResult? FutureBirthDate(ClientDetailsRequest request, DateTimeOffset now) =>
-        request.DateOfBirth > DateOnly.FromDateTime(now.UtcDateTime)
-            ? FieldErrors.Reject(this, "dateOfBirth", new FieldError("in_the_future"), "Date of birth cannot be in the future.")
-            : null;
 }

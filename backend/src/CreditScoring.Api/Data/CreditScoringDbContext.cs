@@ -25,6 +25,8 @@ public class CreditScoringDbContext : DbContext
         this.branchScope = branchScope;
     }
 
+    public const string OneOpenApplicationIndex = "ux_credit_applications_one_open_per_client";
+
     private Guid? ScopeBranchId => branchScope?.BranchId;
 
     public DbSet<CreditApplication> Applications => Set<CreditApplication>();
@@ -69,6 +71,7 @@ public class CreditScoringDbContext : DbContext
             client.Property(c => c.Employer).HasMaxLength(BusinessLimits.EmployerMaxLength);
             client.HasOne<Branch>().WithMany().HasForeignKey(c => c.BranchId).OnDelete(DeleteBehavior.Restrict);
             client.HasQueryFilter(c => ScopeBranchId == null || c.BranchId == ScopeBranchId);
+            client.Property(c => c.Version).IsRowVersion();
             client.HasIndex(c => c.ClientNumber).IsUnique();
             client.HasIndex(c => c.FullName);
             client.HasOne<User>().WithMany().HasForeignKey(c => c.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
@@ -95,6 +98,10 @@ public class CreditScoringDbContext : DbContext
                 .HasSentinel("")
                 .ValueGeneratedOnAdd();
             application.HasIndex(a => a.Reference).IsUnique();
+            application.HasIndex(a => new { a.ClientId, a.SubmittedAt });
+            application.HasIndex(a => a.ClientId, OneOpenApplicationIndex)
+                .IsUnique()
+                .HasFilter("stage IN ('Submitted', 'AwaitingSignOff')");
             application.HasIndex(a => new { a.Stage, a.AssignedToUserId });
             application.Property(a => a.WithdrawnBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
             application.Property(a => a.WithdrawalReason).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
@@ -281,6 +288,7 @@ public class CreditScoringDbContext : DbContext
             user.Property(u => u.MustChangePassword).HasDefaultValue(false);
             user.Property(u => u.SecurityStamp).HasDefaultValueSql("gen_random_uuid()");
             user.HasIndex(u => u.UserName).IsUnique();
+            user.Property(u => u.Version).IsRowVersion();
         });
 
         modelBuilder.Entity<Branch>(branch =>
@@ -291,6 +299,7 @@ public class CreditScoringDbContext : DbContext
             branch.Property(b => b.Name).HasMaxLength(Branch.NameMaxLength);
             branch.Property(b => b.City).HasMaxLength(BusinessLimits.CityMaxLength);
             branch.HasIndex(b => b.Code).IsUnique();
+            branch.Property(b => b.Version).IsRowVersion();
         });
 
         modelBuilder.Entity<AuditEntry>(entry =>
@@ -311,7 +320,9 @@ public class CreditScoringDbContext : DbContext
         {
             foreach (var property in entity.GetProperties())
             {
-                property.SetColumnName(ToSnakeCase(property.Name));
+                property.SetColumnName(property.IsConcurrencyToken && property.ClrType == typeof(uint)
+                    ? "xmin"
+                    : ToSnakeCase(property.Name));
             }
         }
     }
