@@ -457,7 +457,17 @@
     "fullName": "Full name",
     "optional": "Optional",
     "create": "Create client and continue",
-    "created": "Client {{number}} was created."
+    "created": "Client {{number}} was created.",
+    "edit": "Edit details",
+    "save": "Save changes",
+    "saved": "Client details saved.",
+    "deactivate": "Deactivate client",
+    "deactivateText": "A deactivated client cannot get new applications. Existing applications carry on.",
+    "deactivateConfirm": "Deactivate",
+    "deactivated": "Client deactivated.",
+    "reactivate": "Reactivate client",
+    "reactivated": "Client reactivated.",
+    "manage": "Status"
   },
   "models": {
     "title": "Model",

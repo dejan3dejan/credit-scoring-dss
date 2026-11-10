@@ -457,7 +457,17 @@
     "fullName": "Ime i prezime",
     "optional": "Nije obavezno",
     "create": "Napravi klijenta i nastavi",
-    "created": "Klijent {{number}} je napravljen."
+    "created": "Klijent {{number}} je napravljen.",
+    "edit": "Izmeni podatke",
+    "save": "Sačuvaj izmene",
+    "saved": "Podaci klijenta su sačuvani.",
+    "deactivate": "Deaktiviraj klijenta",
+    "deactivateText": "Deaktiviran klijent ne može da dobije nove zahteve. Postojeći zahtevi se nastavljaju.",
+    "deactivateConfirm": "Deaktiviraj",
+    "deactivated": "Klijent je deaktiviran.",
+    "reactivate": "Ponovo aktiviraj klijenta",
+    "reactivated": "Klijent je ponovo aktiviran.",
+    "manage": "Status"
   },
   "models": {
     "title": "Model",

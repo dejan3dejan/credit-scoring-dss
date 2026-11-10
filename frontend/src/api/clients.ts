@@ -20,3 +20,9 @@ export const getClient = (id: string) => request<ClientDetail>(`/api/clients/${i
 export type NewClient = ClientContact & { fullName: string; dateOfBirth: string | null };
 
 export const createClient = (client: NewClient) => request<ClientResponse>("/api/clients", { method: "POST", body: client });
+
+export const updateClient = (id: string, client: NewClient) => request<ClientResponse>(`/api/clients/${id}`, { method: "PUT", body: client });
+
+export const deactivateClient = (id: string) => request<ClientResponse>(`/api/clients/${id}/deactivate`, { method: "POST" });
+
+export const reactivateClient = (id: string) => request<ClientResponse>(`/api/clients/${id}/reactivate`, { method: "POST" });

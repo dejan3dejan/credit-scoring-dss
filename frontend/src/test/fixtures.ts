@@ -1,4 +1,4 @@
-import type { ApplicationResponse, ApplicationSummary, ClientDetail, ClientSummary, Paged } from "@/api/types";
+import type { ApplicationResponse, ApplicationSummary, ClientDetail, ClientResponse, ClientSummary, Paged } from "@/api/types";
 
 export function summary(overrides: Partial<ApplicationSummary> = {}): ApplicationSummary {
   return {
@@ -112,6 +112,24 @@ export function clientSummary(overrides: Partial<ClientSummary> = {}): ClientSum
     branchId: "b1",
     isActive: true,
     anonymisedAt: null,
+    ...overrides,
+  };
+}
+
+export function clientResponse(overrides: Partial<ClientResponse> = {}): ClientResponse {
+  return {
+    id: "c1",
+    clientNumber: "C-000007",
+    fullName: "Milica Testić",
+    dateOfBirth: "1988-04-12",
+    address: "Bulevar oslobođenja 1, Novi Sad",
+    phone: "+381 21 000 000",
+    email: null,
+    employer: "Test d.o.o.",
+    branchId: "b1",
+    isActive: true,
+    anonymisedAt: null,
+    createdAt: "2026-10-01T08:00:00Z",
     ...overrides,
   };
 }
