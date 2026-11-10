@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
+import { BrandLoader } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { errorMessage } from "@/i18n";
 
@@ -44,8 +44,8 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 export function Loading() {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2 py-12 text-muted-foreground" role="status">
-      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+    <div className="flex items-center gap-2.5 py-12 text-muted-foreground" role="status">
+      <BrandLoader size={22} />
       {t("states.loading")}
     </div>
   );

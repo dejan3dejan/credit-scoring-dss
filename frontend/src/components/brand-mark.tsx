@@ -1,8 +1,29 @@
+const squircle =
+  "M32.00 16.00L31.99 21.37L31.95 23.09L31.88 24.32L31.78 25.32L31.65 26.16L31.50 26.90L31.32 27.55L31.11 28.13L30.86 28.65L30.59 29.12L30.27 29.54L29.93 29.93L29.54 30.27L29.12 30.59L28.65 30.86L28.13 31.11L27.55 31.32L26.90 31.50L26.16 31.65L25.32 31.78L24.32 31.88L23.09 31.95L21.37 31.99L16.00 32.00L10.63 31.99L8.91 31.95L7.68 31.88L6.68 31.78L5.84 31.65L5.10 31.50L4.45 31.32L3.87 31.11L3.35 30.86L2.88 30.59L2.46 30.27L2.07 29.93L1.73 29.54L1.41 29.12L1.14 28.65L0.89 28.13L0.68 27.55L0.50 26.90L0.35 26.16L0.22 25.32L0.12 24.32L0.05 23.09L0.01 21.37L0.00 16.00L0.01 10.63L0.05 8.91L0.12 7.68L0.22 6.68L0.35 5.84L0.50 5.10L0.68 4.45L0.89 3.87L1.14 3.35L1.41 2.88L1.73 2.46L2.07 2.07L2.46 1.73L2.88 1.41L3.35 1.14L3.87 0.89L4.45 0.68L5.10 0.50L5.84 0.35L6.68 0.22L7.68 0.12L8.91 0.05L10.63 0.01L16.00 0.00L21.37 0.01L23.09 0.05L24.32 0.12L25.32 0.22L26.16 0.35L26.90 0.50L27.55 0.68L28.13 0.89L28.65 1.14L29.12 1.41L29.54 1.73L29.93 2.07L30.27 2.46L30.59 2.88L30.86 3.35L31.11 3.87L31.32 4.45L31.50 5.10L31.65 5.84L31.78 6.68L31.88 7.68L31.95 8.91L31.99 10.63Z";
+
+const dots = [
+  { cx: 9.5, cy: 19.25, rest: 0.5 },
+  { cx: 16, cy: 12.75, rest: 0.75 },
+  { cx: 22.5, cy: 19.25, rest: 1 },
+];
+
 export function BrandMark({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 22 22" aria-hidden="true">
-      <rect x="1" y="1" width="20" height="20" rx="4" className="fill-primary" />
-      <path d="M7 6v10M7 11l7-5M9.5 9.5L15 16" stroke="#FFFFFF" strokeWidth="2" fill="none" strokeLinecap="round" />
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <path d={squircle} className="fill-primary" />
+      {dots.map((dot) => (
+        <circle key={dot.cx} cx={dot.cx} cy={dot.cy} r={2.6} fill="#FFFFFF" opacity={dot.rest} />
+      ))}
+    </svg>
+  );
+}
+
+export function BrandLoader({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="6 6 20 20" aria-hidden="true" className="text-primary">
+      {dots.map((dot, index) => (
+        <circle key={dot.cx} cx={dot.cx} cy={dot.cy} r={2.6} fill="currentColor" className="dial-dot" style={{ animationDelay: `${index * 0.2}s` }} />
+      ))}
     </svg>
   );
 }

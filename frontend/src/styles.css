@@ -77,6 +77,28 @@
   --color-none-tint: var(--status-none-tint);
 }
 
+.dial-dot {
+  opacity: 0.25;
+  animation: dial 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes dial {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dial-dot {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
