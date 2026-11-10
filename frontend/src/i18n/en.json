@@ -38,8 +38,6 @@
   },
   "home": {
     "newApplication": "New application",
-    "emptyTitle": "Nothing to show yet",
-    "emptyText": "The queue of work waiting for you is added in the next step.",
     "awaitingDecision": "Awaiting my decision",
     "drafts": "Drafts",
     "scoringUnavailable": "Scoring unavailable",
@@ -55,12 +53,12 @@
     "officer": "Name",
     "open": "Open",
     "signOffs": "Waiting for sign-off",
-    "overviewText": "Use the dashboard for the numbers and the model page for the registry."
+    "riskOutcomes": "Loans waiting for an outcome",
+    "riskDashboard": "Open the dashboard",
+    "riskModels": "Open the model page"
   },
   "pages": {
-    "newApplication": "New application",
-    "notBuiltTitle": "Not in the new app yet",
-    "notBuiltText": "This page is being rebuilt. Until then, use the current version of the app."
+    "newApplication": "New application"
   },
   "noAccess": {
     "title": "No access",
@@ -742,5 +740,49 @@
     "deactivated": "Branch deactivated.",
     "reactivated": "Branch reactivated.",
     "note": "A branch is never deleted. Deactivating needs every active user of the branch moved or deactivated first; its clients and applications stay readable."
+  },
+  "audit": {
+    "title": "Audit log",
+    "intro": "Every change to the database, newest first, with who made it and the values before and after.",
+    "from": "From",
+    "to": "To",
+    "entity": "Record type",
+    "action": "Change",
+    "entityId": "Record id",
+    "all": "All",
+    "user": "Changed by",
+    "clearUser": "Show every user",
+    "filterUser": "Show only {{name}}",
+    "clear": "Clear filters",
+    "when": "When",
+    "who": "Who",
+    "what": "Record",
+    "changes": "Values",
+    "system": "System",
+    "redacted": "hidden",
+    "personal": "personal data",
+    "empty": "No changes match these filters.",
+    "actions": {
+      "Created": "Created",
+      "Updated": "Updated",
+      "Deleted": "Deleted"
+    },
+    "entities": {
+      "User": "User",
+      "Branch": "Branch",
+      "Client": "Client",
+      "CreditApplication": "Application",
+      "CreditDecision": "Score",
+      "ScoreFactor": "Score factor",
+      "OfficerDecision": "Decision",
+      "ShadowScore": "Shadow score",
+      "ScoringFailure": "Scoring failure",
+      "ScoringModel": "Model",
+      "ModelEvent": "Model change",
+      "SignOff": "Sign-off",
+      "ApplicationNote": "Note",
+      "ApplicationDraft": "Draft",
+      "LoanOutcome": "Loan outcome"
+    }
   }
 }

@@ -38,8 +38,6 @@
   },
   "home": {
     "newApplication": "Novi zahtev",
-    "emptyTitle": "Još nema ničega za prikaz",
-    "emptyText": "Red poslova koji čekaju na vas dodaje se u sledećem koraku.",
     "awaitingDecision": "Čeka moju odluku",
     "drafts": "Nacrti",
     "scoringUnavailable": "Ocena nije dostupna",
@@ -55,12 +53,12 @@
     "officer": "Ime",
     "open": "Otvoreno",
     "signOffs": "Čeka saglasnost",
-    "overviewText": "Brojeve pratite na kontrolnoj tabli, a registar modela na stranici modela."
+    "riskOutcomes": "Krediti koji čekaju ishod",
+    "riskDashboard": "Otvori kontrolnu tablu",
+    "riskModels": "Otvori stranicu modela"
   },
   "pages": {
-    "newApplication": "Novi zahtev",
-    "notBuiltTitle": "Još nije u novoj aplikaciji",
-    "notBuiltText": "Ova stranica se pravi iznova. Do tada koristite trenutnu verziju aplikacije."
+    "newApplication": "Novi zahtev"
   },
   "noAccess": {
     "title": "Nemate pristup",
@@ -742,5 +740,49 @@
     "deactivated": "Filijala je deaktivirana.",
     "reactivated": "Filijala je ponovo aktivirana.",
     "note": "Filijala se nikada ne briše. Za deaktivaciju svi aktivni korisnici filijale moraju prvo da se premeste ili deaktiviraju; njeni klijenti i zahtevi ostaju dostupni za čitanje."
+  },
+  "audit": {
+    "title": "Dnevnik izmena",
+    "intro": "Svaka izmena u bazi, od najnovije, sa time ko ju je napravio i vrednostima pre i posle.",
+    "from": "Od",
+    "to": "Do",
+    "entity": "Vrsta zapisa",
+    "action": "Izmena",
+    "entityId": "Oznaka zapisa",
+    "all": "Sve",
+    "user": "Izmenio/la",
+    "clearUser": "Prikaži sve korisnike",
+    "filterUser": "Prikaži samo {{name}}",
+    "clear": "Poništi filtere",
+    "when": "Kada",
+    "who": "Ko",
+    "what": "Zapis",
+    "changes": "Vrednosti",
+    "system": "Sistem",
+    "redacted": "skriveno",
+    "personal": "lični podaci",
+    "empty": "Nijedna izmena ne odgovara ovim filterima.",
+    "actions": {
+      "Created": "Napravljeno",
+      "Updated": "Izmenjeno",
+      "Deleted": "Obrisano"
+    },
+    "entities": {
+      "User": "Korisnik",
+      "Branch": "Filijala",
+      "Client": "Klijent",
+      "CreditApplication": "Zahtev",
+      "CreditDecision": "Ocena",
+      "ScoreFactor": "Faktor ocene",
+      "OfficerDecision": "Odluka",
+      "ShadowScore": "Paralelna ocena",
+      "ScoringFailure": "Neuspela ocena",
+      "ScoringModel": "Model",
+      "ModelEvent": "Promena modela",
+      "SignOff": "Saglasnost",
+      "ApplicationNote": "Beleška",
+      "ApplicationDraft": "Nacrt",
+      "LoanOutcome": "Ishod kredita"
+    }
   }
 }

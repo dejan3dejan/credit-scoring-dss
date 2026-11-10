@@ -3,16 +3,6 @@ import { useTranslation } from "react-i18next";
 import { EmptyState, PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 
-export function NotBuiltPage({ titleKey }: { titleKey: string }) {
-  const { t } = useTranslation();
-  return (
-    <>
-      <PageHeader title={t(titleKey)} />
-      <EmptyState title={t("pages.notBuiltTitle")} text={t("pages.notBuiltText")} />
-    </>
-  );
-}
-
 export function NoAccessPage() {
   const { t } = useTranslation();
   return (

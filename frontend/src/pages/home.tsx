@@ -45,7 +45,23 @@ export function HomePage() {
       ) : can(me, "users.manage") ? (
         <AdminOverview title={title} />
       ) : (
-        <EmptyState title={t("home.emptyTitle")} text={me.role === "Risk" ? t("home.overviewText") : t("home.emptyText")} />
+        <div className="flex flex-wrap gap-2">
+          {can(me, "outcomes.record") && (
+            <Button asChild variant="outline">
+              <Link to="/applications" search={{ loanOutcome: "Pending" }}>
+                {t("home.riskOutcomes")}
+              </Link>
+            </Button>
+          )}
+          {can(me, "stats.read") && (
+            <Button asChild variant="outline">
+              <Link to="/dashboard">{t("home.riskDashboard")}</Link>
+            </Button>
+          )}
+          <Button asChild variant="outline">
+            <Link to="/models">{t("home.riskModels")}</Link>
+          </Button>
+        </div>
       )}
     </>
   );

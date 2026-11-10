@@ -17,7 +17,7 @@ import { applyLanguage } from "@/i18n";
 import { ChangePasswordPage } from "@/pages/change-password";
 import { HomePage } from "@/pages/home";
 import { LoginPage } from "@/pages/login";
-import { NoAccessPage, NotBuiltPage, NotFoundPage } from "@/pages/status-pages";
+import { NoAccessPage, NotFoundPage } from "@/pages/status-pages";
 import { ApplicationDetailsPage } from "@/pages/application-details";
 import { ApplicationsListPage } from "@/pages/applications-list";
 import { ClientDetailsPage, ClientsListPage, NewClientPage } from "@/pages/clients";
@@ -28,7 +28,8 @@ import { BranchesPage } from "@/pages/branches";
 import { LazyDashboard } from "@/pages/dashboard-lazy";
 import { validateDashboardSearch } from "@/lib/dashboard-range";
 import type { ClientFilters } from "@/api/clients";
-import { validateApplicationFilters } from "@/lib/filters";
+import { validateApplicationFilters, validateAuditFilters } from "@/lib/filters";
+import { AuditPage } from "@/pages/audit";
 
 type RouterContext = { queryClient: QueryClient };
 
@@ -78,15 +79,6 @@ function requires(permission: Permission) {
   return ({ context }: { context: { me: { permissions: Permission[] } } }) => {
     if (!context.me.permissions.includes(permission)) throw redirect({ to: "/no-access", replace: true });
   };
-}
-
-function page<TPath extends string>(path: TPath, titleKey: string, permission: Permission) {
-  return createRoute({
-    getParentRoute: () => authedRoute,
-    path,
-    beforeLoad: requires(permission),
-    component: () => <NotBuiltPage titleKey={titleKey} />,
-  });
 }
 
 const homeRoute = createRoute({ getParentRoute: () => authedRoute, path: "/", component: HomePage });
@@ -181,6 +173,16 @@ const userRoute = createRoute({
   },
 });
 
+const auditRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: "audit",
+  validateSearch: validateAuditFilters,
+  beforeLoad: requires("audit.read"),
+  component: function Audit() {
+    return <AuditPage filters={auditRoute.useSearch()} />;
+  },
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authedRoute.addChildren([
@@ -199,7 +201,7 @@ const routeTree = rootRoute.addChildren([
     createRoute({ getParentRoute: () => authedRoute, path: "users/new", beforeLoad: requires("users.manage"), component: NewUserPage }),
     userRoute,
     createRoute({ getParentRoute: () => authedRoute, path: "branches", beforeLoad: requires("branches.manage"), component: BranchesPage }),
-    page("audit", "nav.audit", "audit.read"),
+    auditRoute,
   ]),
 ]);
 
