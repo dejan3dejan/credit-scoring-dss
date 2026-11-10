@@ -1,0 +1,13 @@
+services:
+  db:
+    ports: !override
+      - "5434:5432"
+  inference:
+    ports: !override
+      - "8001:8000"
+  web:
+    ports: !override
+      - "8081:8080"
+volumes:
+  pgdata:
+    name: cs_e2e_data
