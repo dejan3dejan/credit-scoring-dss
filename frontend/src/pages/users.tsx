@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { branchesKey, listBranches } from "@/api/branches";
-import { ApiError } from "@/api/client";
+import { ApiError, editedElsewhere } from "@/api/client";
 import type { Language, Role } from "@/api/types";
 import {
   createUser,
@@ -332,16 +332,23 @@ function useUserUpdate() {
 function EditUser({ user }: { user: UserResponse }) {
   const { t } = useTranslation();
   const update = useUserUpdate();
+  const queryClient = useQueryClient();
   const save = useMutation({
-    mutationFn: (fields: UserFields) => updateUser(user.id, fields),
+    mutationFn: (fields: UserFields) => updateUser(user.id, fields, user.version),
     onSuccess: (fresh) => {
       update(fresh);
       toast.success(t("users.saved"));
     },
+    onError: (error) => {
+      if (!editedElsewhere(error)) return;
+      toast.error(errorMessage(error), { id: "edited_elsewhere" });
+      save.reset();
+      void queryClient.invalidateQueries({ queryKey: userKey(user.id) });
+    },
   });
   return (
     <UserFieldsForm
-      key={user.id}
+      key={`${user.id}-${user.version}`}
       initial={{
         displayName: user.displayName,
         email: user.email ?? "",

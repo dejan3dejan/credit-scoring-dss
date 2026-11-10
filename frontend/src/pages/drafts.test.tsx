@@ -38,6 +38,7 @@ function draft(overrides: Partial<DraftResponse> = {}): DraftResponse {
     updatedAt: "2026-11-09T09:10:00Z",
     status: "Open",
     applicationId: null,
+    fieldErrors: {},
     ...overrides,
   };
 }
@@ -115,6 +116,86 @@ describe("drafts", () => {
     expect(draftCalls(calls)).toHaveLength(0);
   });
 
+  it("shows the server's checks of a saved draft next to the fields, but not empty fields", async () => {
+    stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/drafts": {
+        status: 201,
+        body: draft({
+          answers: { ...blank, clientId: "c1", creditScore: 8000 },
+          fieldErrors: { creditScore: [{ code: "range", minimum: 300, maximum: 850 }], loanAmount: [{ code: "required" }] },
+        }),
+      },
+      "GET /api/drafts/d1": { status: 200, body: draft() },
+    });
+    renderApp("/applications/new?clientId=c1");
+    const user = typist();
+    await user.type(await screen.findByLabelText("Credit score"), "8000");
+    await wait(2000);
+    expect(await screen.findByText("Enter a value from 300 to 850.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Credit score")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("This field is required.")).toBeNull();
+    await user.type(screen.getByLabelText("Credit score"), "{Backspace}");
+    expect(screen.queryByText("Enter a value from 300 to 850.")).toBeNull();
+  });
+
+  it("stops at the marked fields instead of opening the review when the server finds problems", async () => {
+    const calls = stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/drafts": {
+        status: 201,
+        body: draft({
+          answers: { ...blank, clientId: "c1", loanAmount: 20000 },
+          fieldErrors: { purpose: [{ code: "required" }], bankruptcies: [{ code: "not_greater_than", other: "publicRecords" }] },
+        }),
+      },
+      "GET /api/drafts/d1": { status: 200, body: draft() },
+    });
+    renderApp("/applications/new?clientId=c1");
+    const user = typist();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    expect(await screen.findByText("Fix the marked fields first.")).toBeInTheDocument();
+    expect(screen.getByText("This field is required.")).toBeInTheDocument();
+    expect(screen.getByText("Must not be larger than Derogatory public records.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(draftCalls(calls).map((c) => c.method)).toEqual(["POST"]);
+  });
+
+  it("opens the review once the server finds nothing to fix", async () => {
+    stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/drafts": { status: 201, body: draft({ fieldErrors: {} }) },
+      "GET /api/drafts/d1": { status: 200, body: draft() },
+    });
+    renderApp("/applications/new?clientId=c1");
+    const user = typist();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    await user.click(screen.getByRole("button", { name: "Review" }));
+    expect(await screen.findByRole("dialog", { name: "Check the application" })).toBeInTheDocument();
+  });
+
+  it("says when the client already has an open application", async () => {
+    stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/drafts": {
+        status: 201,
+        body: draft({ fieldErrors: { clientId: [{ code: "client_has_open_application", applicationId: "a12", reference: "A-000012" }] } }),
+      },
+      "GET /api/drafts/d1": { status: 200, body: draft() },
+    });
+    renderApp("/applications/new?clientId=c1");
+    const user = typist();
+    await user.type(await screen.findByLabelText("Loan amount"), "20000");
+    await wait(2000);
+    expect(await screen.findByText("This client already has an open application, A-000012.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open A-000012" })).toHaveAttribute("href", "/app/applications/a12");
+  });
+
   it("has no manual save button", async () => {
     stubApi({ ...signedInAs("Officer"), ...client });
     renderApp("/applications/new?clientId=c1");
@@ -169,8 +250,10 @@ describe("drafts", () => {
     await user.click(screen.getByRole("button", { name: "Review" }));
     await user.click(await screen.findByRole("button", { name: "Get recommendation" }));
     await screen.findByRole("heading", { name: "Milica Testić" });
+    const beforeLeaving = draftCalls(calls).length;
     await wait(3000);
-    expect(draftCalls(calls)).toHaveLength(0);
+    expect(draftCalls(calls)).toHaveLength(beforeLeaving);
+    expect(beforeLeaving).toBeLessThanOrEqual(1);
   });
 
   it("continues a draft and submits it with its id", async () => {
@@ -219,7 +302,7 @@ describe("drafts", () => {
       "GET /api/work/mine": {
         status: 200,
         body: {
-          counts: { drafts: 0, awaitingDecision: 0, scoringUnavailable: 0, awaitingSignOff: 0, decidedLast7Days: 0 },
+          counts: { drafts: 0, awaitingDecision: 0, scoringUnavailable: 0, awaitingSignOff: 0, decidedLast7Days: 0, submittedLast7Days: 0, approvedLast7Days: 0, overridesLast7Days: 0 },
           drafts: [],
           awaitingDecision: [],
           scoringUnavailable: [],
@@ -249,7 +332,7 @@ describe("drafts", () => {
       "GET /api/work/mine": {
         status: 200,
         body: {
-          counts: { drafts: 1, awaitingDecision: 0, scoringUnavailable: 0, awaitingSignOff: 0, decidedLast7Days: 0 },
+          counts: { drafts: 1, awaitingDecision: 0, scoringUnavailable: 0, awaitingSignOff: 0, decidedLast7Days: 0, submittedLast7Days: 0, approvedLast7Days: 0, overridesLast7Days: 0 },
           drafts: [draft()],
           awaitingDecision: [],
           scoringUnavailable: [],

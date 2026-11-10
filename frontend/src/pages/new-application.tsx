@@ -8,6 +8,7 @@ import { applicationKey, createApplication, getApplication, type NewApplication 
 import { ApiError } from "@/api/client";
 import { clientKey, getClient, listClients } from "@/api/clients";
 import { discardDraft, draftKey, getDraft, type DraftResponse } from "@/api/drafts";
+import { getLimits, limitsKey, type Limits } from "@/api/limits";
 import {
   employmentLengths,
   homeOwnerships,
@@ -27,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { errorMessage, useLanguage } from "@/i18n";
-import { formatDateTime, formatShortDate, formatTime } from "@/i18n/format";
+import { formatDateTime, formatNumber, formatShortDate, formatTime } from "@/i18n/format";
 import { formatAnswer } from "@/lib/application-inputs";
 import { clientName } from "@/lib/client-name";
 import { parseNumber } from "@/lib/numbers";
@@ -138,7 +139,10 @@ function FormLoader({ clientId, from, draftId }: { clientId?: string; from?: str
     queryFn: () => getApplication(from!),
     enabled: !!from,
   });
+  const limits = useQuery({ queryKey: limitsKey, queryFn: getLimits, staleTime: Infinity });
 
+  if (limits.isPending) return <Loading />;
+  if (limits.isError) return <ErrorState error={limits.error} onRetry={() => void limits.refetch()} />;
   if (draftId && draft.isPending) return <Loading />;
   if (draftId && draft.isError) return <ErrorState error={draft.error} onRetry={() => void draft.refetch()} />;
   if (draft.data && closed)
@@ -160,7 +164,7 @@ function FormLoader({ clientId, from, draftId }: { clientId?: string; from?: str
   if (client.isError) return <ErrorState error={client.error} onRetry={() => void client.refetch()} />;
   if (from && previous.isError) return <ErrorState error={previous.error} onRetry={() => void previous.refetch()} />;
   const prefill = !draft.data && from && previous.data?.clientId === client.data.id ? previous.data : undefined;
-  return <ApplicationForm client={client.data} draft={draft.data} prefill={prefill} />;
+  return <ApplicationForm client={client.data} draft={draft.data} prefill={prefill} limits={limits.data} />;
 }
 
 function ClientPicker() {
@@ -249,7 +253,19 @@ function ClientPicker() {
   );
 }
 
-function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; prefill?: ApplicationResponse; draft?: DraftResponse }) {
+type Checked = { errors: Record<string, FieldError[]>; body: NewApplication };
+
+function ApplicationForm({
+  client,
+  prefill,
+  draft,
+  limits,
+}: {
+  client: ClientDetail;
+  prefill?: ApplicationResponse;
+  draft?: DraftResponse;
+  limits: Limits;
+}) {
   const { t } = useTranslation();
   const language = useLanguage();
   const navigate = useNavigate();
@@ -259,9 +275,22 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
   );
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [fixFirst, setFixFirst] = useState(false);
+  const [showRequired, setShowRequired] = useState(false);
+  const [checked, setChecked] = useState<Checked | null>(() =>
+    draft ? { errors: draft.fieldErrors ?? {}, body: toRequest(client.id, answersFromDraft(draft), language) } : null,
+  );
+  const current = toRequest(client.id, answers, language);
 
-  const autosave = useDraftAutosave(draft, (saved) => {
-    void navigate({ to: "/applications/new", search: (current: { clientId?: string; from?: string }) => ({ ...current, draftId: saved.id }), replace: true });
+  const autosave = useDraftAutosave(draft, (saved, body, first) => {
+    setChecked({ errors: saved.fieldErrors ?? {}, body });
+    if (first)
+      void navigate({
+        to: "/applications/new",
+        search: (search: { clientId?: string; from?: string }) => ({ ...search, draftId: saved.id }),
+        replace: true,
+      });
   });
 
   const discard = useMutation({
@@ -279,9 +308,9 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
   });
 
   const submit = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (body: NewApplication) => {
       const draftId = await autosave.beforeSubmit();
-      return createApplication({ ...toRequest(client.id, answers, language), ...(draftId ? { draftId } : {}) });
+      return createApplication({ ...body, ...(draftId ? { draftId } : {}) });
     },
     onSuccess: async (created) => {
       autosave.submitted();
@@ -292,21 +321,39 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
       toast.success(t("newApplication.submitted", { reference: created.reference }));
       await navigate({ to: "/applications/$id", params: { id: created.id } });
     },
-    onError: () => {
+    onError: (error, body) => {
       setReviewing(false);
+      if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
+        setChecked({ errors: error.fieldErrors, body });
+        setShowRequired(true);
+      }
       autosave.resume();
     },
   });
 
-  const saveError = autosave.state.status === "failed" ? autosave.state.error : null;
   const lastError = submit.error ?? discard.error;
-  const errorSource = lastError ?? saveError;
-  const errors = errorSource instanceof ApiError ? errorSource.fieldErrors : {};
+  const openApplication =
+    lastError instanceof ApiError && lastError.code === "client_has_open_application"
+      ? lastError.members
+      : checked?.errors.clientId?.find((error) => error.code === "client_has_open_application");
   const fieldErrors = (name: string): FieldError[] | undefined => {
-    const list = [...(errors[name] ?? []), ...(errors[`$.${name}`] ?? [])];
+    if (!checked) return undefined;
+    const key = name as keyof NewApplication;
+    if (name !== "clientId" && current[key] !== checked.body[key]) return undefined;
+    const list = [...(checked.errors[name] ?? []), ...(checked.errors[`$.${name}`] ?? [])].filter(
+      (error) => (showRequired || error.code !== "required") && error.code !== "client_has_open_application",
+    );
     return list.length ? list : undefined;
   };
-  const generalError = lastError && Object.keys(errors).length === 0;
+  const generalError =
+    lastError && !openApplication && !(lastError instanceof ApiError && Object.keys(lastError.fieldErrors).length > 0);
+  const range = (name: string) => {
+    const allowed = limits.application.ranges[name];
+    return t("newApplication.range", {
+      minimum: formatNumber(allowed.minimum, language),
+      maximum: formatNumber(allowed.maximum, language),
+    });
+  };
 
   const set = (name: keyof Answers) => (value: string) => {
     const next = { ...answers, [name]: value };
@@ -321,7 +368,7 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
       onChange={(event) => set(name)(event.target.value)}
       inputMode={props.inputMode ?? "numeric"}
       suffix={props.suffix}
-      hint={props.hint}
+      hint={[range(name), props.hint].filter(Boolean).join(" ")}
       errors={fieldErrors(name)}
       autoComplete="off"
     />
@@ -338,8 +385,17 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
     />
   );
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    setChecking(true);
+    const errors = await autosave.check(current);
+    setChecking(false);
+    if (errors && Object.keys(errors).length > 0) {
+      setShowRequired(true);
+      setFixFirst(true);
+      return;
+    }
+    setFixFirst(false);
     setReviewing(true);
   }
 
@@ -367,11 +423,24 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
           {t("newApplication.prefilled", { reference: prefill.reference })}
         </p>
       )}
+      {openApplication && (
+        <Alert>
+          <span>{t("fieldErrors.client_has_open_application", { reference: openApplication.reference })}</span>{" "}
+          <Link
+            to="/applications/$id"
+            params={{ id: String(openApplication.applicationId) }}
+            className="font-medium underline underline-offset-4"
+          >
+            {t("newApplication.openApplication", { reference: openApplication.reference })}
+          </Link>
+        </Alert>
+      )}
+      {fixFirst && <Alert>{t("newApplication.fixFirst")}</Alert>}
       {generalError && <Alert>{errorMessage(lastError)}</Alert>}
       <FieldErrors id="client-error" errors={fieldErrors("clientId")} />
 
       <Section title={t("newApplication.sectionLoan")}>
-        {text("loanAmount", { suffix: "USD", hint: t("newApplication.termHint") })}
+        {text("loanAmount", { suffix: "USD", hint: t("newApplication.termHint", { months: limits.application.termMonths }) })}
         {select("purpose", "LoanPurpose", loanPurposes)}
       </Section>
 
@@ -410,13 +479,16 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
       </Section>
 
       <Section title={t("newApplication.sectionReport")}>
-        {text("creditScore", { hint: t("newApplication.creditScoreHint", { min: 300, max: 850 }) })}
+        {text("creditScore", { hint: t("newApplication.creditScoreHint") })}
         <TextField
           label={t("fields.EarliestCreditLine")}
           type="month"
           value={answers.earliestCreditLine}
           onChange={(event) => set("earliestCreditLine")(event.target.value)}
-          hint={t("newApplication.creditLineHint")}
+          hint={t("newApplication.creditLineHint", {
+            age: limits.application.creditLineMinimumAge,
+            years: limits.application.creditLineMaximumYears,
+          })}
           errors={fieldErrors("earliestCreditLine")}
         />
         {text("inquiriesLast6Months")}
@@ -433,7 +505,7 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
       </Section>
 
       <div className="sticky bottom-0 -mx-6 flex items-center gap-3 border-t bg-card px-6 py-3">
-        <Button type="submit" disabled={submit.isPending || !client.isActive}>
+        <Button type="submit" disabled={submit.isPending || checking || !client.isActive}>
           {t("newApplication.review")}
         </Button>
         <SaveStatus state={autosave.state} onRetry={() => void autosave.retry()} />
@@ -464,7 +536,7 @@ function ApplicationForm({ client, prefill, draft }: { client: ClientDetail; pre
         <DialogContent aria-describedby={undefined}>
           <Review client={client} request={toRequest(client.id, answers, language)} />
           <div className="flex flex-wrap gap-3 border-t pt-4">
-            <Button type="button" onClick={() => submit.mutate()} disabled={submit.isPending}>
+            <Button type="button" onClick={() => submit.mutate(current)} disabled={submit.isPending}>
               {t("newApplication.submit")}
             </Button>
             <DialogClose asChild>

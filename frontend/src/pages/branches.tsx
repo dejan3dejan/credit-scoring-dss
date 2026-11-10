@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { branchesKey, createBranch, deactivateBranch, listBranches, reactivateBranch, updateBranch, type Branch } from "@/api/branches";
-import { ApiError } from "@/api/client";
+import { ApiError, editedElsewhere } from "@/api/client";
 import { ErrorState, Loading, PageHeader } from "@/components/page";
 import { Alert, Card, Table, Td, Th } from "@/components/surface";
 import { TextField } from "@/components/text-field";
@@ -61,16 +61,24 @@ function useBranchUpdate() {
 
 function BranchRow({ branch }: { branch: Branch }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const update = useBranchUpdate();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(branch.name);
   const [city, setCity] = useState(branch.city ?? "");
   const save = useMutation({
-    mutationFn: () => updateBranch(branch.id, { name: name.trim(), city: city.trim() || null }),
+    mutationFn: () => updateBranch(branch.id, { name: name.trim(), city: city.trim() || null }, branch.version),
     onSuccess: (fresh) => {
       update(fresh);
       setEditing(false);
       toast.success(t("branches.saved"));
+    },
+    onError: (error) => {
+      if (!editedElsewhere(error)) return;
+      toast.error(errorMessage(error), { id: "edited_elsewhere" });
+      save.reset();
+      setEditing(false);
+      void queryClient.invalidateQueries({ queryKey: branchesKey });
     },
   });
   const status = useMutation({
@@ -115,7 +123,15 @@ function BranchRow({ branch }: { branch: Branch }) {
             </span>
           ) : (
             <span className="inline-flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setName(branch.name);
+                  setCity(branch.city ?? "");
+                  setEditing(true);
+                }}
+              >
                 {t("branches.edit")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => status.mutate()} disabled={status.isPending}>

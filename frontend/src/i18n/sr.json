@@ -43,7 +43,6 @@
     "drafts": "Nacrti",
     "scoringUnavailable": "Ocena nije dostupna",
     "awaitingSignOff": "Čeka saglasnost",
-    "decidedLast7Days": "Odlučeno u poslednjih 7 dana",
     "recentlyDecided": "Nedavno odlučeno",
     "nothingWaiting": "Ništa ne čeka vašu odluku.",
     "team": "Tim",
@@ -69,7 +68,12 @@
     "latestChanges": "Poslednje izmene",
     "when": "Vreme",
     "change": "Izmena",
-    "record": "Zapis"
+    "record": "Zapis",
+    "myWeek": "Mojih poslednjih 7 dana",
+    "submitted": "Podneto",
+    "decided": "Odlučeno",
+    "approved": "Odobreno",
+    "overrides": "Suprotno preporuci"
   },
   "pages": {
     "newApplication": "Novi zahtev"
@@ -125,7 +129,9 @@
     "assignee_not_found": "Ta osoba nije aktivni službenik ili menadžer ove filijale.",
     "own_account": "Ne možete deaktivirati sopstveni nalog.",
     "branch_has_active_users": "Ova filijala još ima aktivne korisnike. Prvo ih premestite ili deaktivirajte.",
-    "branch_inactive": "Filijala korisnika je deaktivirana. Prvo premestite korisnika u aktivnu filijalu."
+    "branch_inactive": "Filijala korisnika je deaktivirana. Prvo premestite korisnika u aktivnu filijalu.",
+    "edited_elsewhere": "Neko drugi je ovo u međuvremenu izmenio. Prikazane su nove vrednosti; ponovite izmenu.",
+    "client_has_open_application": "Ovaj klijent već ima otvoren zahtev. Prvo ga odlučite ili povucite."
   },
   "fieldErrors": {
     "required": "Ovo polje je obavezno.",
@@ -162,7 +168,12 @@
     "branch_not_allowed": "Administrator i rizik nemaju filijalu.",
     "branch_not_found": "Ova filijala ne postoji.",
     "branch_inactive": "Ova filijala je deaktivirana.",
-    "branch_code_taken": "Ovu oznaku već koristi druga filijala."
+    "branch_code_taken": "Ovu oznaku već koristi druga filijala.",
+    "before_adulthood": "Prva kreditna linija ne može biti otvorena pre nego što je klijent napunio {{minimumAge}} godina.",
+    "must_be_zero": "Mora biti 0 kada je {{other}} 0.",
+    "too_young": "Klijent mora imati najmanje {{minimumAge}} godina.",
+    "too_old": "Klijent ne može biti stariji od {{maximumAge}} godina.",
+    "client_has_open_application": "Ovaj klijent već ima otvoren zahtev, {{reference}}."
   },
   "enums": {
     "LoanPurpose": {
@@ -423,12 +434,12 @@
     "sectionIncome": "Prihod i stanovanje",
     "sectionReport": "Kreditni izveštaj",
     "sectionAccounts": "Kreditni računi",
-    "termHint": "Model je učio samo na kreditima sa rokom od 36 meseci.",
+    "termHint": "Model je učio samo na kreditima sa rokom od {{months}} meseci.",
     "incomeHint": "Bruto, kako ga navodi podnosilac.",
     "verificationHint": "Izvor proveren: potvrđen je izvor prihoda, ne i iznos.",
     "dtiHint": "Mesečne otplate dugova kao udeo mesečnog prihoda, bez ovog kredita i hipoteke.",
-    "creditScoreHint": "FICO skor, od {{min}} do {{max}}.",
-    "creditLineHint": "Mesec i godina; model koristi dužinu kreditne istorije.",
+    "creditScoreHint": "FICO skor.",
+    "creditLineHint": "Mesec i godina, od {{age}}. godine i najviše pre {{years}} godina; model koristi dužinu kreditne istorije.",
     "delinquenciesHint": "Otplate kasnije od 30 ili više dana.",
     "revolvingBalanceHint": "Dug po kreditnim karticama i drugim revolving kreditima.",
     "utilisationHint": "Dug kao udeo kreditnog limita; 0 ako nema revolving kredita.",
@@ -441,7 +452,10 @@
     "reviewTitle": "Provera zahteva",
     "backToForm": "Nazad na formu",
     "notEntered": "Nije uneto",
-    "missingAnswers": "Nedostaje odgovora: {{count}}"
+    "missingAnswers": "Nedostaje odgovora: {{count}}",
+    "range": "Dozvoljeno: od {{minimum}} do {{maximum}}.",
+    "fixFirst": "Prvo ispravite označena polja.",
+    "openApplication": "Otvori {{reference}}"
   },
   "clients": {
     "title": "Klijenti",
@@ -486,7 +500,8 @@
     "deactivated": "Klijent je deaktiviran.",
     "reactivate": "Ponovo aktiviraj klijenta",
     "reactivated": "Klijent je ponovo aktiviran.",
-    "manage": "Status"
+    "manage": "Status",
+    "dobHint": "Nije obavezno. Starost od {{minimum}} do {{maximum}} godina."
   },
   "models": {
     "title": "Model",

@@ -6,6 +6,7 @@ export class ApiError extends Error {
   readonly title: string | undefined;
   readonly fieldErrors: Record<string, FieldError[]>;
   readonly lockedUntil: string | undefined;
+  readonly members: Record<string, unknown>;
 
   constructor(status: number, problem: Partial<Problem>) {
     super(`${status} ${problem.code ?? "unexpected"}`);
@@ -15,7 +16,12 @@ export class ApiError extends Error {
     this.title = problem.title;
     this.fieldErrors = problem.fieldErrors ?? {};
     this.lockedUntil = problem.lockedUntil;
+    this.members = problem;
   }
+}
+
+export function editedElsewhere(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "edited_elsewhere";
 }
 
 type RequestOptions = { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown };

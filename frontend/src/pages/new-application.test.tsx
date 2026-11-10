@@ -146,6 +146,31 @@ describe("new application", () => {
     expect(calls.some((c) => c.path === "/api/applications")).toBe(false);
   });
 
+  it("shows the allowed range under each number field, from the server", async () => {
+    stubApi({ ...signedInAs("Officer"), ...client });
+    renderApp("/applications/new?clientId=c1");
+    expect(await screen.findByLabelText("Credit score")).toHaveAccessibleDescription("Allowed: 300 to 850. FICO score.");
+    expect(screen.getByLabelText("Loan amount")).toHaveAccessibleDescription("Allowed: 1,000 to 35,000. The model was trained on 36-month loans only.");
+    expect(screen.getByLabelText("Bankruptcies")).toHaveAccessibleDescription("Allowed: 0 to 50.");
+    expect(screen.getByLabelText("First credit line opened")).toHaveAccessibleDescription(
+      "Month and year, from age 18 and at most 80 years ago; the model uses the length of the credit history.",
+    );
+  });
+
+  it("says when the client already has an open application on submit", async () => {
+    stubApi({
+      ...signedInAs("Officer"),
+      ...client,
+      "POST /api/applications": problem(409, "client_has_open_application", { applicationId: "a12", reference: "A-000012" }),
+    });
+    renderApp("/applications/new?clientId=c1");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("button", { name: "Get recommendation" }));
+    expect(await screen.findByText("This client already has an open application, A-000012.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open A-000012" })).toHaveAttribute("href", "/app/applications/a12");
+  });
+
   it("fills the form from the client's last application", async () => {
     stubApi({ ...signedInAs("Officer"), ...client, "GET /api/applications/a1": { status: 200, body: application() } });
     renderApp("/applications/new?clientId=c1&from=a1");

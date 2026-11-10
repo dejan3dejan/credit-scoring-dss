@@ -71,6 +71,30 @@ export function meFor(role: Role, overrides: Partial<MeResponse> = {}): MeRespon
   };
 }
 
+export const limits = {
+  application: {
+    ranges: {
+      loanAmount: { minimum: 1000, maximum: 35000 },
+      annualIncome: { minimum: 0, maximum: 10000000 },
+      debtToIncomePercent: { minimum: 0, maximum: 100 },
+      creditScore: { minimum: 300, maximum: 850 },
+      inquiriesLast6Months: { minimum: 0, maximum: 50 },
+      delinquenciesLast2Years: { minimum: 0, maximum: 50 },
+      publicRecords: { minimum: 0, maximum: 50 },
+      bankruptcies: { minimum: 0, maximum: 50 },
+      revolvingBalance: { minimum: 0, maximum: 10000000 },
+      revolvingUtilizationPercent: { minimum: 0, maximum: 200 },
+      openAccounts: { minimum: 0, maximum: 100 },
+      totalAccounts: { minimum: 0, maximum: 200 },
+      mortgageAccounts: { minimum: 0, maximum: 50 },
+    },
+    termMonths: 36,
+    creditLineMaximumYears: 80,
+    creditLineMinimumAge: 18,
+  },
+  client: { minimumAge: 18, maximumAge: 100 },
+};
+
 export function signedInAs(role: Role, overrides: Partial<MeResponse> = {}): Record<string, StubRoute> {
-  return { "GET /api/auth/me": { status: 200, body: meFor(role, overrides) } };
+  return { "GET /api/auth/me": { status: 200, body: meFor(role, overrides) }, "GET /api/limits": { status: 200, body: limits } };
 }

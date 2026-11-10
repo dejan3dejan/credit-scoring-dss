@@ -5,7 +5,16 @@ import { signedInAs, stubApi } from "@/test/api";
 import { paged, summary } from "@/test/fixtures";
 
 const mine = (overrides: Record<string, unknown> = {}) => ({
-  counts: { drafts: 1, awaitingDecision: 1, scoringUnavailable: 0, awaitingSignOff: 0, decidedLast7Days: 4 },
+  counts: {
+    drafts: 1,
+    awaitingDecision: 1,
+    scoringUnavailable: 0,
+    awaitingSignOff: 0,
+    decidedLast7Days: 4,
+    submittedLast7Days: 6,
+    approvedLast7Days: 3,
+    overridesLast7Days: 1,
+  },
   drafts: [],
   awaitingDecision: [summary()],
   scoringUnavailable: [],
@@ -52,7 +61,12 @@ describe("home", () => {
     renderApp("/");
     const tiles = await screen.findByRole("list", { name: "My work" });
     expect(within(tiles).getByText("Awaiting my decision").nextSibling).toHaveTextContent("1");
-    expect(within(tiles).getByText("Decided in the last 7 days").nextSibling).toHaveTextContent("4");
+    expect(within(tiles).queryByText("Decided in the last 7 days")).toBeNull();
+    const week = screen.getByRole("list", { name: "My last 7 days" });
+    expect(tile(week, "Submitted")).toHaveTextContent("6");
+    expect(tile(week, "Decided")).toHaveTextContent("4");
+    expect(tile(week, "Approved")).toHaveTextContent("3");
+    expect(tile(week, "Against the recommendation")).toHaveTextContent("1");
     expect(screen.getByRole("link", { name: "A-000001" })).toBeInTheDocument();
   });
 
@@ -61,7 +75,19 @@ describe("home", () => {
       ...signedInAs("Officer"),
       "GET /api/work/mine": {
         status: 200,
-        body: mine({ awaitingDecision: [], counts: { drafts: 0, awaitingDecision: 0, scoringUnavailable: 0, awaitingSignOff: 0, decidedLast7Days: 0 } }),
+        body: mine({
+          awaitingDecision: [],
+          counts: {
+            drafts: 0,
+            awaitingDecision: 0,
+            scoringUnavailable: 0,
+            awaitingSignOff: 0,
+            decidedLast7Days: 0,
+            submittedLast7Days: 0,
+            approvedLast7Days: 0,
+            overridesLast7Days: 0,
+          },
+        }),
       },
     });
     renderApp("/");

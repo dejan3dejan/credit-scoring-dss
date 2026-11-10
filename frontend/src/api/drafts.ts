@@ -1,5 +1,6 @@
 import type { NewApplication } from "@/api/applications";
 import { request } from "@/api/client";
+import type { FieldError } from "@/api/types";
 
 export type DraftResponse = {
   id: string;
@@ -11,6 +12,7 @@ export type DraftResponse = {
   updatedAt: string;
   status: "Open" | "Submitted" | "Discarded";
   applicationId: string | null;
+  fieldErrors: Record<string, FieldError[]>;
 };
 
 export const draftKey = (id: string) => ["draft", id] as const;

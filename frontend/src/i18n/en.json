@@ -43,7 +43,6 @@
     "drafts": "Drafts",
     "scoringUnavailable": "Scoring unavailable",
     "awaitingSignOff": "Waiting for sign-off",
-    "decidedLast7Days": "Decided in the last 7 days",
     "recentlyDecided": "Recently decided",
     "nothingWaiting": "Nothing waits for your decision.",
     "team": "Team",
@@ -69,7 +68,12 @@
     "latestChanges": "Latest changes",
     "when": "When",
     "change": "Change",
-    "record": "Record"
+    "record": "Record",
+    "myWeek": "My last 7 days",
+    "submitted": "Submitted",
+    "decided": "Decided",
+    "approved": "Approved",
+    "overrides": "Against the recommendation"
   },
   "pages": {
     "newApplication": "New application"
@@ -125,7 +129,9 @@
     "assignee_not_found": "That person is not an active officer or manager of this branch.",
     "own_account": "You cannot deactivate your own account.",
     "branch_has_active_users": "This branch still has active users. Move or deactivate them first.",
-    "branch_inactive": "The user's branch is deactivated. Move the user to an active branch first."
+    "branch_inactive": "The user's branch is deactivated. Move the user to an active branch first.",
+    "edited_elsewhere": "Someone else changed this in the meantime. The newer values are shown; make your change again.",
+    "client_has_open_application": "This client already has an open application. Decide or withdraw it first."
   },
   "fieldErrors": {
     "required": "This field is required.",
@@ -162,7 +168,12 @@
     "branch_not_allowed": "Admin and Risk users have no branch.",
     "branch_not_found": "This branch does not exist.",
     "branch_inactive": "This branch is deactivated.",
-    "branch_code_taken": "This code is already used by another branch."
+    "branch_code_taken": "This code is already used by another branch.",
+    "before_adulthood": "The first credit line cannot be opened before the client turned {{minimumAge}}.",
+    "must_be_zero": "Must be 0 when {{other}} is 0.",
+    "too_young": "The client must be at least {{minimumAge}} years old.",
+    "too_old": "The client cannot be older than {{maximumAge}}.",
+    "client_has_open_application": "This client already has an open application, {{reference}}."
   },
   "enums": {
     "LoanPurpose": {
@@ -423,12 +434,12 @@
     "sectionIncome": "Income and housing",
     "sectionReport": "Credit report",
     "sectionAccounts": "Credit accounts",
-    "termHint": "The model was trained on 36-month loans only.",
+    "termHint": "The model was trained on {{months}}-month loans only.",
     "incomeHint": "Before tax, as stated by the applicant.",
     "verificationHint": "Source verified: the income source was confirmed, not the amount.",
     "dtiHint": "Monthly debt payments as a share of monthly income, without this loan and the mortgage.",
-    "creditScoreHint": "FICO score, {{min}} to {{max}}.",
-    "creditLineHint": "Month and year; the model uses the length of the credit history.",
+    "creditScoreHint": "FICO score.",
+    "creditLineHint": "Month and year, from age {{age}} and at most {{years}} years ago; the model uses the length of the credit history.",
     "delinquenciesHint": "Payments 30 or more days late.",
     "revolvingBalanceHint": "Owed on credit cards and other revolving credit.",
     "utilisationHint": "Balance as a share of the credit limit; 0 if there is no revolving credit.",
@@ -441,7 +452,10 @@
     "reviewTitle": "Check the application",
     "backToForm": "Back to the form",
     "notEntered": "Not entered",
-    "missingAnswers": "Missing answers: {{count}}"
+    "missingAnswers": "Missing answers: {{count}}",
+    "range": "Allowed: {{minimum}} to {{maximum}}.",
+    "fixFirst": "Fix the marked fields first.",
+    "openApplication": "Open {{reference}}"
   },
   "clients": {
     "title": "Clients",
@@ -486,7 +500,8 @@
     "deactivated": "Client deactivated.",
     "reactivate": "Reactivate client",
     "reactivated": "Client reactivated.",
-    "manage": "Status"
+    "manage": "Status",
+    "dobHint": "Optional. Age {{minimum}} to {{maximum}}."
   },
   "models": {
     "title": "Model",

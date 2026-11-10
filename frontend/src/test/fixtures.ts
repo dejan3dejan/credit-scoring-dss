@@ -130,6 +130,7 @@ export function clientResponse(overrides: Partial<ClientResponse> = {}): ClientR
     isActive: true,
     anonymisedAt: null,
     createdAt: "2026-10-01T08:00:00Z",
+    version: 3,
     ...overrides,
   };
 }
@@ -148,6 +149,7 @@ export function clientDetail(overrides: Partial<ClientDetail> = {}): ClientDetai
     isActive: true,
     anonymisedAt: null,
     createdAt: "2026-10-01T08:00:00Z",
+    version: 3,
     applications: [summary()],
     ...overrides,
   };

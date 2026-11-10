@@ -86,9 +86,22 @@ function MyWorkSection({ title }: { title: string }) {
           { label: t("home.scoringUnavailable"), value: counts.scoringUnavailable },
           { label: t("home.awaitingSignOff"), value: counts.awaitingSignOff },
           { label: t("home.drafts"), value: counts.drafts },
-          { label: t("home.decidedLast7Days"), value: counts.decidedLast7Days },
         ]}
+        className="xl:grid-cols-4"
       />
+      <section className="grid gap-2">
+        <h2 className="font-semibold">{t("home.myWeek")}</h2>
+        <NumberTiles
+          label={t("home.myWeek")}
+          className="xl:grid-cols-4"
+          items={[
+            { label: t("home.submitted"), value: counts.submittedLast7Days },
+            { label: t("home.decided"), value: counts.decidedLast7Days },
+            { label: t("home.approved"), value: counts.approvedLast7Days },
+            { label: t("home.overrides"), value: counts.overridesLast7Days },
+          ]}
+        />
+      </section>
       {work.data.awaitingDecision.length === 0 && work.data.scoringUnavailable.length === 0 ? (
         <EmptyState title={t("home.nothingWaiting")} />
       ) : (

@@ -21,21 +21,35 @@ type Saver = {
   running: Promise<void> | null;
   stopped: boolean;
   mounted: boolean;
+  failed: boolean;
+  last: DraftResponse | undefined;
 };
 
 function savedAtOf(state: AutosaveState): string | undefined {
   return state.status === "idle" ? undefined : state.savedAt;
 }
 
-export function useDraftAutosave(draft: DraftResponse | undefined, onCreated: (draft: DraftResponse) => void) {
+export function useDraftAutosave(
+  draft: DraftResponse | undefined,
+  onSaved: (saved: DraftResponse, body: NewApplication, first: boolean) => void,
+) {
   const queryClient = useQueryClient();
   const [state, setState] = useState<AutosaveState>(draft ? { status: "saved", savedAt: draft.updatedAt } : { status: "idle" });
   const [draftId, setDraftId] = useState(draft?.id);
-  const saver = useRef<Saver>({ draftId: draft?.id, pending: null, timer: undefined, running: null, stopped: false, mounted: true });
-  const created = useRef(onCreated);
+  const saver = useRef<Saver>({
+    draftId: draft?.id,
+    pending: null,
+    timer: undefined,
+    running: null,
+    stopped: false,
+    mounted: true,
+    failed: false,
+    last: draft,
+  });
+  const saved = useRef(onSaved);
 
   useEffect(() => {
-    created.current = onCreated;
+    saved.current = onSaved;
   });
 
   const flush = useCallback(async (): Promise<void> => {
@@ -50,17 +64,20 @@ export function useDraftAutosave(draft: DraftResponse | undefined, onCreated: (d
     if (s.mounted) setState((current) => ({ status: "saving", savedAt: savedAtOf(current) }));
     const run = (s.draftId ? updateDraft(s.draftId, body) : createDraft(body))
       .then(
-        (saved) => {
-          s.draftId = saved.id;
-          queryClient.setQueryData(draftKey(saved.id), saved);
+        (draft) => {
+          s.draftId = draft.id;
+          s.failed = false;
+          s.last = draft;
+          queryClient.setQueryData(draftKey(draft.id), draft);
           void queryClient.invalidateQueries({ queryKey: ["work"] });
           if (!s.mounted) return;
-          setDraftId(saved.id);
-          setState({ status: "saved", savedAt: saved.updatedAt });
-          if (first) created.current(saved);
+          setDraftId(draft.id);
+          setState({ status: "saved", savedAt: draft.updatedAt });
+          saved.current(draft, body, first);
         },
         (error: unknown) => {
           s.pending ??= body;
+          s.failed = true;
           if (error instanceof ApiError && error.status === 409) s.stopped = true;
           if (s.mounted) setState((current) => ({ status: "failed", savedAt: savedAtOf(current), error }));
           else toast.error(errorMessage(error));
@@ -80,6 +97,17 @@ export function useDraftAutosave(draft: DraftResponse | undefined, onCreated: (d
       s.pending = body;
       clearTimeout(s.timer);
       s.timer = setTimeout(() => void flush(), autosaveDelay);
+    },
+    [flush],
+  );
+
+  const check = useCallback(
+    async (body: NewApplication) => {
+      const s = saver.current;
+      if (s.stopped) return null;
+      s.pending = body;
+      await flush();
+      return s.failed || !s.last ? null : s.last.fieldErrors;
     },
     [flush],
   );
@@ -112,5 +140,5 @@ export function useDraftAutosave(draft: DraftResponse | undefined, onCreated: (d
     };
   }, [flush]);
 
-  return { state, draftId, schedule, retry: flush, beforeSubmit, submitted, resume };
+  return { state, draftId, schedule, check, retry: flush, beforeSubmit, submitted, resume };
 }

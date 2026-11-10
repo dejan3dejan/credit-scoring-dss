@@ -14,6 +14,7 @@ export type UserResponse = {
   createdAt: string;
   lastSignedInAt: string | null;
   lockedUntil: string | null;
+  version: number;
 };
 
 export type UserFields = {
@@ -35,7 +36,8 @@ export const getUser = (id: string) => request<UserResponse>(`/api/users/${id}`)
 
 export const createUser = (user: NewUser) => request<UserResponse>("/api/users", { method: "POST", body: user });
 
-export const updateUser = (id: string, user: UserFields) => request<UserResponse>(`/api/users/${id}`, { method: "PUT", body: user });
+export const updateUser = (id: string, user: UserFields, version: number) =>
+  request<UserResponse>(`/api/users/${id}`, { method: "PUT", body: { ...user, version } });
 
 export const deactivateUser = (id: string) => request<UserResponse>(`/api/users/${id}/deactivate`, { method: "POST" });
 

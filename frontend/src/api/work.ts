@@ -3,7 +3,16 @@ import type { DraftResponse } from "@/api/drafts";
 import type { ApplicationSummary, Role } from "@/api/types";
 
 export type MyWork = {
-  counts: { drafts: number; awaitingDecision: number; scoringUnavailable: number; awaitingSignOff: number; decidedLast7Days: number };
+  counts: {
+    drafts: number;
+    awaitingDecision: number;
+    scoringUnavailable: number;
+    awaitingSignOff: number;
+    decidedLast7Days: number;
+    submittedLast7Days: number;
+    approvedLast7Days: number;
+    overridesLast7Days: number;
+  };
   drafts: DraftResponse[];
   awaitingDecision: ApplicationSummary[];
   scoringUnavailable: ApplicationSummary[];

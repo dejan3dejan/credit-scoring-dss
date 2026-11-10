@@ -21,7 +21,8 @@ export type NewClient = ClientContact & { fullName: string; dateOfBirth: string 
 
 export const createClient = (client: NewClient) => request<ClientResponse>("/api/clients", { method: "POST", body: client });
 
-export const updateClient = (id: string, client: NewClient) => request<ClientResponse>(`/api/clients/${id}`, { method: "PUT", body: client });
+export const updateClient = (id: string, client: NewClient, version: number) =>
+  request<ClientResponse>(`/api/clients/${id}`, { method: "PUT", body: { ...client, version } });
 
 export const deactivateClient = (id: string) => request<ClientResponse>(`/api/clients/${id}/deactivate`, { method: "POST" });
 

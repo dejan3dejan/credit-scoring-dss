@@ -16,6 +16,8 @@ import {
   type ClientFilters,
   type NewClient,
 } from "@/api/clients";
+import { editedElsewhere } from "@/api/client";
+import { getLimits, limitsKey } from "@/api/limits";
 import type { ClientDetail, ClientResponse, ClientSummary } from "@/api/types";
 import { can, useMe } from "@/auth/session";
 import { EmptyState, ErrorState, Loading, PageHeader } from "@/components/page";
@@ -238,12 +240,20 @@ function ClientDetailsCard({ client: c, canEdit }: { client: ClientDetail; canEd
   const language = useLanguage();
   const [editing, setEditing] = useState(false);
   const update = useClientUpdate(c.id);
+  const queryClient = useQueryClient();
   const save = useMutation({
-    mutationFn: (values: NewClient) => updateClient(c.id, values),
+    mutationFn: (values: NewClient) => updateClient(c.id, values, c.version),
     onSuccess: (fresh) => {
       update(fresh);
       setEditing(false);
       toast.success(t("clients.saved"));
+    },
+    onError: (error) => {
+      if (!editedElsewhere(error)) return;
+      toast.error(errorMessage(error), { id: "edited_elsewhere" });
+      save.reset();
+      setEditing(false);
+      void queryClient.invalidateQueries({ queryKey: clientKey(c.id) });
     },
   });
 
@@ -366,6 +376,7 @@ function ClientForm({
   const blankToNull = (value: string) => value.trim() || null;
   const errors = error instanceof ApiError ? error.fieldErrors : {};
   const optional = t("clients.optional");
+  const limits = useQuery({ queryKey: limitsKey, queryFn: getLimits, staleTime: Infinity });
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -392,12 +403,18 @@ function ClientForm({
     />
   );
 
+  if (limits.isPending) return <Loading />;
+  if (limits.isError) return <ErrorState error={limits.error} onRetry={() => void limits.refetch()} />;
+
   return (
     <form onSubmit={submit} noValidate className="grid gap-4">
       {!!error && Object.keys(errors).length === 0 && <Alert>{errorMessage(error)}</Alert>}
       {field("fullName", t("clients.fullName"), { maxLength: 200 })}
       <div className={cn("grid gap-4", !stacked && "md:grid-cols-2")}>
-        {field("dateOfBirth", t("clients.dateOfBirth"), { type: "date", hint: optional })}
+        {field("dateOfBirth", t("clients.dateOfBirth"), {
+          type: "date",
+          hint: t("clients.dobHint", { minimum: limits.data.client.minimumAge, maximum: limits.data.client.maximumAge }),
+        })}
         {field("phone", t("clients.phone"), { type: "tel", maxLength: 32, hint: optional })}
         {field("email", t("clients.email"), { type: "email", maxLength: 254, hint: optional })}
         {field("employer", t("clients.employer"), { maxLength: 200, hint: optional })}

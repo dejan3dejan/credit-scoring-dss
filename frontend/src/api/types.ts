@@ -227,6 +227,7 @@ export type ClientResponse = ClientContact & {
   isActive: boolean;
   anonymisedAt: string | null;
   createdAt: string;
+  version: number;
 };
 
 export type ClientDetail = ClientResponse & { applications: ApplicationSummary[] };

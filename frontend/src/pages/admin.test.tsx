@@ -6,8 +6,8 @@ import { problem, signedInAs, stubApi } from "@/test/api";
 import type { UserResponse } from "@/api/users";
 import type { Branch } from "@/api/branches";
 
-const novi: Branch = { id: "b1", code: "NS", name: "Novi Sad", city: "Novi Sad", isActive: true, createdAt: "2026-01-01T00:00:00Z" };
-const old: Branch = { id: "b2", code: "SU", name: "Subotica", city: null, isActive: false, createdAt: "2026-01-01T00:00:00Z" };
+const novi: Branch = { id: "b1", code: "NS", name: "Novi Sad", city: "Novi Sad", isActive: true, createdAt: "2026-01-01T00:00:00Z", version: 2 };
+const old: Branch = { id: "b2", code: "SU", name: "Subotica", city: null, isActive: false, createdAt: "2026-01-01T00:00:00Z", version: 1 };
 
 function user(overrides: Partial<UserResponse> = {}): UserResponse {
   return {
@@ -23,6 +23,7 @@ function user(overrides: Partial<UserResponse> = {}): UserResponse {
     createdAt: "2026-10-01T08:00:00Z",
     lastSignedInAt: "2026-11-09T08:00:00Z",
     lockedUntil: null,
+    version: 5,
     ...overrides,
   };
 }
@@ -106,7 +107,28 @@ describe("users", () => {
       role: "Manager",
       branchId: "b1",
       preferredLanguage: "en",
+      version: 5,
     });
+  });
+
+  it("reloads a user that someone else changed meanwhile", async () => {
+    let version = 5;
+    stubApi({
+      ...signedInAs("Admin"),
+      ...branches,
+      "GET /api/users/u1": () => ({ status: 200, body: user({ version, displayName: version === 6 ? "Mila Novaković" : "Mila Testić" }) }),
+      "PUT /api/users/u1": () => {
+        version = 6;
+        return problem(409, "edited_elsewhere");
+      },
+    });
+    renderApp("/users/u1");
+    const userEvents = userEvent.setup();
+    await userEvents.selectOptions(await screen.findByLabelText("Role"), "Manager");
+    await userEvents.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("Someone else changed this in the meantime. The newer values are shown; make your change again.")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("Mila Novaković")).toBeInTheDocument();
+    expect(screen.getByLabelText("Role")).toHaveValue("Officer");
   });
 
   it("sets a temporary password", async () => {
@@ -142,6 +164,43 @@ describe("users", () => {
 });
 
 describe("branches", () => {
+  it("edits a branch with the version it was read at", async () => {
+    const calls = stubApi({
+      ...signedInAs("Admin"),
+      ...branches,
+      "PUT /api/branches/b1": { status: 200, body: { ...novi, name: "Novi Sad centar", version: 3 } },
+    });
+    renderApp("/branches");
+    const row = (await screen.findByText("NS")).closest("tr")!;
+    const userEvents = userEvent.setup();
+    await userEvents.click(within(row).getByRole("button", { name: "Edit" }));
+    const name = screen.getByLabelText("Name", { selector: "tr input" });
+    await userEvents.clear(name);
+    await userEvents.type(name, "Novi Sad centar");
+    await userEvents.click(within(row).getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Novi Sad centar")).toBeInTheDocument();
+    expect(calls.find((c) => c.method === "PUT")?.body).toEqual({ name: "Novi Sad centar", city: "Novi Sad", version: 2 });
+  });
+
+  it("reloads the branches when someone else changed the branch meanwhile", async () => {
+    let changed = false;
+    stubApi({
+      ...signedInAs("Admin"),
+      "GET /api/branches": () => ({ status: 200, body: [changed ? { ...novi, name: "Novi Sad 2", version: 3 } : novi, old] }),
+      "PUT /api/branches/b1": () => {
+        changed = true;
+        return problem(409, "edited_elsewhere");
+      },
+    });
+    renderApp("/branches");
+    const row = (await screen.findByText("NS")).closest("tr")!;
+    const userEvents = userEvent.setup();
+    await userEvents.click(within(row).getByRole("button", { name: "Edit" }));
+    await userEvents.click(within(row).getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Someone else changed this in the meantime. The newer values are shown; make your change again.")).toBeInTheDocument();
+    expect(await screen.findByText("Novi Sad 2")).toBeInTheDocument();
+  });
+
   it("lists branches and creates one", async () => {
     const calls = stubApi({
       ...signedInAs("Admin"),
