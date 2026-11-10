@@ -23,6 +23,7 @@ export type ApplicationFilters = {
   from?: string;
   to?: string;
   page?: number;
+  pageSize?: number;
 };
 
 function startOfDay(date: string): string {
@@ -45,6 +46,7 @@ export function applicationsQuery(filters: ApplicationFilters): string {
   if (filters.from) params.set("from", startOfDay(filters.from));
   if (filters.to) params.set("to", startOfNextDay(filters.to));
   if (filters.page && filters.page > 1) params.set("page", String(filters.page));
+  if (filters.pageSize) params.set("pageSize", String(filters.pageSize));
   const query = params.toString();
   return query ? `?${query}` : "";
 }

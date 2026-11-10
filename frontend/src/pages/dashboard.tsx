@@ -22,10 +22,13 @@ import { listModels, modelsKey } from "@/api/models";
 import { listBranches } from "@/api/branches";
 import { getStats, type DashboardStats } from "@/api/stats";
 import { useMe } from "@/auth/session";
+import { CalibrationTable } from "@/components/calibration-table";
+import { NumberTiles, type NumberTile } from "@/components/number-tiles";
 import { EmptyState, ErrorState, Loading, PageHeader } from "@/components/page";
 import { Card, SelectField, Table, Td, Th } from "@/components/surface";
 import { useLanguage } from "@/i18n";
 import { formatPercent, formatShortDate } from "@/i18n/format";
+import { calibratedBands } from "@/lib/calibration";
 import { rangeFilters, type DashboardSearch } from "@/lib/dashboard-range";
 import { cn } from "@/lib/utils";
 
@@ -101,7 +104,7 @@ function Numbers({ stats, showBranches }: { stats: DashboardStats; showBranches:
   const reviewShare = stats.scored > 0 ? (review.approved + review.rejected + review.pending) / stats.scored : null;
   const previous = stats.comparison?.previous;
 
-  const tiles: { label: string; value: string; previous?: string; note?: string }[] = [
+  const tiles: NumberTile[] = [
     { label: t("dashboard.applications"), value: String(stats.applications), previous: previous && String(previous.applications) },
     { label: t("dashboard.decided"), value: String(stats.decided), previous: previous && String(previous.decided) },
     { label: t("dashboard.approvalRate"), value: percent(approvalRate), previous: previous && percent(previous.approvalRate) },
@@ -116,18 +119,7 @@ function Numbers({ stats, showBranches }: { stats: DashboardStats; showBranches:
 
   return (
     <>
-      <ul aria-label={t("dashboard.keyNumbers")} className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {tiles.map((tile) => (
-          <li key={tile.label} className="rounded-md border bg-card px-4 py-3">
-            <div className="text-xs text-muted-foreground">{tile.label}</div>
-            <div className="mt-1 text-[26px] leading-none font-semibold">{tile.value}</div>
-            {tile.previous !== undefined && (
-              <div className="mt-1.5 text-xs text-muted-foreground">{t("dashboard.previous", { value: tile.previous })}</div>
-            )}
-            {tile.note && <div className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{tile.note}</div>}
-          </li>
-        ))}
-      </ul>
+      <NumberTiles label={t("dashboard.keyNumbers")} items={tiles} className="xl:grid-cols-6" />
       {stats.applications === 0 ? (
         <EmptyState title={t("dashboard.empty")} text={t("dashboard.emptyText")} />
       ) : (
@@ -535,7 +527,7 @@ function Calibration({ stats }: { stats: DashboardStats }) {
   const { t } = useTranslation();
   const language = useLanguage();
   const pct = (value: number) => formatPercent(value, language);
-  const bands = stats.calibration.filter((band) => band.loans > 0 && band.meanPredicted !== null && band.observedDefaultRate !== null);
+  const bands = calibratedBands(stats.calibration);
   const title = t("dashboard.calibrationTitle");
 
   if (bands.length === 0)
@@ -549,30 +541,7 @@ function Calibration({ stats }: { stats: DashboardStats }) {
     <ChartCard
       title={title}
       note={t("dashboard.calibrationNote")}
-      table={
-        <Table label={title}>
-          <thead>
-            <tr>
-              <Th>{t("dashboard.band")}</Th>
-              <Th align="right">{t("dashboard.loans")}</Th>
-              <Th align="right">{t("dashboard.predicted")}</Th>
-              <Th align="right">{t("dashboard.observed")}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {bands.map((band) => (
-              <tr key={band.from} className="group">
-                <Td>
-                  {pct(band.from)} – {pct(band.to)}
-                </Td>
-                <Td align="right">{band.loans}</Td>
-                <Td align="right">{pct(band.meanPredicted!)}</Td>
-                <Td align="right">{pct(band.observedDefaultRate!)}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      }
+      table={<CalibrationTable bands={bands} label={title} />}
     >
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart margin={{ top: 8, right: 12, bottom: 0, left: -8 }}>

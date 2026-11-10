@@ -8,7 +8,7 @@ import { application, clientDetail, clientSummary, paged } from "@/test/fixtures
 const client = { "GET /api/clients/c1": { status: 200, body: clientDetail() } };
 
 async function fillForm() {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   const type = async (label: string, value: string) => user.type(screen.getByLabelText(label), value);
   const choose = async (label: string, value: string) => user.selectOptions(screen.getByLabelText(label), value);
   await type("Loan amount", "20000");

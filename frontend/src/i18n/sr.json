@@ -56,7 +56,20 @@
     "signOffs": "Čeka saglasnost",
     "riskOutcomes": "Krediti koji čekaju ishod",
     "riskDashboard": "Otvori kontrolnu tablu",
-    "riskModels": "Otvori stranicu modela"
+    "riskModels": "Otvori stranicu modela",
+    "branchPeriod": "Filijala, poslednjih 30 dana",
+    "allBranchesPeriod": "Sve filijale, poslednjih 30 dana",
+    "showAll": "Prikaži sve",
+    "noOutcomesWaiting": "Nijedan odobren kredit ne čeka ishod.",
+    "activeModel": "Aktivni model",
+    "threshold": "Odbijanje od P(bad) {{value}}",
+    "noActiveModel": "Nijedan model nije aktivan, pa se zahtevi ne ocenjuju.",
+    "user": "Korisnik",
+    "lockedUntil": "Zaključan do",
+    "latestChanges": "Poslednje izmene",
+    "when": "Vreme",
+    "change": "Izmena",
+    "record": "Zapis"
   },
   "pages": {
     "newApplication": "Novi zahtev"

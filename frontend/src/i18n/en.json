@@ -56,7 +56,20 @@
     "signOffs": "Waiting for sign-off",
     "riskOutcomes": "Loans waiting for an outcome",
     "riskDashboard": "Open the dashboard",
-    "riskModels": "Open the model page"
+    "riskModels": "Open the model page",
+    "branchPeriod": "Branch, last 30 days",
+    "allBranchesPeriod": "All branches, last 30 days",
+    "showAll": "Show all",
+    "noOutcomesWaiting": "No approved loan waits for an outcome.",
+    "activeModel": "Active model",
+    "threshold": "Reject from P(bad) {{value}}",
+    "noActiveModel": "No model is active, so applications are not scored.",
+    "user": "User",
+    "lockedUntil": "Locked until",
+    "latestChanges": "Latest changes",
+    "when": "When",
+    "change": "Change",
+    "record": "Record"
   },
   "pages": {
     "newApplication": "New application"

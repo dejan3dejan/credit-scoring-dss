@@ -23,6 +23,7 @@ export type AuditFilters = {
   action?: AuditAction;
   entityId?: string;
   page?: number;
+  pageSize?: number;
 };
 
 export function auditQuery(filters: AuditFilters): string {
@@ -38,6 +39,7 @@ export function auditQuery(filters: AuditFilters): string {
   if (filters.action) params.set("action", filters.action);
   if (filters.entityId) params.set("entityId", filters.entityId);
   if (filters.page && filters.page > 1) params.set("page", String(filters.page));
+  if (filters.pageSize) params.set("pageSize", String(filters.pageSize));
   const query = params.toString();
   return query ? `?${query}` : "";
 }
