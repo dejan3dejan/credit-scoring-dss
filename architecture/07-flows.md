@@ -2,12 +2,12 @@
 
 ## 7.1 Sign-in
 
-The Razor login page and `POST /api/auth/login` (React SPA) both call `SignInService`, so the lockout rule has one owner.
+The React login page calls `POST /api/auth/login`, which calls `SignInService`, the one owner of the lockout rule.
 
 ```mermaid
 sequenceDiagram
     actor U as User
-    participant L as Login page or POST /api/auth/login
+    participant L as POST /api/auth/login
     participant S as SignInService
     participant DB as PostgreSQL
     U->>L: user name + password
@@ -25,7 +25,7 @@ sequenceDiagram
     else correct
         S->>DB: failed count 0, last_signed_in_at = now
         S-->>L: SignedIn(user)
-        L-->>U: sign-in cookie with role and security stamp (8 h, HttpOnly, SameSite=Strict), page redirects, API returns MeResponse
+        L-->>U: sign-in cookie with role and security stamp (8 h, HttpOnly, SameSite=Strict) and MeResponse
     end
     Note over U,L: API failures are 401 problems with code invalid_credentials or locked_out (+ lockedUntil)
 ```
@@ -41,7 +41,7 @@ sequenceDiagram
     B->>C: request with cookie
     C->>DB: read user by id
     alt missing, deactivated, or stamp differs (password reset or changed)
-        C-->>B: cookie removed, 401 problem under /api, login page otherwise
+        C-->>B: cookie removed, 401 problem under /api, redirect to /app otherwise
     else role or name changed
         C->>C: new principal from the user row, cookie renewed
         C->>E: continue with the new role
@@ -233,5 +233,30 @@ sequenceDiagram
     else
         A->>DB: insert loan_outcome, commit
         A-->>R: 200 with loanOutcome
+    end
+```
+
+## 7.8 Anonymising a client
+
+Admin holds `clients.anonymise` but not `clients.read`, so a separate lookup returns only what is needed to pick the client; Admin still sees no applications.
+
+```mermaid
+sequenceDiagram
+    actor AD as Admin
+    participant C as ClientsController
+    participant AN as ClientAnonymisation
+    participant DB as PostgreSQL
+    AD->>C: GET /api/clients/lookup?search=
+    C->>DB: clients by name or number, every branch
+    C-->>AD: id, number, name, branch, active, anonymisedAt (no applications, birth date or contact data)
+    AD->>C: POST /api/clients/{id}/anonymise
+    C->>DB: load client and its applications
+    C->>AN: Apply(client, applications, now)
+    alt already anonymised
+        C-->>AD: 409 client_anonymised
+    else
+        AN-->>C: name "Anonymised", birth date and contact data cleared, inactive
+        C->>DB: save (audit entry with before and after)
+        C-->>AD: 200 ClientResponse
     end
 ```
