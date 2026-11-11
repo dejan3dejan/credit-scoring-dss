@@ -27,3 +27,19 @@ export const updateClient = (id: string, client: NewClient, version: number) =>
 export const deactivateClient = (id: string) => request<ClientResponse>(`/api/clients/${id}/deactivate`, { method: "POST" });
 
 export const reactivateClient = (id: string) => request<ClientResponse>(`/api/clients/${id}/reactivate`, { method: "POST" });
+
+export type ClientLookupItem = {
+  id: string;
+  clientNumber: string;
+  fullName: string;
+  branchId: string;
+  isActive: boolean;
+  anonymisedAt: string | null;
+  createdAt: string;
+};
+
+export type LookupFilters = { search?: string; page?: number };
+
+export const lookupClients = (filters: LookupFilters) => request<Paged<ClientLookupItem>>(`/api/clients/lookup${clientsQuery(filters)}`);
+
+export const anonymiseClient = (id: string) => request<ClientResponse>(`/api/clients/${id}/anonymise`, { method: "POST" });

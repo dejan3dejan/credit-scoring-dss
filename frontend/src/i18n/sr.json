@@ -13,7 +13,8 @@
     "models": "Modeli",
     "users": "Korisnici",
     "branches": "Filijale",
-    "audit": "Dnevnik izmena"
+    "audit": "Dnevnik izmena",
+    "anonymise": "Anonimizacija klijenata"
   },
   "roles": {
     "Admin": "Administrator",
@@ -809,5 +810,21 @@
     "applications": "Zahtevi",
     "none": "Nema rezultata",
     "searching": "Pretraga…"
+  },
+  "anonymise": {
+    "title": "Anonimizacija klijenata",
+    "search": "Ime ili broj klijenta",
+    "clients": "Klijenti",
+    "branch": "Filijala",
+    "status": "Status",
+    "action": "Anonimizuj",
+    "anonymisedOn": "Anonimizovan {{date}}",
+    "warning": "Ovo se ne može poništiti. Ime, datum rođenja i kontakt podaci se brišu, a klijent se deaktivira; iznosi kredita, ocene i odluke ostaju za statistiku.",
+    "confirmLabel": "Upišite {{number}} da potvrdite",
+    "confirm": "Trajno anonimizuj",
+    "done": "Klijent {{number}} je anonimizovan.",
+    "previous": "Prethodna",
+    "next": "Sledeća",
+    "page": "Strana {{page}} od {{last}}"
   }
 }

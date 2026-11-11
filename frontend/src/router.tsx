@@ -29,6 +29,7 @@ import { LazyDashboard } from "@/pages/dashboard-lazy";
 import { validateDashboardSearch } from "@/lib/dashboard-range";
 import type { ClientFilters } from "@/api/clients";
 import { validateApplicationFilters, validateAuditFilters } from "@/lib/filters";
+import { AnonymisePage } from "@/pages/anonymise";
 import { AuditPage } from "@/pages/audit";
 
 type RouterContext = { queryClient: QueryClient };
@@ -201,6 +202,7 @@ const routeTree = rootRoute.addChildren([
     createRoute({ getParentRoute: () => authedRoute, path: "users/new", beforeLoad: requires("users.manage"), component: NewUserPage }),
     userRoute,
     createRoute({ getParentRoute: () => authedRoute, path: "branches", beforeLoad: requires("branches.manage"), component: BranchesPage }),
+    createRoute({ getParentRoute: () => authedRoute, path: "anonymise", beforeLoad: requires("clients.anonymise"), component: AnonymisePage }),
     auditRoute,
   ]),
 ]);

@@ -12,6 +12,7 @@ import {
   LogOut,
   ScrollText,
   UserCog,
+  UserX,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -34,7 +35,7 @@ import {
 import { errorMessage } from "@/i18n";
 
 type NavItem = {
-  to: "/" | "/applications" | "/clients" | "/dashboard" | "/models" | "/users" | "/branches" | "/audit";
+  to: "/" | "/applications" | "/clients" | "/dashboard" | "/models" | "/users" | "/branches" | "/anonymise" | "/audit";
   label: string;
   icon: LucideIcon;
   permission?: Permission;
@@ -47,6 +48,7 @@ const items: NavItem[] = [
   { to: "/models", label: "nav.models", icon: Boxes, permission: "models.read" },
   { to: "/users", label: "nav.users", icon: UserCog, permission: "users.manage" },
   { to: "/branches", label: "nav.branches", icon: Building2, permission: "branches.manage" },
+  { to: "/anonymise", label: "nav.anonymise", icon: UserX, permission: "clients.anonymise" },
   { to: "/audit", label: "nav.audit", icon: ScrollText, permission: "audit.read" },
 ];
 

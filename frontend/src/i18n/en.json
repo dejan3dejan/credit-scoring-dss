@@ -13,7 +13,8 @@
     "models": "Models",
     "users": "Users",
     "branches": "Branches",
-    "audit": "Audit log"
+    "audit": "Audit log",
+    "anonymise": "Anonymise clients"
   },
   "roles": {
     "Admin": "Admin",
@@ -809,5 +810,21 @@
     "applications": "Applications",
     "none": "No matches",
     "searching": "Searching…"
+  },
+  "anonymise": {
+    "title": "Anonymise clients",
+    "search": "Name or client number",
+    "clients": "Clients",
+    "branch": "Branch",
+    "status": "Status",
+    "action": "Anonymise",
+    "anonymisedOn": "Anonymised on {{date}}",
+    "warning": "This cannot be undone. The name, date of birth and contact data are removed and the client is deactivated; loan figures, scores and decisions stay for the statistics.",
+    "confirmLabel": "Type {{number}} to confirm",
+    "confirm": "Anonymise permanently",
+    "done": "Client {{number}} was anonymised.",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}} of {{last}}"
   }
 }

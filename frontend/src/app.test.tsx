@@ -45,7 +45,7 @@ describe("navigation by permission", () => {
     stubApi(signedInAs("Admin"));
     renderApp("/");
     await screen.findByRole("navigation", { name: "Main" });
-    expect(navLinks()).toEqual(["Administration", "Users", "Branches", "Audit log"]);
+    expect(navLinks()).toEqual(["Administration", "Users", "Branches", "Anonymise clients", "Audit log"]);
   });
 
   it("offers a new application only to roles that may submit one", async () => {
