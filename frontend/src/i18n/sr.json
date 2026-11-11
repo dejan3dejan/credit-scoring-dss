@@ -800,5 +800,14 @@
       "LoanOutcome": "Ishod kredita"
     },
     "more": "Još {{count}} vrednosti"
+  },
+  "search": {
+    "label": "Pretraga klijenata i zahteva",
+    "placeholder": "Klijent, broj ili oznaka zahteva",
+    "results": "Rezultati pretrage",
+    "clients": "Klijenti",
+    "applications": "Zahtevi",
+    "none": "Nema rezultata",
+    "searching": "Pretraga…"
   }
 }

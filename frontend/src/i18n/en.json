@@ -800,5 +800,14 @@
       "LoanOutcome": "Loan outcome"
     },
     "more": "{{count}} more values"
+  },
+  "search": {
+    "label": "Search clients and applications",
+    "placeholder": "Client, number or reference",
+    "results": "Search results",
+    "clients": "Clients",
+    "applications": "Applications",
+    "none": "No matches",
+    "searching": "Searching…"
   }
 }

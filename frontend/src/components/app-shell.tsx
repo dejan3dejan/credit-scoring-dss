@@ -21,6 +21,7 @@ import type { MeResponse, Permission } from "@/api/types";
 import { homeTitleKey } from "@/auth/home";
 import { can, useMe } from "@/auth/session";
 import { BrandMark } from "@/components/brand-mark";
+import { GlobalSearch } from "@/components/global-search";
 import { LanguageSwitch } from "@/components/language-switch";
 import {
   DropdownMenu,
@@ -85,6 +86,7 @@ export function AppShell() {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-card px-6">
+          {can(me, "clients.read") && <GlobalSearch />}
           <div className="ml-auto">
             <LanguageSwitch saveOnAccount />
           </div>
