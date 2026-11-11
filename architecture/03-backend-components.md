@@ -4,14 +4,8 @@ Inside `backend/src/CreditScoring.Api`. Folders are layers: the UI and controlle
 
 ```mermaid
 flowchart TB
-    subgraph ui["Ui + Pages (Razor Pages)"]
-        pagesC["Pages/*<br/>Login, Applications, Clients,<br/>Dashboard, Model"]
-        appsApi["ApplicationsApi<br/>typed HttpClient to /api"]
-        fwd["CookieForwardingHandler<br/>copies the sign-in cookie"]
-        helpers["Labels, FormErrors,<br/>ApplicationInputs, HistoryFilter"]
-        spaHost["SpaHosting<br/>serves the React build<br/>under /app"]
-        pagesC --> appsApi --> fwd
-        pagesC --> helpers
+    subgraph ui["Ui"]
+        spaHost["SpaHosting<br/>serves the React build under /app,<br/>/ redirects to /app"]
     end
 
     subgraph controllers["Controllers (REST API)"]
@@ -57,7 +51,6 @@ flowchart TB
         cookie["CookieSetup, Credentials,<br/>SignInService (lockout), Seeder"]
     end
 
-    fwd -- HTTP --> controllers
     controllers --> dtos
     appsCtl --> svc
     modelsCtl --> registry
@@ -76,7 +69,7 @@ flowchart TB
 |---|---|---|
 | Input validation, business limits | `Contracts` (attributes, `BusinessLimits`) and controllers | Python |
 | Recommendation rule (threshold, review band) | `ScoringModel.RecommendationFor`, called by `CreditDecisionService` | controllers, Python |
-| When an officer must give a reason | `OfficerDecision.NeedsReason` | pages |
+| When an officer must give a reason | `OfficerDecision.NeedsReason` | the React app |
 | Model roles (one active, shadows, retired) | `ModelRegistry` | database triggers |
 | Turning inputs into a probability | Python inference service | C# |
 | Who the user is | the sign-in cookie, read by `Credentials.ActorOf` | the request body |

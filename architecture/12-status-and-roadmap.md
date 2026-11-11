@@ -1,6 +1,6 @@
 # 12. Status and roadmap
 
-Where the system is on 2026-11-10 and what is planned next. Solid boxes are built and tested; dashed ones are planned.
+Where the system is on 2026-11-11 and what is planned next. Solid boxes are built and tested; dashed ones are planned.
 
 ```mermaid
 flowchart LR
@@ -13,9 +13,8 @@ flowchart LR
 
     subgraph next["Planned, in order"]
         direction TB
-        n1["React pages for drafts, notes,<br/>withdrawal, assignment, outcomes"]
-        n2["React admin pages:<br/>users, branches, audit log"]
-        n3["Browser tests on React<br/>(QA session), then remove<br/>the Razor pages"]
+        n1["Release v1.0: README,<br/>screenshots, MIT licence"]
+        n2["Thesis and presentation"]
     end
 
     subgraph done["Built"]
@@ -33,10 +32,12 @@ flowchart LR
         d11["CI: tests on every push"]
         d12["React app, English and Serbian:<br/>applications, clients, home queue,<br/>models, dashboard"]
         d13["API: branches, audit log, drafts,<br/>sign-off, notes, loan outcomes"]
+        d14["React: drafts, notes, outcomes,<br/>admin pages, audit log, search"]
+        d15["End-to-end tests (Playwright),<br/>Razor pages removed"]
     end
 
     classDef plan stroke-dasharray: 5 5
-    class n1,n2,n3,l1,l2,l3 plan
+    class n1,n2,l1,l2,l3 plan
 ```
 
 ## What changes when outcome tracking lands

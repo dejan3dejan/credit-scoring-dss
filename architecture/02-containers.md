@@ -10,9 +10,7 @@ flowchart TB
 
     subgraph web["ASP.NET Core 9 (C#)"]
         spa["React app under /app<br/>static files from the Vite build,<br/>English and Serbian"]
-        pages["Razor Pages UI<br/>until the React pages replace it"]
         api["REST API /api/*<br/>JSON, OpenAPI"]
-        pages -- "HTTP + forwarded<br/>sign-in cookie<br/>(ApplicationsApi)" --> api
     end
 
     db[("PostgreSQL 17<br/>EF Core, snake_case tables")]
@@ -25,14 +23,12 @@ flowchart TB
 
     browser -- "loads page and scripts" --> spa
     browser -- "fetch /api/*, same origin,<br/>sign-in cookie" --> api
-    browser -- "HTTP(S), cookie" --> pages
     browser -. "optional: Swagger UI<br/>in Development" .-> api
     api -- "EF Core" --> db
-    pages -- "sign-in only:<br/>user lookup" --> db
     api -- "HTTP JSON<br/>(IMlClient, 5 s timeout)" --> fastapi
 ```
 
-Why both UIs go through the API instead of calling services directly: there is one way in to the business rules, so the API and the UI cannot drift apart, and every rule is tested once. The React app runs in the browser and calls the API on the same origin, so the `HttpOnly`, `SameSite=Strict` cookie works without CORS and the SPA never sees a token.
+Why the UI goes only through the API: there is one way in to the business rules, so the API and the UI cannot drift apart, and every rule is tested once. `/` redirects to `/app`. The React app runs in the browser and calls the API on the same origin, so the `HttpOnly`, `SameSite=Strict` cookie works without CORS and the SPA never sees a token.
 
 ## Deployment
 
