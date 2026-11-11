@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker compose up --build --detach --wait
       - run: curl --fail --silent --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/health
-      - run: curl --fail --silent --retry 30 --retry-delay 2 --retry-all-errors --output /dev/null http://localhost:8080/account/login
+      - run: curl --fail --silent --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/app/login | grep --quiet '<div id="root">'
       - run: curl --fail --silent --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/app/ | grep --quiet '<div id="root">'
       - if: always()
         run: docker compose logs
