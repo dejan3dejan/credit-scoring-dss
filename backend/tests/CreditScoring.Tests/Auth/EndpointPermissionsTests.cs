@@ -51,6 +51,7 @@ public class EndpointPermissionsTests
         ["Clients.Deactivate"] = "clients.write",
         ["Clients.Reactivate"] = "clients.write",
         ["Clients.Anonymise"] = "clients.anonymise",
+        ["Clients.Lookup"] = "clients.anonymise",
         ["Clients.Get"] = "clients.read",
         ["Clients.List"] = "clients.read",
         ["Models.List"] = "models.read",

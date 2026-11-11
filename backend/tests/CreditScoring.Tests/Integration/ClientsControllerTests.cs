@@ -303,4 +303,48 @@ public sealed class ClientsControllerTests(DatabaseFixture database) : IAsyncLif
 
         Problem((await As(admin, c => c.Anonymise(Guid.NewGuid(), CancellationToken.None))).Result!, 404, "not_found");
     }
+
+    [Fact]
+    public async Task Admin_finds_clients_of_every_branch_by_name_or_number()
+    {
+        var mine = await CreateAs(database.Officer, "Ana Petrović");
+        var theirs = await CreateAs(database.OtherOfficer, "Ana Marić");
+        await CreateAs(database.Officer, "Marko Ilić");
+        var admin = await NewUser(UserRole.Admin);
+
+        var byName = (await As(admin, c => c.Lookup(new ClientQuery { Search = "ana" }, CancellationToken.None))).Value!;
+        var byNumber = (await As(admin, c => c.Lookup(new ClientQuery { Search = theirs.ClientNumber }, CancellationToken.None))).Value!;
+
+        Assert.Equal([theirs.Id, mine.Id], byName.Items.Select(i => i.Id));
+        Assert.Equal(2, byName.TotalCount);
+        Assert.Equal([theirs.Id], byNumber.Items.Select(i => i.Id));
+        var item = byNumber.Items.Single();
+        Assert.Equal((theirs.ClientNumber, "Ana Marić", theirs.BranchId, true, null, theirs.CreatedAt),
+            (item.ClientNumber, item.FullName, item.BranchId, item.IsActive, item.AnonymisedAt, item.CreatedAt));
+    }
+
+    [Fact]
+    public async Task The_lookup_shows_anonymised_clients_and_filters_by_active()
+    {
+        var done = await CreateAs(database.Officer, "Ana Petrović");
+        var active = await CreateAs(database.Officer, "Marko Ilić");
+        var admin = await NewUser(UserRole.Admin);
+        await As(admin, c => c.Anonymise(done.Id, CancellationToken.None));
+
+        var all = (await As(admin, c => c.Lookup(new ClientQuery(), CancellationToken.None))).Value!.Items;
+        var onlyActive = (await As(admin, c => c.Lookup(new ClientQuery { Active = true }, CancellationToken.None))).Value!.Items;
+
+        var anonymised = all.Single(i => i.Id == done.Id);
+        Assert.Equal((Client.AnonymisedName, false), (anonymised.FullName, anonymised.IsActive));
+        Assert.NotNull(anonymised.AnonymisedAt);
+        Assert.Equal([active.Id], onlyActive.Select(i => i.Id));
+    }
+
+    [Fact]
+    public void The_lookup_carries_no_application_birth_date_or_contact_data()
+    {
+        var fields = typeof(ClientLookupItem).GetProperties().Select(p => p.Name).Order(StringComparer.Ordinal);
+
+        Assert.Equal(["AnonymisedAt", "BranchId", "ClientNumber", "CreatedAt", "FullName", "Id", "IsActive"], fields);
+    }
 }

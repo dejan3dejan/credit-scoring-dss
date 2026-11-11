@@ -35,7 +35,21 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
     [Authorize(Policy = Permissions.ClientsRead)]
     [ProducesResponseType<PagedResult<ClientSummary>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<PagedResult<ClientSummary>>> List([FromQuery] ClientQuery query, CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<ClientSummary>>> List([FromQuery] ClientQuery query, CancellationToken cancellationToken) =>
+        await PageAsync(query, page => Summaries(page, db), cancellationToken);
+
+    [HttpGet("lookup")]
+    [Authorize(Policy = Permissions.ClientsAnonymise)]
+    [ProducesResponseType<PagedResult<ClientLookupItem>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResult<ClientLookupItem>>> Lookup([FromQuery] ClientQuery query, CancellationToken cancellationToken) =>
+        await PageAsync(query, page => page.Select(c => new ClientLookupItem(
+            c.Id, c.ClientNumber, c.FullName, c.BranchId, c.IsActive, c.AnonymisedAt, c.CreatedAt)), cancellationToken);
+
+    private async Task<PagedResult<T>> PageAsync<T>(
+        ClientQuery query,
+        Func<IQueryable<Client>, IQueryable<T>> project,
+        CancellationToken cancellationToken)
     {
         var clients = db.Clients.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -53,9 +67,9 @@ public class ClientsController(CreditScoringDbContext db, TimeProvider time) : C
             .ThenBy(c => c.ClientNumber)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize);
-        var items = await Summaries(page, db).ToListAsync(cancellationToken);
+        var items = await project(page).ToListAsync(cancellationToken);
 
-        return new PagedResult<ClientSummary>(items, query.Page, query.PageSize, total);
+        return new PagedResult<T>(items, query.Page, query.PageSize, total);
     }
 
     internal static IQueryable<ClientSummary> Summaries(IQueryable<Client> clients, CreditScoringDbContext db) =>

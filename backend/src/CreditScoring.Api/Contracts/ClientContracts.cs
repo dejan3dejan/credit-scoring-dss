@@ -92,6 +92,15 @@ public sealed record ClientSummary(
     bool IsActive,
     DateTimeOffset? AnonymisedAt);
 
+public sealed record ClientLookupItem(
+    Guid Id,
+    string ClientNumber,
+    string FullName,
+    Guid BranchId,
+    bool IsActive,
+    DateTimeOffset? AnonymisedAt,
+    DateTimeOffset CreatedAt);
+
 public sealed record ClientDetail(
     Guid Id,
     string ClientNumber,
