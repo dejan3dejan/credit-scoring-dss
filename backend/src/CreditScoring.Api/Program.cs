@@ -5,9 +5,6 @@ using CreditScoring.Api.Decisions;
 using CreditScoring.Api.Ml;
 using CreditScoring.Api.Ui;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -46,25 +43,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(CookieSetup.Configure);
 builder.Services.AddAuthorization(Policies.Configure);
 builder.Services.AddScoped<SignInService>();
-builder.Services.AddTransient<CookieForwardingHandler>();
-
-builder.Services.AddOptions<UiOptions>()
-    .Bind(builder.Configuration.GetSection(UiOptions.SectionName));
-builder.Services.AddHttpClient<ApplicationsApi>((services, client) =>
-    client.BaseAddress = services.GetRequiredService<IOptions<UiOptions>>().Value.ApiBaseUrl
-        ?? SelfAddress.Choose(services.GetRequiredService<IServer>().Features.GetRequiredFeature<IServerAddressesFeature>().Addresses))
-    .AddHttpMessageHandler<CookieForwardingHandler>();
-builder.Services.AddRazorPages(options =>
-{
-    options.Conventions.AllowAnonymousToPage("/Account/Login");
-    options.Conventions.AllowAnonymousToPage("/Error");
-    options.Conventions.AuthorizeFolder("/Applications", Permissions.ApplicationsRead);
-    options.Conventions.AuthorizeFolder("/Clients", Permissions.ClientsRead);
-    options.Conventions.AuthorizePage("/Model", Permissions.ModelsRead);
-    options.Conventions.AuthorizePage("/Applications/New", Permissions.ApplicationsWrite);
-    options.Conventions.AuthorizePage("/Clients/New", Permissions.ClientsWrite);
-    options.Conventions.AuthorizePage("/Dashboard", Permissions.StatsRead);
-});
 
 var app = builder.Build();
 
@@ -81,7 +59,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler("/Error");
+    app.UseExceptionHandler();
 }
 
 app.UseHttpsRedirection();
@@ -90,7 +68,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapRazorPages();
 SpaHosting.Map(app);
 
 app.Run();

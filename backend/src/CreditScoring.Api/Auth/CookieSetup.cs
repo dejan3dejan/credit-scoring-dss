@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CreditScoring.Api.Data;
 using CreditScoring.Api.Domain;
+using CreditScoring.Api.Ui;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
@@ -17,8 +18,8 @@ public static class CookieSetup
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        options.LoginPath = "/account/login";
-        options.AccessDeniedPath = "/account/denied";
+        options.LoginPath = SpaHosting.BasePath;
+        options.AccessDeniedPath = SpaHosting.BasePath;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
         options.Events.OnRedirectToLogin = context => RedirectOrProblem(context, StatusCodes.Status401Unauthorized);
@@ -56,7 +57,7 @@ public static class CookieSetup
         if (context.Request.Path.StartsWithSegments("/api"))
             return Results.Problem(statusCode: status).ExecuteAsync(context.HttpContext);
 
-        context.Response.Redirect(context.RedirectUri);
+        context.Response.Redirect(SpaHosting.BasePath);
         return Task.CompletedTask;
     }
 }

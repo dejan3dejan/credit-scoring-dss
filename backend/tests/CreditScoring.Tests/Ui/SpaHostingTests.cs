@@ -1,5 +1,8 @@
 using CreditScoring.Api.Ui;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.FileProviders;
 
 namespace CreditScoring.Tests.Ui;
@@ -54,5 +57,23 @@ public sealed class SpaHostingTests : IDisposable
         Assert.Equal("/app", SpaHosting.BasePath);
         Assert.Equal("app/{**path:nonfile}", SpaHosting.RoutePattern);
         Assert.Equal("app/index.html", SpaHosting.ShellFile);
+    }
+
+    [Fact]
+    public async Task The_root_redirects_to_the_spa_without_a_sign_in()
+    {
+        await using var app = WebApplication.CreateBuilder().Build();
+        SpaHosting.Map(app);
+        var root = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(source => source.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(endpoint => endpoint.RoutePattern.RawText == "/");
+        var context = new DefaultHttpContext { RequestServices = app.Services };
+
+        await root.RequestDelegate!(context);
+
+        Assert.NotNull(root.Metadata.GetMetadata<IAllowAnonymous>());
+        Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+        Assert.Equal("/app", context.Response.Headers.Location.ToString());
     }
 }

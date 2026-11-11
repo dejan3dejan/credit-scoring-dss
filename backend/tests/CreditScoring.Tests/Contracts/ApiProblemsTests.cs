@@ -34,7 +34,7 @@ public class ApiProblemsTests
         var options = new CookieAuthenticationOptions();
         CookieSetup.Configure(options);
         var scheme = new AuthenticationScheme(CookieAuthenticationDefaults.AuthenticationScheme, null, typeof(CookieAuthenticationHandler));
-        var redirect = new RedirectContext<CookieAuthenticationOptions>(context, scheme, options, new AuthenticationProperties(), "/account/login?ReturnUrl=x");
+        var redirect = new RedirectContext<CookieAuthenticationOptions>(context, scheme, options, new AuthenticationProperties(), "/app?ReturnUrl=x");
         return pick(options.Events)(redirect);
     }
 
@@ -98,14 +98,37 @@ public class ApiProblemsTests
         Assert.Equal("forbidden", (await Body(context)).GetProperty("code").GetString());
     }
 
-    [Fact]
-    public async Task Pages_outside_api_still_redirect_to_the_login_page()
+    [Theory]
+    [InlineData("/applications")]
+    [InlineData("/account/login")]
+    public async Task A_missing_sign_in_outside_api_lands_in_the_spa(string path)
     {
-        var context = Context("/applications");
+        var context = Context(path);
 
         await Raise(context, e => e.OnRedirectToLogin);
 
         Assert.Equal(302, context.Response.StatusCode);
-        Assert.Equal("/account/login?ReturnUrl=x", context.Response.Headers.Location.ToString());
+        Assert.Equal("/app", context.Response.Headers.Location.ToString());
+    }
+
+    [Fact]
+    public async Task A_missing_permission_outside_api_lands_in_the_spa()
+    {
+        var context = Context("/applications");
+
+        await Raise(context, e => e.OnRedirectToAccessDenied);
+
+        Assert.Equal(302, context.Response.StatusCode);
+        Assert.Equal("/app", context.Response.Headers.Location.ToString());
+    }
+
+    [Fact]
+    public void The_cookie_paths_point_into_the_spa()
+    {
+        var options = new CookieAuthenticationOptions();
+        CookieSetup.Configure(options);
+
+        Assert.Equal("/app", options.LoginPath.Value);
+        Assert.Equal("/app", options.AccessDeniedPath.Value);
     }
 }

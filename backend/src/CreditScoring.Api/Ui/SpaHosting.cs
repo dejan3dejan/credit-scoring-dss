@@ -8,9 +8,12 @@ public static class SpaHosting
     public const string RoutePattern = "app/{**path:nonfile}";
     public const string ShellFile = "app/index.html";
 
-    public static void Map(WebApplication app) =>
+    public static void Map(WebApplication app)
+    {
+        app.MapGet("/", () => Results.Redirect(BasePath)).AllowAnonymous();
         app.MapFallback(RoutePattern, context => ServeShellAsync(context, app.Environment.WebRootFileProvider))
             .AllowAnonymous();
+    }
 
     public static async Task ServeShellAsync(HttpContext context, IFileProvider webRoot)
     {
