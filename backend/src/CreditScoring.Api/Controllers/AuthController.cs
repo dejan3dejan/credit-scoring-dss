@@ -11,6 +11,7 @@ namespace CreditScoring.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[AllowedBeforePasswordChange]
 public class AuthController(SignInService signIn, CreditScoringDbContext db) : ControllerBase
 {
     [HttpPost("login")]

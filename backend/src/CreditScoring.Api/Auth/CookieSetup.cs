@@ -48,6 +48,10 @@ public static class CookieSetup
             case SessionCheck.Refresh:
                 context.ReplacePrincipal(Credentials.PrincipalFor(user!));
                 context.ShouldRenew = true;
+                PasswordChangeGate.Record(context.HttpContext, user!.MustChangePassword);
+                break;
+            case SessionCheck.Valid:
+                PasswordChangeGate.Record(context.HttpContext, user!.MustChangePassword);
                 break;
         }
     }
