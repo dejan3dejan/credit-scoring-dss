@@ -2,7 +2,10 @@
 
 FastAPI service that scores one applicant and returns P(bad). It serves the
 `/v1` and `/v2` endpoints for German Credit models and `/v3` for Lending Club
-models, and nothing else: no decision, no business rules.
+models, and nothing else: no decision, no business rules. The backend calls
+only `/v3`. `/v1` and `/v2` remain for the German Credit proof of concept;
+their models are not committed, so in a fresh clone or in Compose `/v1`
+answers `503 model_unavailable` and `/v2/models` lists none.
 
 Each model file in the models directory is served under the version that
 matches the dataset in its metadata, after a check that its inputs match
