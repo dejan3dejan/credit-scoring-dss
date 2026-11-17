@@ -4,6 +4,7 @@ public enum SignOffReason
 {
     OverridesReject = 1,
     LargeAmount = 2,
+    NoScore = 3,
 }
 
 public enum SignOffStatus
@@ -20,6 +21,7 @@ public static class SignOffRules
     public static SignOffReason? ReasonFor(Recommendation? recommendation, FinalDecision outcome, int loanAmount) =>
         outcome != FinalDecision.Approve ? null
         : recommendation == Recommendation.Reject ? SignOffReason.OverridesReject
+        : recommendation is null ? SignOffReason.NoScore
         : loanAmount > LargeLoanAmount ? SignOffReason.LargeAmount
         : null;
 }

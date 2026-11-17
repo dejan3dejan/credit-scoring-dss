@@ -175,8 +175,27 @@ public class OfficerDecisionRuleTests
         Assert.Contains("no recommendation", refused.Message);
 
         var recorded = Assert.IsType<DecisionRecorded>(
-            Service().RecordOfficerDecision(Unavailable(), FinalDecision.Approve, "manual check", TestData.Officer, actsForBranch: false));
+            Service().RecordOfficerDecision(Unavailable(), FinalDecision.Reject, "manual check", TestData.Officer, actsForBranch: false));
         Assert.False(recorded.Decision.IsOverride);
+    }
+
+    [Fact]
+    public void An_officer_approving_without_a_score_asks_for_a_sign_off()
+    {
+        var application = Unavailable();
+
+        var requested = Assert.IsType<SignOffRequested>(
+            Service().RecordOfficerDecision(application, FinalDecision.Approve, "manual check", TestData.Officer, actsForBranch: false));
+
+        Assert.Equal(SignOffReason.NoScore, requested.Request.Why);
+        Assert.Equal(ApplicationStage.AwaitingSignOff, application.Stage);
+    }
+
+    [Fact]
+    public void A_manager_approving_without_a_score_needs_no_sign_off()
+    {
+        Assert.IsType<DecisionRecorded>(
+            Service().RecordOfficerDecision(Unavailable(), FinalDecision.Approve, "manual check", Manager, actsForBranch: true));
     }
 
     [Fact]

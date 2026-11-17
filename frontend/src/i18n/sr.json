@@ -229,7 +229,8 @@
     },
     "SignOffReason": {
       "OverridesReject": "odobrenje uprkos preporuci Odbiti",
-      "LargeAmount": "iznos veći od 25.000 USD"
+      "LargeAmount": "iznos veći od 25.000 USD",
+      "NoScore": "odobrenje bez ocene modela"
     },
     "SignOffStatus": {
       "Pending": "Čeka",

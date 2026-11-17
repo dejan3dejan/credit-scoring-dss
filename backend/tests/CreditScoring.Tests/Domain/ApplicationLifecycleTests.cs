@@ -30,8 +30,10 @@ public class ApplicationLifecycleTests
     [InlineData(Recommendation.Reject, FinalDecision.Approve, 12_000, SignOffReason.OverridesReject)]
     [InlineData(Recommendation.Approve, FinalDecision.Approve, SignOffRules.LargeLoanAmount + 1, SignOffReason.LargeAmount)]
     [InlineData(Recommendation.Reject, FinalDecision.Approve, SignOffRules.LargeLoanAmount + 1, SignOffReason.OverridesReject)]
-    public void Approving_against_a_reject_or_a_large_amount_needs_a_sign_off(
-        Recommendation recommendation, FinalDecision outcome, int amount, SignOffReason why)
+    [InlineData(null, FinalDecision.Approve, 12_000, SignOffReason.NoScore)]
+    [InlineData(null, FinalDecision.Approve, SignOffRules.LargeLoanAmount + 1, SignOffReason.NoScore)]
+    public void Approving_against_a_reject_without_a_score_or_a_large_amount_needs_a_sign_off(
+        Recommendation? recommendation, FinalDecision outcome, int amount, SignOffReason why)
     {
         Assert.Equal(why, SignOffRules.ReasonFor(recommendation, outcome, amount));
     }
@@ -41,7 +43,7 @@ public class ApplicationLifecycleTests
     [InlineData(Recommendation.Review, FinalDecision.Approve, 12_000)]
     [InlineData(Recommendation.Approve, FinalDecision.Reject, 35_000)]
     [InlineData(Recommendation.Reject, FinalDecision.Reject, 35_000)]
-    [InlineData(null, FinalDecision.Approve, 12_000)]
+    [InlineData(null, FinalDecision.Reject, 12_000)]
     public void Other_decisions_need_no_sign_off(Recommendation? recommendation, FinalDecision outcome, int amount)
     {
         Assert.Null(SignOffRules.ReasonFor(recommendation, outcome, amount));

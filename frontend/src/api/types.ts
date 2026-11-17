@@ -41,7 +41,7 @@ export type ReviewFilter = "Pending" | "Approved" | "Rejected" | "Override";
 export type LoanOutcomeFilter = "Pending" | "Repaid" | "Defaulted";
 
 export type Note = { id: string; text: string; author: string; createdAt: string };
-export type SignOffReason = "OverridesReject" | "LargeAmount";
+export type SignOffReason = "OverridesReject" | "LargeAmount" | "NoScore";
 export type SignOffStatus = "Pending" | "Approved" | "Returned";
 export type ModelRole = "Active" | "Shadow" | "Retired";
 export type DecisionPath = "AsRecommended" | "AfterReview" | "Override" | "WithoutScore";

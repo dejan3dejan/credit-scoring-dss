@@ -229,7 +229,8 @@
     },
     "SignOffReason": {
       "OverridesReject": "approves against a Reject recommendation",
-      "LargeAmount": "amount above 25,000 USD"
+      "LargeAmount": "amount above 25,000 USD",
+      "NoScore": "approves without a model score"
     },
     "SignOffStatus": {
       "Pending": "Waiting",
