@@ -9,7 +9,7 @@ Undergraduate thesis project, Faculty of Technical Sciences, University of Novi 
 | Folder | What it is |
 |---|---|
 | `frontend/` | React app (Vite, TypeScript), in English and Serbian, served by the backend under `/app` |
-| `backend/` | ASP.NET Core 9: REST API, business rules, PostgreSQL through EF Core; the older Razor Pages UI stays until the React app replaces it |
+| `backend/` | ASP.NET Core 9: REST API, business rules, PostgreSQL through EF Core; serves the React app and sends every non-API path to it |
 | `inference/` | FastAPI service that turns 18 application inputs into P(bad) and its top factors. No business rules |
 | `ml/` | Offline data work, experiments and model training (Python, scikit-learn, XGBoost) |
 | `architecture/` | Diagrams of the whole system: context, components, classes, database, flows, ML pipeline |
@@ -24,7 +24,7 @@ Needs Docker Desktop.
 docker compose up --build
 ```
 
-Then open http://localhost:8080/app for the React app (the older Razor Pages UI is still at http://localhost:8080). The first start builds two images and takes a few minutes; later starts take seconds.
+Then open http://localhost:8080/app (http://localhost:8080 redirects there). The first start builds two images and takes a few minutes; later starts take seconds.
 
 - `db`: PostgreSQL 17, also reachable on port 5433
 - `inference`: http://localhost:8000 (`/health`, `/v3/models`)
@@ -37,7 +37,7 @@ The database is created and migrated on start. Five demo users are seeded: `admi
 | Officer | create clients and applications, save drafts, record decisions; sees only their own branch |
 | Manager | everything the officer can in their branch, plus assigning work, signing off risky approvals and the dashboard |
 | Risk | read all applications, record loan outcomes, the dashboard, the model registry and the audit log |
-| Admin | users, branches and the audit log; no access to clients or applications |
+| Admin | users, branches and the audit log; can look up and anonymise a client, but cannot read client files or applications |
 
 The served model `ml/models/credit_lc_xgb_isotonic_v1.joblib` is committed, so nothing has to be trained to run the app.
 

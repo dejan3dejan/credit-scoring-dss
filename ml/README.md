@@ -1,8 +1,10 @@
 # credit-scoring-ml
 
-Data and model work for a credit scoring decision support system, built on
-the Statlog German Credit dataset. The output is a calibrated model that
-returns the probability of default for one applicant.
+Data and model work for a credit scoring decision support system. The served
+model is trained on Lending Club loans (36-month, issued 2012 to 2014, tested
+once on 2015); the Statlog German Credit work is the earlier proof of concept.
+The output is a calibrated model that returns the probability of default for
+one applicant.
 
 ## Setup
 
