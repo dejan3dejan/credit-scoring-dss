@@ -17,7 +17,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build /app .
 COPY --from=frontend-build /backend/src/CreditScoring.Api/wwwroot/app ./wwwroot/app
-ENV ASPNETCORE_URLS=http://+:8080 \
-    ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "CreditScoring.Api.dll"]
