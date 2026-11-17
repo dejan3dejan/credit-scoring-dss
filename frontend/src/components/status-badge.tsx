@@ -16,7 +16,7 @@ export function StatusBadge({ recommendation }: { recommendation: Recommendation
   const { icon: Icon, className } = styles[key];
   return (
     <span className={cn("inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-semibold", className)}>
-      <Icon className="size-3.5" aria-hidden="true" />
+      <Icon className="size-3.5" strokeWidth={2.75} aria-hidden="true" />
       {t(`recommendation.${key}`)}
     </span>
   );
