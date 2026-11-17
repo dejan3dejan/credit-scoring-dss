@@ -9,6 +9,7 @@ export const en = {
     models: "Models",
     users: "Users",
     branches: "Branches",
+    anonymise: "Anonymise clients",
     audit: "Audit log",
   },
   noAccess: "No access",

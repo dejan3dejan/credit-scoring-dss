@@ -12,11 +12,11 @@ const navOf: Record<Role, string[]> = {
   Officer: [en.home.Officer, en.nav.applications, en.nav.clients, en.nav.models],
   Manager: [en.home.Manager, en.nav.applications, en.nav.clients, en.nav.dashboard, en.nav.models],
   Risk: [en.home.Risk, en.nav.applications, en.nav.clients, en.nav.dashboard, en.nav.models, en.nav.audit],
-  Admin: [en.home.Admin, en.nav.users, en.nav.branches, en.nav.audit],
+  Admin: [en.home.Admin, en.nav.users, en.nav.branches, en.nav.anonymise, en.nav.audit],
 };
 
 const refusedPages: Record<Role, string[]> = {
-  Officer: ["/dashboard", "/users", "/users/new", "/branches", "/audit"],
+  Officer: ["/dashboard", "/users", "/users/new", "/branches", "/anonymise", "/audit"],
   Manager: ["/users", "/users/new", "/branches", "/audit"],
   Risk: ["/users", "/branches", "/applications/new", "/clients/new"],
   Admin: ["/applications", "/applications/new", "/clients", "/clients/new", "/dashboard", "/models"],
@@ -26,7 +26,7 @@ const allowedPages: Record<Role, [string, string][]> = {
   Officer: [["/applications", en.nav.applications], ["/clients", en.nav.clients], ["/applications/new", "New application"]],
   Manager: [["/dashboard", en.dashboard.title], ["/applications", en.nav.applications]],
   Risk: [["/dashboard", en.dashboard.title], ["/audit", en.nav.audit], ["/applications", en.nav.applications]],
-  Admin: [["/users", en.nav.users], ["/branches", en.nav.branches], ["/audit", en.nav.audit]],
+  Admin: [["/users", en.nav.users], ["/branches", en.nav.branches], ["/anonymise", en.nav.anonymise], ["/audit", en.nav.audit]],
 };
 
 for (const role of Object.keys(userOf) as Role[]) {
