@@ -36,7 +36,7 @@ The database is created and migrated on start. Five demo users are seeded: `admi
 |---|---|
 | Officer | create clients and applications, save drafts, record decisions; sees only their own branch |
 | Manager | everything the officer can in their branch, plus assigning work, signing off risky approvals and the dashboard |
-| Risk | read all applications, record loan outcomes, the dashboard, the model registry and the audit log |
+| Risk | read all applications, record and correct loan outcomes, the dashboard, the model registry and the audit log |
 | Admin | users, branches and the audit log; can look up and anonymise a client, but cannot read client files or applications |
 
 The served model `ml/models/credit_lc_xgb_isotonic_v1.joblib` is committed, so nothing has to be trained to run the app.

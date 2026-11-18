@@ -19,7 +19,25 @@ public sealed record RecordOutcomeRequest
     public string? Note { get; init; }
 }
 
-public sealed record LoanOutcomeResponse(LoanOutcomeKind Outcome, string? Note, string RecordedBy, DateTimeOffset RecordedAt)
+public sealed record CorrectOutcomeRequest
 {
-    public static LoanOutcomeResponse From(LoanOutcome outcome) => new(outcome.Outcome, outcome.Note, outcome.RecordedBy, outcome.RecordedAt);
+    [Required, EnumDataType(typeof(LoanOutcomeKind)), Display(Name = "Outcome")]
+    public LoanOutcomeKind? Outcome { get; init; }
+
+    [Required, StringLength(BusinessLimits.DecisionReasonMaxLength), Display(Name = "Reason")]
+    public string? Reason { get; init; }
+}
+
+public sealed record LoanOutcomeResponse(
+    LoanOutcomeKind Outcome,
+    string? Note,
+    string RecordedBy,
+    DateTimeOffset RecordedAt,
+    string? CorrectionReason,
+    string? CorrectedBy,
+    DateTimeOffset? CorrectedAt)
+{
+    public static LoanOutcomeResponse From(LoanOutcome outcome) => new(
+        outcome.Outcome, outcome.Note, outcome.RecordedBy, outcome.RecordedAt,
+        outcome.CorrectionReason, outcome.CorrectedBy, outcome.CorrectedAt);
 }

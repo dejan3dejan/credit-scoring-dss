@@ -139,6 +139,73 @@ describe("loan outcome", () => {
     });
   });
 
+  const recorded = {
+    ...decidedApproved,
+    loanOutcome: { outcome: "Repaid", note: null, recordedBy: "Vera Testić", recordedAt: "2027-08-01T09:00:00Z", correctionReason: null, correctedBy: null, correctedAt: null },
+  } as const;
+
+  it("lets risk staff correct a recorded outcome with a reason", async () => {
+    const calls = stubApi({
+      ...signedInAs("Risk"),
+      ...get(recorded),
+      ...noNotes,
+      "GET /api/applications/a1/shadow-scores": { status: 200, body: [] },
+      "PUT /api/applications/a1/outcome": {
+        status: 200,
+        body: {
+          ...recorded,
+          loanOutcome: { ...recorded.loanOutcome, outcome: "Defaulted", correctionReason: "The report was for another loan.", correctedBy: "Rade Testić", correctedAt: "2027-08-03T09:00:00Z" },
+        },
+      },
+    });
+    renderApp("/applications/a1");
+    const user = userEvent.setup();
+    const card = (await screen.findByRole("heading", { name: "Loan outcome" })).closest("section")!;
+    expect(within(card).getByText(/Repaid, recorded by Vera Testić/)).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "Correct outcome" }));
+    await user.click(within(card).getByRole("radio", { name: "Defaulted" }));
+    await user.type(within(card).getByLabelText("Reason for the correction"), "The report was for another loan.");
+    await user.click(within(card).getByRole("button", { name: "Save correction" }));
+
+    expect(await within(card).findByText(/Defaulted \(corrected\)\. First recorded by Vera Testić/)).toBeInTheDocument();
+    expect(within(card).getByText(/Corrected by Rade Testić/)).toBeInTheDocument();
+    expect(within(card).getByText("The report was for another loan.")).toBeInTheDocument();
+    expect(screen.getByText("Loan outcome recorded by Vera Testić")).toBeInTheDocument();
+    expect(screen.getByText("Loan defaulted, corrected by Rade Testić")).toBeInTheDocument();
+    expect(calls.find((c) => c.path === "/api/applications/a1/outcome" && c.method === "PUT")?.body).toEqual({
+      outcome: "Defaulted",
+      reason: "The report was for another loan.",
+    });
+  });
+
+  it("shows the server's refusal of a correction without a reason", async () => {
+    stubApi({
+      ...signedInAs("Risk"),
+      ...get(recorded),
+      ...noNotes,
+      "GET /api/applications/a1/shadow-scores": { status: 200, body: [] },
+      "PUT /api/applications/a1/outcome": {
+        status: 400,
+        body: { status: 400, title: "Invalid", code: "validation_failed", fieldErrors: { reason: [{ code: "reason_required" }] } },
+      },
+    });
+    renderApp("/applications/a1");
+    const user = userEvent.setup();
+    const card = (await screen.findByRole("heading", { name: "Loan outcome" })).closest("section")!;
+    await user.click(within(card).getByRole("button", { name: "Correct outcome" }));
+    await user.click(within(card).getByRole("radio", { name: "Defaulted" }));
+    await user.click(within(card).getByRole("button", { name: "Save correction" }));
+    expect(await within(card).findByText("Give a reason.")).toBeInTheDocument();
+  });
+
+  it("does not offer a correction to roles that cannot record outcomes", async () => {
+    stubApi({ ...signedInAs("Manager"), ...get(recorded), ...noNotes, "GET /api/applications/a1/shadow-scores": { status: 200, body: [] } });
+    renderApp("/applications/a1");
+    const card = (await screen.findByRole("heading", { name: "Loan outcome" })).closest("section")!;
+    expect(within(card).getByText(/Repaid, recorded by Vera Testić/)).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Correct outcome" })).toBeNull();
+  });
+
   it("is not asked for a rejected application, where no loan was issued", async () => {
     stubApi({
       ...signedInAs("Risk"),

@@ -567,6 +567,24 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("CorrectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("corrected_at");
+
+                    b.Property<string>("CorrectedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("corrected_by");
+
+                    b.Property<Guid?>("CorrectedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("corrected_by_user_id");
+
+                    b.Property<string>("CorrectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("correction_reason");
+
                     b.Property<Guid>("CreditApplicationId")
                         .HasColumnType("uuid")
                         .HasColumnName("credit_application_id");
@@ -597,6 +615,8 @@ namespace CreditScoring.Api.Data.Migrations
                         .HasColumnName("recorded_by_user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CorrectedByUserId");
 
                     b.HasIndex("CreditApplicationId")
                         .IsUnique();
@@ -1197,6 +1217,11 @@ namespace CreditScoring.Api.Data.Migrations
 
             modelBuilder.Entity("CreditScoring.Api.Domain.LoanOutcome", b =>
                 {
+                    b.HasOne("CreditScoring.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("CorrectedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("CreditScoring.Api.Domain.CreditApplication", null)
                         .WithOne("LoanOutcome")
                         .HasForeignKey("CreditScoring.Api.Domain.LoanOutcome", "CreditApplicationId")

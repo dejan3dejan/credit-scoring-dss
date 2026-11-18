@@ -436,12 +436,16 @@ function Timeline({ application: a }: { application: ApplicationResponse }) {
       }),
       tone: "done",
     });
-  if (a.loanOutcome)
-    entries.push({
-      at: a.loanOutcome.recordedAt,
-      text: t("actions.tlOutcome", { outcome: t(`enums.LoanOutcomeKind.${a.loanOutcome.outcome}`).toLowerCase(), name: a.loanOutcome.recordedBy }),
-      tone: a.loanOutcome.outcome === "Repaid" ? "done" : "failed",
-    });
+  if (a.loanOutcome) {
+    const outcome = t(`enums.LoanOutcomeKind.${a.loanOutcome.outcome}`).toLowerCase();
+    const tone = a.loanOutcome.outcome === "Repaid" ? "done" : "failed";
+    if (a.loanOutcome.correctedAt && a.loanOutcome.correctedBy) {
+      entries.push({ at: a.loanOutcome.recordedAt, text: t("actions.tlOutcomeRecorded", { name: a.loanOutcome.recordedBy }), tone: "done" });
+      entries.push({ at: a.loanOutcome.correctedAt, text: t("actions.tlOutcomeCorrected", { outcome, name: a.loanOutcome.correctedBy }), tone });
+    } else {
+      entries.push({ at: a.loanOutcome.recordedAt, text: t("actions.tlOutcome", { outcome, name: a.loanOutcome.recordedBy }), tone });
+    }
+  }
   if (a.withdrawal) entries.push({ at: a.withdrawal.at, text: t("details.tlWithdrawn", { name: a.withdrawal.by }), tone: "failed" });
   if (a.stage === "Submitted") entries.push({ at: null, text: t("details.tlAwaiting"), tone: "pending" });
 

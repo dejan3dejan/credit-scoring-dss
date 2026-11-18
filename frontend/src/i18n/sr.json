@@ -132,7 +132,8 @@
     "branch_has_active_users": "Ova filijala još ima aktivne korisnike. Prvo ih premestite ili deaktivirajte.",
     "branch_inactive": "Filijala korisnika je deaktivirana. Prvo premestite korisnika u aktivnu filijalu.",
     "edited_elsewhere": "Neko drugi je ovo u međuvremenu izmenio. Prikazane su nove vrednosti; ponovite izmenu.",
-    "client_has_open_application": "Ovaj klijent već ima otvoren zahtev. Prvo ga odlučite ili povucite."
+    "client_has_open_application": "Ovaj klijent već ima otvoren zahtev. Prvo ga odlučite ili povucite.",
+    "no_outcome": "Za ovaj kredit još nije zabeležen ishod."
   },
   "fieldErrors": {
     "required": "Ovo polje je obavezno.",
@@ -174,7 +175,8 @@
     "must_be_zero": "Mora biti 0 kada je {{other}} 0.",
     "too_young": "Klijent mora imati najmanje {{minimumAge}} godina.",
     "too_old": "Klijent ne može biti stariji od {{maximumAge}} godina.",
-    "client_has_open_application": "Ovaj klijent već ima otvoren zahtev, {{reference}}."
+    "client_has_open_application": "Ovaj klijent već ima otvoren zahtev, {{reference}}.",
+    "same_outcome": "Kredit već ima ovaj ishod."
   },
   "enums": {
     "LoanPurpose": {
@@ -666,7 +668,15 @@
     "outcomeRecorded": "Ishod je zabeležen.",
     "outcomeShown": "{{outcome}}, zabeležio/la {{name}}, {{date}}.",
     "tlOutcome": "Kredit: {{outcome}}, zabeležio/la {{name}}",
-    "tlNote": "Beleška, {{name}}"
+    "tlNote": "Beleška, {{name}}",
+    "correctOutcome": "Ispravi ishod",
+    "correctionReason": "Razlog ispravke",
+    "saveCorrection": "Sačuvaj ispravku",
+    "outcomeCorrected": "Ishod je ispravljen.",
+    "correctedShown": "Ispravio/la {{name}}, {{date}}.",
+    "tlOutcomeRecorded": "Ishod kredita zabeležio/la {{name}}",
+    "tlOutcomeCorrected": "Kredit: {{outcome}}, ispravio/la {{name}}",
+    "outcomeShownCorrected": "{{outcome}} (ispravljeno). Prvi put zabeležio/la {{name}}, {{date}}."
   },
   "drafts": {
     "discard": "Odbaci nacrt",

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { addNote, applicationKey, assign, listNotes, notesKey, recordOutcome, withdraw } from "@/api/applications";
+import { addNote, applicationKey, assign, correctOutcome, listNotes, notesKey, recordOutcome, withdraw } from "@/api/applications";
 import { ApiError } from "@/api/client";
 import type { ApplicationResponse, LoanOutcomeKind, MeResponse } from "@/api/types";
 import { getTeamWork } from "@/api/work";
@@ -39,7 +39,7 @@ export function ApplicationActions({ application: a, me }: { application: Applic
   return (
     <>
       {can(me, "applications.assign") && isOpen(a) && <AssignCard application={a} />}
-      {loanIssued && (a.loanOutcome || can(me, "outcomes.record")) && <OutcomeCard application={a} />}
+      {loanIssued && (a.loanOutcome || can(me, "outcomes.record")) && <OutcomeCard application={a} canRecord={can(me, "outcomes.record")} />}
       <NotesCard application={a} canWrite={can(me, "applications.write")} />
     </>
   );
@@ -148,74 +148,141 @@ export function WithdrawAction({ application: a }: { application: ApplicationRes
   );
 }
 
-function OutcomeCard({ application: a }: { application: ApplicationResponse }) {
+function OutcomeChoice({
+  name,
+  value,
+  onChange,
+  errors,
+}: {
+  name: string;
+  value: LoanOutcomeKind | null;
+  onChange: (value: LoanOutcomeKind) => void;
+  errors?: Parameters<typeof FieldErrors>[0]["errors"];
+}) {
+  const { t } = useTranslation();
+  return (
+    <fieldset className="grid gap-1.5">
+      <legend className="mb-1.5 text-sm font-medium">{t("actions.outcome")}</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {(["Repaid", "Defaulted"] as const).map((option) => (
+          <label
+            key={option}
+            className={cn(
+              "flex cursor-pointer items-center justify-center gap-2 rounded-md border px-3 py-2 font-medium has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50",
+              value === option ? "border-foreground bg-muted" : "bg-card hover:bg-muted/60",
+            )}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option}
+              checked={value === option}
+              onChange={() => onChange(option)}
+              className="accent-foreground"
+            />
+            {t(`enums.LoanOutcomeKind.${option}`)}
+          </label>
+        ))}
+      </div>
+      <FieldErrors id={`${name}-error`} errors={errors} />
+    </fieldset>
+  );
+}
+
+function OutcomeCard({ application: a, canRecord }: { application: ApplicationResponse; canRecord: boolean }) {
   const { t } = useTranslation();
   const language = useLanguage();
   const update = useApplicationUpdate(a.id);
   const [outcome, setOutcome] = useState<LoanOutcomeKind | null>(null);
-  const [note, setNote] = useState("");
-  const change = useMutation({
-    mutationFn: () => recordOutcome(a.id, outcome, note.trim() || null),
+  const [text, setText] = useState("");
+  const [correcting, setCorrecting] = useState(false);
+  const record = useMutation({
+    mutationFn: () => recordOutcome(a.id, outcome, text.trim() || null),
     onSuccess: (fresh) => {
       update(fresh);
+      setOutcome(null);
+      setText("");
       toast.success(t("actions.outcomeRecorded"));
     },
   });
+  const correct = useMutation({
+    mutationFn: () => correctOutcome(a.id, outcome, text.trim() || null),
+    onSuccess: (fresh) => {
+      update(fresh);
+      setCorrecting(false);
+      setOutcome(null);
+      setText("");
+      toast.success(t("actions.outcomeCorrected"));
+    },
+  });
+  const change = a.loanOutcome ? correct : record;
   const errors = fieldErrorsOf(change.error);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    change.mutate();
+  };
 
   if (a.loanOutcome)
     return (
       <Card title={t("actions.outcomeTitle")}>
         <p>
-          {t("actions.outcomeShown", {
+          {t(a.loanOutcome.correctedAt ? "actions.outcomeShownCorrected" : "actions.outcomeShown", {
             outcome: t(`enums.LoanOutcomeKind.${a.loanOutcome.outcome}`),
             name: a.loanOutcome.recordedBy,
             date: formatDateTime(a.loanOutcome.recordedAt, language),
           })}
         </p>
         {a.loanOutcome.note && <blockquote className="mt-2 border-l-2 pl-3 text-muted-foreground">{a.loanOutcome.note}</blockquote>}
+        {a.loanOutcome.correctedBy && a.loanOutcome.correctedAt && (
+          <>
+            <p className="mt-3">
+              {t("actions.correctedShown", { name: a.loanOutcome.correctedBy, date: formatDateTime(a.loanOutcome.correctedAt, language) })}
+            </p>
+            {a.loanOutcome.correctionReason && (
+              <blockquote className="mt-2 border-l-2 pl-3 text-muted-foreground">{a.loanOutcome.correctionReason}</blockquote>
+            )}
+          </>
+        )}
+        {canRecord && !correcting && (
+          <div className="mt-3">
+            <Button type="button" variant="outline" onClick={() => setCorrecting(true)}>
+              {t("actions.correctOutcome")}
+            </Button>
+          </div>
+        )}
+        {canRecord && correcting && (
+          <form noValidate className="mt-3 grid gap-3" onSubmit={submit}>
+            <OutcomeChoice name="correctedOutcome" value={outcome} onChange={setOutcome} errors={errors.outcome} />
+            <TextareaField
+              label={t("actions.correctionReason")}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              maxLength={500}
+              rows={2}
+              errors={errors.reason}
+            />
+            <GeneralError error={change.error} />
+            <div className="flex gap-2">
+              <Button type="submit" disabled={change.isPending}>
+                {t("actions.saveCorrection")}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setCorrecting(false)}>
+                {t("actions.cancel")}
+              </Button>
+            </div>
+          </form>
+        )}
       </Card>
     );
 
   return (
     <Card title={t("actions.outcomeTitle")}>
-      <form
-        noValidate
-        className="grid gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          change.mutate();
-        }}
-      >
-        <fieldset className="grid gap-1.5">
-          <legend className="mb-1.5 text-sm font-medium">{t("actions.outcome")}</legend>
-          <div className="grid grid-cols-2 gap-2">
-            {(["Repaid", "Defaulted"] as const).map((value) => (
-              <label
-                key={value}
-                className={cn(
-                  "flex cursor-pointer items-center justify-center gap-2 rounded-md border px-3 py-2 font-medium has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50",
-                  outcome === value ? "border-foreground bg-muted" : "bg-card hover:bg-muted/60",
-                )}
-              >
-                <input
-                  type="radio"
-                  name="loanOutcome"
-                  value={value}
-                  checked={outcome === value}
-                  onChange={() => setOutcome(value)}
-                  className="accent-foreground"
-                />
-                {t(`enums.LoanOutcomeKind.${value}`)}
-              </label>
-            ))}
-          </div>
-          <FieldErrors id="loan-outcome-error" errors={errors.outcome} />
-        </fieldset>
+      <form noValidate className="grid gap-3" onSubmit={submit}>
+        <OutcomeChoice name="loanOutcome" value={outcome} onChange={setOutcome} errors={errors.outcome} />
         <TextareaField
           label={t("actions.outcomeNote")}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
           maxLength={500}
           rows={2}
           errors={errors.note}

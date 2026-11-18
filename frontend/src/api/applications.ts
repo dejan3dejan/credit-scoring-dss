@@ -85,5 +85,8 @@ export const assign = (id: string, userId: string) =>
 export const recordOutcome = (id: string, outcome: LoanOutcomeKind | null, note: string | null) =>
   request<ApplicationResponse>(`/api/applications/${id}/outcome`, { method: "POST", body: { outcome, note } });
 
+export const correctOutcome = (id: string, outcome: LoanOutcomeKind | null, reason: string | null) =>
+  request<ApplicationResponse>(`/api/applications/${id}/outcome`, { method: "PUT", body: { outcome, reason } });
+
 export const signOff = (id: string, approve: boolean, note: string | null) =>
   request<ApplicationResponse>(`/api/applications/${id}/sign-off`, { method: "POST", body: { approve, note } });

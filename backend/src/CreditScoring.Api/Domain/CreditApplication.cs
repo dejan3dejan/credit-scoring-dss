@@ -72,6 +72,20 @@ public class CreditApplication
         return new Changed();
     }
 
+    public ChangeResult CorrectOutcome(LoanOutcomeKind outcome, string? reason, Actor by, DateTimeOffset now)
+    {
+        if (LoanOutcome is null)
+            return new Refused(null, "no_outcome", "No outcome is recorded for this loan yet.");
+        if (!Enum.IsDefined(outcome))
+            throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "unknown loan outcome");
+        if (Text.TrimToNull(reason) is not { } why)
+            return new Refused("reason", "reason_required", "Say why the outcome is corrected.");
+        if (LoanOutcome.Outcome == outcome)
+            return new Refused("outcome", "same_outcome", "The loan already has this outcome.");
+        LoanOutcome.Correct(outcome, why, by, now);
+        return new Changed();
+    }
+
     public bool MayBeHandledBy(Guid userId, bool actsForBranch) => actsForBranch || AssignedToUserId == userId;
 
     public ChangeResult AssignTo(User assignee)

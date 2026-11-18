@@ -23,6 +23,7 @@ public class EndpointPermissionsTests
         ["Applications.SignOff"] = "applications.approve-escalated",
         ["Applications.Assign"] = "applications.assign",
         ["Applications.RecordOutcome"] = "outcomes.record",
+        ["Applications.CorrectOutcome"] = "outcomes.record",
         ["Applications.Withdraw"] = "applications.write",
         ["Applications.Notes"] = "applications.read",
         ["Applications.AddNote"] = "applications.write",

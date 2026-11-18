@@ -226,6 +226,9 @@ public class CreditScoringDbContext : DbContext
             outcome.Property(o => o.Id).ValueGeneratedNever();
             outcome.Property(o => o.Note).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
             outcome.Property(o => o.RecordedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            outcome.Property(o => o.CorrectionReason).HasMaxLength(BusinessLimits.DecisionReasonMaxLength);
+            outcome.Property(o => o.CorrectedBy).HasMaxLength(BusinessLimits.SubmittedByMaxLength);
+            outcome.HasOne<User>().WithMany().HasForeignKey(o => o.CorrectedByUserId).OnDelete(DeleteBehavior.Restrict);
             outcome.HasIndex(o => o.CreditApplicationId).IsUnique();
             outcome.HasOne<User>().WithMany().HasForeignKey(o => o.RecordedByUserId).OnDelete(DeleteBehavior.Restrict);
         });

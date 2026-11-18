@@ -77,6 +77,26 @@ public sealed class OutcomesAndStatsTests(DatabaseFixture database) : IAsyncLife
     }
 
     [Fact]
+    public async Task Risk_corrects_a_recorded_outcome_with_a_reason()
+    {
+        var loan = await Submit(database.Officer, 0.1, TestData.Now, FinalDecision.Approve);
+        Problem((await Applications(risk, c => c.CorrectOutcome(loan.Id,
+            new CorrectOutcomeRequest { Outcome = LoanOutcomeKind.Defaulted, Reason = "typo" }, CancellationToken.None))).Result, 409, "no_outcome");
+        await Record(loan.Id, LoanOutcomeKind.Repaid);
+        clock.Now = TestData.Now.AddDays(2);
+
+        var corrected = (await Applications(risk, c => c.CorrectOutcome(loan.Id,
+            new CorrectOutcomeRequest { Outcome = LoanOutcomeKind.Defaulted, Reason = "the servicing report was for another loan" }, CancellationToken.None))).Value!;
+
+        Assert.Equal((LoanOutcomeKind.Defaulted, "Rita Risk", "the servicing report was for another loan", TestData.Now.AddDays(2)),
+            (corrected.LoanOutcome!.Outcome, corrected.LoanOutcome.CorrectedBy, corrected.LoanOutcome.CorrectionReason, corrected.LoanOutcome.CorrectedAt));
+        await using var db = database.CreateContext();
+        var entry = Assert.Single(db.AuditEntries.Where(e => e.Entity == nameof(LoanOutcome) && e.Action == AuditAction.Updated).ToList());
+        var outcome = System.Text.Json.JsonDocument.Parse(entry.Changes).RootElement.GetProperty("outcome");
+        Assert.Equal(("Repaid", "Defaulted"), (outcome.GetProperty("before").GetString(), outcome.GetProperty("after").GetString()));
+    }
+
+    [Fact]
     public async Task Rejected_or_undecided_applications_have_no_loan()
     {
         var rejected = await Submit(database.Officer, 0.4, TestData.Now, FinalDecision.Reject);

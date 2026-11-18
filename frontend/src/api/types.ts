@@ -174,7 +174,15 @@ export type ApplicationResponse = ApplicationAnswers & {
   assignedTo: UserRef | null;
   withdrawal: { at: string; by: string; reason: string } | null;
   signOffs: SignOffResponse[];
-  loanOutcome: { outcome: LoanOutcomeKind; note: string | null; recordedBy: string; recordedAt: string } | null;
+  loanOutcome: {
+    outcome: LoanOutcomeKind;
+    note: string | null;
+    recordedBy: string;
+    recordedAt: string;
+    correctionReason: string | null;
+    correctedBy: string | null;
+    correctedAt: string | null;
+  } | null;
   clientId: string;
   branchId: string;
   clientNumber: string;

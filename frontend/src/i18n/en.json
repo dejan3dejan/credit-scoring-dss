@@ -132,7 +132,8 @@
     "branch_has_active_users": "This branch still has active users. Move or deactivate them first.",
     "branch_inactive": "The user's branch is deactivated. Move the user to an active branch first.",
     "edited_elsewhere": "Someone else changed this in the meantime. The newer values are shown; make your change again.",
-    "client_has_open_application": "This client already has an open application. Decide or withdraw it first."
+    "client_has_open_application": "This client already has an open application. Decide or withdraw it first.",
+    "no_outcome": "No outcome is recorded for this loan yet."
   },
   "fieldErrors": {
     "required": "This field is required.",
@@ -174,7 +175,8 @@
     "must_be_zero": "Must be 0 when {{other}} is 0.",
     "too_young": "The client must be at least {{minimumAge}} years old.",
     "too_old": "The client cannot be older than {{maximumAge}}.",
-    "client_has_open_application": "This client already has an open application, {{reference}}."
+    "client_has_open_application": "This client already has an open application, {{reference}}.",
+    "same_outcome": "The loan already has this outcome."
   },
   "enums": {
     "LoanPurpose": {
@@ -666,7 +668,15 @@
     "outcomeRecorded": "Outcome recorded.",
     "outcomeShown": "{{outcome}}, recorded by {{name}} on {{date}}.",
     "tlOutcome": "Loan {{outcome}}, recorded by {{name}}",
-    "tlNote": "Note by {{name}}"
+    "tlNote": "Note by {{name}}",
+    "correctOutcome": "Correct outcome",
+    "correctionReason": "Reason for the correction",
+    "saveCorrection": "Save correction",
+    "outcomeCorrected": "Outcome corrected.",
+    "correctedShown": "Corrected by {{name}} on {{date}}.",
+    "tlOutcomeRecorded": "Loan outcome recorded by {{name}}",
+    "tlOutcomeCorrected": "Loan {{outcome}}, corrected by {{name}}",
+    "outcomeShownCorrected": "{{outcome}} (corrected). First recorded by {{name}} on {{date}}."
   },
   "drafts": {
     "discard": "Discard draft",

@@ -254,6 +254,16 @@ public class ApplicationsController(
         ChangeLockedAsync(id, application =>
             application.RecordOutcome(request.Outcome!.Value, request.Note, Credentials.ActorOf(User), time.GetUtcNow()), cancellationToken);
 
+    [HttpPut("{id:guid}/outcome")]
+    [Authorize(Policy = Permissions.OutcomesRecord)]
+    [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public Task<ActionResult<ApplicationResponse>> CorrectOutcome(Guid id, CorrectOutcomeRequest request, CancellationToken cancellationToken) =>
+        ChangeLockedAsync(id, application =>
+            application.CorrectOutcome(request.Outcome!.Value, request.Reason, Credentials.ActorOf(User), time.GetUtcNow()), cancellationToken);
+
     [HttpPost("{id:guid}/assign")]
     [Authorize(Policy = Permissions.ApplicationsAssign)]
     [ProducesResponseType<ApplicationResponse>(StatusCodes.Status200OK)]
