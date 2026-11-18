@@ -49,6 +49,7 @@ test("the language switch turns the app Serbian, is kept on the account, and eve
 
   await page.reload();
   await expect(heading(page)).toHaveText(sr.home.Risk);
+  await expect(page.locator("html")).toHaveAttribute("lang", "sr");
 
   for (const path of ["/", "/applications", "/clients", "/dashboard", "/models", "/audit"]) {
     await page.goto(`/app${path}`);
@@ -66,6 +67,7 @@ test("the language switch turns the app Serbian, is kept on the account, and eve
   await second.goto("/app/login");
   await signInThroughForm(second, userName, password);
   await expect(heading(second)).toHaveText(sr.home.Risk);
+  await expect(second.locator("html")).toHaveAttribute("lang", "sr");
   await fresh.close();
 
   await page.goto("/app/");

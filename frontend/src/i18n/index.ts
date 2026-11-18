@@ -35,16 +35,16 @@ export async function applyLanguage(language: Language) {
   if (i18n.language !== language) await i18n.changeLanguage(language);
 }
 
+i18n.on("languageChanged", (language) => {
+  document.documentElement.lang = language;
+});
+
 void i18n.use(initReactI18next).init({
   resources: { en: { translation: en }, sr: { translation: sr } },
   lng: storedLanguage(),
   fallbackLng: "en",
   interpolation: { escapeValue: false },
   initAsync: false,
-});
-
-i18n.on("languageChanged", (language) => {
-  document.documentElement.lang = language;
 });
 
 export function useLanguage(): Language {
