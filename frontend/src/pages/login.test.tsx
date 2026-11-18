@@ -62,7 +62,7 @@ describe("login page", () => {
   it("shows the product name", async () => {
     stubApi({ "GET /api/auth/me": unauthenticated });
     renderApp("/login");
-    expect(await screen.findByText("Kadran")).toBeInTheDocument();
+    expect(await screen.findByText("Sentio")).toBeInTheDocument();
   });
 
   it("switches the login page to Serbian", async () => {
