@@ -1,0 +1,1178 @@
+{
+  "source": "40 loans issued in 2015, drawn at random (seed 42) from the 2015 test year after leaving out loans the application form cannot take; when the draw has no Reject, its last loan is swapped for a random Reject so the demo can show one. Names and birth dates are invented.",
+  "modelId": "credit_lc_xgb_isotonic_v1",
+  "threshold": 0.32861227038217605,
+  "reviewFrom": 0.2,
+  "bands": {
+    "Approve": 34,
+    "Review": 5,
+    "Reject": 1
+  },
+  "testYearBands": {
+    "Approve": 0.8403,
+    "Review": 0.1593,
+    "Reject": 0.0004
+  },
+  "cases": [
+    {
+      "name": "Luka Vasić",
+      "yearsOldAtFirstCredit": 24,
+      "answers": {
+        "loanAmount": 15000,
+        "purpose": "CreditCard",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 75000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 22.78,
+        "creditScore": 662,
+        "creditHistoryMonths": 151,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 14193.0,
+        "revolvingUtilizationPercent": 58.9,
+        "openAccounts": 13,
+        "totalAccounts": 17,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1741,
+        "band": "Approve"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Nemanja Tomić",
+      "yearsOldAtFirstCredit": 28,
+      "answers": {
+        "loanAmount": 15000,
+        "purpose": "HomeImprovement",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 60000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 16.94,
+        "creditScore": 807,
+        "creditHistoryMonths": 157,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 12092.0,
+        "revolvingUtilizationPercent": 19.4,
+        "openAccounts": 14,
+        "totalAccounts": 33,
+        "mortgageAccounts": 1
+      },
+      "expected": {
+        "pBad": 0.0252,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Jovana Mitić",
+      "yearsOldAtFirstCredit": 22,
+      "answers": {
+        "loanAmount": 11850,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "FourYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 33000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 34.73,
+        "creditScore": 662,
+        "creditHistoryMonths": 73,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 6176.0,
+        "revolvingUtilizationPercent": 80.2,
+        "openAccounts": 7,
+        "totalAccounts": 12,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.2503,
+        "band": "Review"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Teodora Ilić",
+      "yearsOldAtFirstCredit": 21,
+      "answers": {
+        "loanAmount": 8500,
+        "purpose": "MajorPurchase",
+        "employmentLength": "LessThanOneYear",
+        "homeOwnership": "Rent",
+        "annualIncome": 60000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 23.04,
+        "creditScore": 662,
+        "creditHistoryMonths": 220,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 4,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 1178.0,
+        "revolvingUtilizationPercent": 78.5,
+        "openAccounts": 9,
+        "totalAccounts": 11,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.2504,
+        "band": "Review"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Stefan Lazić",
+      "yearsOldAtFirstCredit": 23,
+      "answers": {
+        "loanAmount": 10000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Own",
+        "annualIncome": 35000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 31.76,
+        "creditScore": 722,
+        "creditHistoryMonths": 243,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 12876.0,
+        "revolvingUtilizationPercent": 32.8,
+        "openAccounts": 12,
+        "totalAccounts": 28,
+        "mortgageAccounts": 2
+      },
+      "expected": {
+        "pBad": 0.1105,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Jovana Savić",
+      "yearsOldAtFirstCredit": 19,
+      "answers": {
+        "loanAmount": 20000,
+        "purpose": "Other",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 85000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 25.72,
+        "creditScore": 662,
+        "creditHistoryMonths": 624,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 3,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 6090.0,
+        "revolvingUtilizationPercent": 99.8,
+        "openAccounts": 6,
+        "totalAccounts": 29,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.2218,
+        "band": "Review"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Luka Milošević",
+      "yearsOldAtFirstCredit": 20,
+      "answers": {
+        "loanAmount": 15750,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 50000.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 7.27,
+        "creditScore": 787,
+        "creditHistoryMonths": 142,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 0.0,
+        "revolvingUtilizationPercent": 0.0,
+        "openAccounts": 2,
+        "totalAccounts": 11,
+        "mortgageAccounts": 2
+      },
+      "expected": {
+        "pBad": 0.082,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Sanja Milošević",
+      "yearsOldAtFirstCredit": 20,
+      "answers": {
+        "loanAmount": 5000,
+        "purpose": "Other",
+        "employmentLength": "NotStated",
+        "homeOwnership": "Rent",
+        "annualIncome": 40000.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 5.91,
+        "creditScore": 737,
+        "creditHistoryMonths": 298,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 8170.0,
+        "revolvingUtilizationPercent": 40.2,
+        "openAccounts": 4,
+        "totalAccounts": 18,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.0607,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Teodora Živković",
+      "yearsOldAtFirstCredit": 28,
+      "answers": {
+        "loanAmount": 7100,
+        "purpose": "CreditCard",
+        "employmentLength": "TwoYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 47000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 17.97,
+        "creditScore": 687,
+        "creditHistoryMonths": 71,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 8093.0,
+        "revolvingUtilizationPercent": 64.7,
+        "openAccounts": 9,
+        "totalAccounts": 14,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1175,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Aleksandar Živković",
+      "yearsOldAtFirstCredit": 27,
+      "answers": {
+        "loanAmount": 12575,
+        "purpose": "HomeImprovement",
+        "employmentLength": "OneYear",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 35000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 7.06,
+        "creditScore": 672,
+        "creditHistoryMonths": 198,
+        "inquiriesLast6Months": 2,
+        "delinquenciesLast2Years": 1,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 4408.0,
+        "revolvingUtilizationPercent": 81.6,
+        "openAccounts": 7,
+        "totalAccounts": 13,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.2703,
+        "band": "Review"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Miloš Petrović",
+      "yearsOldAtFirstCredit": 27,
+      "answers": {
+        "loanAmount": 3550,
+        "purpose": "CreditCard",
+        "employmentLength": "ThreeYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 36000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 10.9,
+        "creditScore": 667,
+        "creditHistoryMonths": 145,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 2675.0,
+        "revolvingUtilizationPercent": 22.5,
+        "openAccounts": 9,
+        "totalAccounts": 12,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1354,
+        "band": "Approve"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Tamara Nikolić",
+      "yearsOldAtFirstCredit": 24,
+      "answers": {
+        "loanAmount": 18000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 53500.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 13.23,
+        "creditScore": 702,
+        "creditHistoryMonths": 252,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 6728.0,
+        "revolvingUtilizationPercent": 48.8,
+        "openAccounts": 7,
+        "totalAccounts": 23,
+        "mortgageAccounts": 5
+      },
+      "expected": {
+        "pBad": 0.1049,
+        "band": "Approve"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Nikola Živković",
+      "yearsOldAtFirstCredit": 27,
+      "answers": {
+        "loanAmount": 17000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 95000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 9.25,
+        "creditScore": 717,
+        "creditHistoryMonths": 163,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 1,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 10059.0,
+        "revolvingUtilizationPercent": 25.4,
+        "openAccounts": 11,
+        "totalAccounts": 22,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.0635,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Aleksandar Milošević",
+      "yearsOldAtFirstCredit": 20,
+      "answers": {
+        "loanAmount": 4125,
+        "purpose": "CreditCard",
+        "employmentLength": "TwoYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 60340.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 20.53,
+        "creditScore": 787,
+        "creditHistoryMonths": 180,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 4376.0,
+        "revolvingUtilizationPercent": 8.8,
+        "openAccounts": 12,
+        "totalAccounts": 23,
+        "mortgageAccounts": 3
+      },
+      "expected": {
+        "pBad": 0.0382,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Aleksandar Pavlović",
+      "yearsOldAtFirstCredit": 29,
+      "answers": {
+        "loanAmount": 5500,
+        "purpose": "CreditCard",
+        "employmentLength": "NineYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 39000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 15.63,
+        "creditScore": 687,
+        "creditHistoryMonths": 126,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 5588.0,
+        "revolvingUtilizationPercent": 49.9,
+        "openAccounts": 10,
+        "totalAccounts": 15,
+        "mortgageAccounts": 2
+      },
+      "expected": {
+        "pBad": 0.1241,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Jovana Živković",
+      "yearsOldAtFirstCredit": 25,
+      "answers": {
+        "loanAmount": 16000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 105000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 16.87,
+        "creditScore": 682,
+        "creditHistoryMonths": 218,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 21152.0,
+        "revolvingUtilizationPercent": 62.0,
+        "openAccounts": 11,
+        "totalAccounts": 33,
+        "mortgageAccounts": 6
+      },
+      "expected": {
+        "pBad": 0.0899,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Tamara Pavlović",
+      "yearsOldAtFirstCredit": 30,
+      "answers": {
+        "loanAmount": 12000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "ThreeYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 45000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 17.49,
+        "creditScore": 667,
+        "creditHistoryMonths": 158,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 21024.0,
+        "revolvingUtilizationPercent": 68.7,
+        "openAccounts": 14,
+        "totalAccounts": 34,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1815,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Marko Radović",
+      "yearsOldAtFirstCredit": 20,
+      "answers": {
+        "loanAmount": 4500,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "SixYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 60000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 7.24,
+        "creditScore": 672,
+        "creditHistoryMonths": 152,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 7651.0,
+        "revolvingUtilizationPercent": 66.0,
+        "openAccounts": 6,
+        "totalAccounts": 21,
+        "mortgageAccounts": 3
+      },
+      "expected": {
+        "pBad": 0.1146,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Tamara Vasić",
+      "yearsOldAtFirstCredit": 24,
+      "answers": {
+        "loanAmount": 10000,
+        "purpose": "HomeImprovement",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 52000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 13.43,
+        "creditScore": 667,
+        "creditHistoryMonths": 164,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 1,
+        "bankruptcies": 0,
+        "revolvingBalance": 2110.0,
+        "revolvingUtilizationPercent": 9.2,
+        "openAccounts": 10,
+        "totalAccounts": 20,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1646,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Filip Živković",
+      "yearsOldAtFirstCredit": 27,
+      "answers": {
+        "loanAmount": 10000,
+        "purpose": "CreditCard",
+        "employmentLength": "TwoYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 105000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 16.21,
+        "creditScore": 672,
+        "creditHistoryMonths": 327,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 2,
+        "bankruptcies": 2,
+        "revolvingBalance": 8863.0,
+        "revolvingUtilizationPercent": 57.2,
+        "openAccounts": 14,
+        "totalAccounts": 64,
+        "mortgageAccounts": 4
+      },
+      "expected": {
+        "pBad": 0.1774,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Vuk Marković",
+      "yearsOldAtFirstCredit": 24,
+      "answers": {
+        "loanAmount": 8000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TwoYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 22000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 27.71,
+        "creditScore": 672,
+        "creditHistoryMonths": 137,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 1,
+        "bankruptcies": 1,
+        "revolvingBalance": 5259.0,
+        "revolvingUtilizationPercent": 87.6,
+        "openAccounts": 4,
+        "totalAccounts": 10,
+        "mortgageAccounts": 1
+      },
+      "expected": {
+        "pBad": 0.2052,
+        "band": "Review"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Miloš Đorđević",
+      "yearsOldAtFirstCredit": 24,
+      "answers": {
+        "loanAmount": 20000,
+        "purpose": "HomeImprovement",
+        "employmentLength": "NotStated",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 144000.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 5.83,
+        "creditScore": 672,
+        "creditHistoryMonths": 451,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 1,
+        "publicRecords": 3,
+        "bankruptcies": 0,
+        "revolvingBalance": 28123.0,
+        "revolvingUtilizationPercent": 37.7,
+        "openAccounts": 10,
+        "totalAccounts": 28,
+        "mortgageAccounts": 6
+      },
+      "expected": {
+        "pBad": 0.0877,
+        "band": "Approve"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Teodora Radović",
+      "yearsOldAtFirstCredit": 20,
+      "answers": {
+        "loanAmount": 8000,
+        "purpose": "MajorPurchase",
+        "employmentLength": "NineYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 45000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 17.23,
+        "creditScore": 692,
+        "creditHistoryMonths": 118,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 1,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 8413.0,
+        "revolvingUtilizationPercent": 33.5,
+        "openAccounts": 24,
+        "totalAccounts": 44,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1344,
+        "band": "Approve"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Vuk Lazić",
+      "yearsOldAtFirstCredit": 23,
+      "answers": {
+        "loanAmount": 5000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TwoYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 26000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 31.63,
+        "creditScore": 702,
+        "creditHistoryMonths": 55,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 4510.0,
+        "revolvingUtilizationPercent": 57.1,
+        "openAccounts": 10,
+        "totalAccounts": 10,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1502,
+        "band": "Approve"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Tamara Ilić",
+      "yearsOldAtFirstCredit": 21,
+      "answers": {
+        "loanAmount": 8000,
+        "purpose": "MajorPurchase",
+        "employmentLength": "FiveYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 38500.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 2.56,
+        "creditScore": 722,
+        "creditHistoryMonths": 39,
+        "inquiriesLast6Months": 2,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 4085.0,
+        "revolvingUtilizationPercent": 7.5,
+        "openAccounts": 8,
+        "totalAccounts": 23,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1008,
+        "band": "Approve"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Nikola Mitić",
+      "yearsOldAtFirstCredit": 22,
+      "answers": {
+        "loanAmount": 35000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 147000.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 20.78,
+        "creditScore": 772,
+        "creditHistoryMonths": 296,
+        "inquiriesLast6Months": 2,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 12762.0,
+        "revolvingUtilizationPercent": 10.2,
+        "openAccounts": 26,
+        "totalAccounts": 59,
+        "mortgageAccounts": 9
+      },
+      "expected": {
+        "pBad": 0.055,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Katarina Ilić",
+      "yearsOldAtFirstCredit": 27,
+      "answers": {
+        "loanAmount": 5000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 75438.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 25.12,
+        "creditScore": 672,
+        "creditHistoryMonths": 141,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 1,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 21548.0,
+        "revolvingUtilizationPercent": 74.6,
+        "openAccounts": 12,
+        "totalAccounts": 23,
+        "mortgageAccounts": 3
+      },
+      "expected": {
+        "pBad": 0.1587,
+        "band": "Approve"
+      },
+      "observedOutcome": "Defaulted"
+    },
+    {
+      "name": "Ivana Đorđević",
+      "yearsOldAtFirstCredit": 26,
+      "answers": {
+        "loanAmount": 7775,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "LessThanOneYear",
+        "homeOwnership": "Rent",
+        "annualIncome": 60000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 19.14,
+        "creditScore": 662,
+        "creditHistoryMonths": 86,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 1,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 6482.0,
+        "revolvingUtilizationPercent": 43.5,
+        "openAccounts": 14,
+        "totalAccounts": 28,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1711,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Milica Jovanović",
+      "yearsOldAtFirstCredit": 26,
+      "answers": {
+        "loanAmount": 5000,
+        "purpose": "Other",
+        "employmentLength": "NotStated",
+        "homeOwnership": "Own",
+        "annualIncome": 34000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 6.85,
+        "creditScore": 667,
+        "creditHistoryMonths": 466,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 2,
+        "publicRecords": 1,
+        "bankruptcies": 1,
+        "revolvingBalance": 0.0,
+        "revolvingUtilizationPercent": 0.0,
+        "openAccounts": 4,
+        "totalAccounts": 21,
+        "mortgageAccounts": 1
+      },
+      "expected": {
+        "pBad": 0.1923,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Nikola Radović",
+      "yearsOldAtFirstCredit": 23,
+      "answers": {
+        "loanAmount": 12000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "FiveYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 50000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 15.89,
+        "creditScore": 692,
+        "creditHistoryMonths": 174,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 22657.0,
+        "revolvingUtilizationPercent": 68.2,
+        "openAccounts": 14,
+        "totalAccounts": 40,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1453,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Filip Jovanović",
+      "yearsOldAtFirstCredit": 30,
+      "answers": {
+        "loanAmount": 4750,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "LessThanOneYear",
+        "homeOwnership": "Rent",
+        "annualIncome": 12000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 19.0,
+        "creditScore": 677,
+        "creditHistoryMonths": 56,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 5364.0,
+        "revolvingUtilizationPercent": 64.6,
+        "openAccounts": 14,
+        "totalAccounts": 15,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1206,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Marko Milošević",
+      "yearsOldAtFirstCredit": 20,
+      "answers": {
+        "loanAmount": 6000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 56000.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 11.84,
+        "creditScore": 662,
+        "creditHistoryMonths": 146,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 1,
+        "bankruptcies": 1,
+        "revolvingBalance": 9996.0,
+        "revolvingUtilizationPercent": 91.7,
+        "openAccounts": 5,
+        "totalAccounts": 5,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.0827,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Marko Tomić",
+      "yearsOldAtFirstCredit": 23,
+      "answers": {
+        "loanAmount": 10000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Rent",
+        "annualIncome": 42000.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 20.26,
+        "creditScore": 727,
+        "creditHistoryMonths": 91,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 10348.0,
+        "revolvingUtilizationPercent": 61.6,
+        "openAccounts": 7,
+        "totalAccounts": 12,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1015,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Marko Vasić",
+      "yearsOldAtFirstCredit": 20,
+      "answers": {
+        "loanAmount": 5500,
+        "purpose": "Other",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 88683.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 11.27,
+        "creditScore": 667,
+        "creditHistoryMonths": 217,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 5,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 1176.0,
+        "revolvingUtilizationPercent": 73.5,
+        "openAccounts": 7,
+        "totalAccounts": 26,
+        "mortgageAccounts": 4
+      },
+      "expected": {
+        "pBad": 0.1132,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Miloš Nikolić",
+      "yearsOldAtFirstCredit": 23,
+      "answers": {
+        "loanAmount": 16000,
+        "purpose": "Other",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 134000.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 11.28,
+        "creditScore": 812,
+        "creditHistoryMonths": 256,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 38690.0,
+        "revolvingUtilizationPercent": 35.7,
+        "openAccounts": 12,
+        "totalAccounts": 22,
+        "mortgageAccounts": 3
+      },
+      "expected": {
+        "pBad": 0.0053,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Marko Popović",
+      "yearsOldAtFirstCredit": 30,
+      "answers": {
+        "loanAmount": 2000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Own",
+        "annualIncome": 45000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 19.94,
+        "creditScore": 702,
+        "creditHistoryMonths": 110,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 10992.0,
+        "revolvingUtilizationPercent": 39.3,
+        "openAccounts": 16,
+        "totalAccounts": 24,
+        "mortgageAccounts": 0
+      },
+      "expected": {
+        "pBad": 0.1155,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Katarina Radović",
+      "yearsOldAtFirstCredit": 23,
+      "answers": {
+        "loanAmount": 20000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "EightYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 100000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 15.48,
+        "creditScore": 677,
+        "creditHistoryMonths": 93,
+        "inquiriesLast6Months": 1,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 13031.0,
+        "revolvingUtilizationPercent": 56.9,
+        "openAccounts": 15,
+        "totalAccounts": 21,
+        "mortgageAccounts": 1
+      },
+      "expected": {
+        "pBad": 0.1777,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Teodora Tomić",
+      "yearsOldAtFirstCredit": 29,
+      "answers": {
+        "loanAmount": 33000,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 75000.0,
+        "incomeVerification": "SourceVerified",
+        "debtToIncomePercent": 25.54,
+        "creditScore": 692,
+        "creditHistoryMonths": 282,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 33778.0,
+        "revolvingUtilizationPercent": 69.6,
+        "openAccounts": 15,
+        "totalAccounts": 24,
+        "mortgageAccounts": 4
+      },
+      "expected": {
+        "pBad": 0.129,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Katarina Pavlović",
+      "yearsOldAtFirstCredit": 24,
+      "answers": {
+        "loanAmount": 16500,
+        "purpose": "DebtConsolidation",
+        "employmentLength": "NineYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 72000.0,
+        "incomeVerification": "NotVerified",
+        "debtToIncomePercent": 26.33,
+        "creditScore": 732,
+        "creditHistoryMonths": 175,
+        "inquiriesLast6Months": 0,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 0,
+        "bankruptcies": 0,
+        "revolvingBalance": 20417.0,
+        "revolvingUtilizationPercent": 25.9,
+        "openAccounts": 25,
+        "totalAccounts": 42,
+        "mortgageAccounts": 3
+      },
+      "expected": {
+        "pBad": 0.0719,
+        "band": "Approve"
+      },
+      "observedOutcome": "Repaid"
+    },
+    {
+      "name": "Jovana Stojanović",
+      "yearsOldAtFirstCredit": 27,
+      "answers": {
+        "loanAmount": 30000,
+        "purpose": "House",
+        "employmentLength": "TenOrMoreYears",
+        "homeOwnership": "Mortgage",
+        "annualIncome": 85000.0,
+        "incomeVerification": "Verified",
+        "debtToIncomePercent": 30.69,
+        "creditScore": 677,
+        "creditHistoryMonths": 304,
+        "inquiriesLast6Months": 2,
+        "delinquenciesLast2Years": 0,
+        "publicRecords": 1,
+        "bankruptcies": 1,
+        "revolvingBalance": 16805.0,
+        "revolvingUtilizationPercent": 57.0,
+        "openAccounts": 24,
+        "totalAccounts": 56,
+        "mortgageAccounts": 10
+      },
+      "expected": {
+        "pBad": 0.3327,
+        "band": "Reject"
+      },
+      "observedOutcome": "Repaid"
+    }
+  ]
+}

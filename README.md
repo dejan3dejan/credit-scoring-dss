@@ -41,6 +41,16 @@ The database is created and migrated on start. Five demo users are seeded: `admi
 
 The served model `ml/models/credit_lc_xgb_isotonic_v1.joblib` is committed, so nothing has to be trained to run the app.
 
+### Demo data
+
+To fill an empty database with 40 real 2015 LendingClub loans, run this with the stack up (Python 3, standard library only):
+
+```bash
+python demo/seed_demo.py
+```
+
+The cases in `demo/cases.json` are a random draw from the 2015 test year, so the recommendations match real data: 34 Approve, 5 Review and 1 Reject. The test year as a whole is 84.0% Approve, 15.9% Review and 0.04% Reject; the one Reject was added on purpose so the demo can show it. Names and birth dates are invented. The officer decides 30 cases, the manager signs off the one that needs it, and the risk user records each approved loan's real LendingClub outcome. 10 cases stay open for a live demo. The script checks that every score matches the one in the file and refuses a database it has already seeded. `ml/scripts/make_demo_cases.py` rebuilds the file from the data.
+
 ## Run without Docker
 
 Start only the database with `docker compose up db`, then:
